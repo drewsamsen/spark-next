@@ -22,3 +22,10 @@
 - Simplified theme toggle in header to directly toggle between light and dark (removed system option and dropdown).
 - Fixed sidebar width layout shifts by implementing a delayed rendering approach - component won't render until user settings are fully loaded.
 - Cleaned up implementation by removing unused code, components, and dependencies.
+- Improved left sidebar resize functionality with better cursor handling and integration with nested sidebars.
+- Enhanced resize handles with better usability, wider drag areas, touch support, and visual feedback.
+- Refactored sidebar resize functionality into respective components for better encapsulation and consistent behavior.
+- Removed unused NextAuth code and API routes, fixing the "EMAIL_REQUIRES_ADAPTER_ERROR" during development.
+- Fixed tRPC module imports and updated authentication to use the local Supabase client, resolving build errors.
+- Completely removed unused tRPC framework code, including client/server files, API routes, and dependencies to simplify the codebase.
+- Fixed left sidebar resize functionality after closing nested sidebar by enhancing resize handle visibility and refreshing event listeners.

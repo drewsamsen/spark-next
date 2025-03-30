@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/header";
 import LeftSidebar from "@/components/left-sidebar";
 import RightSidebar from "@/components/right-sidebar";
@@ -14,7 +14,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthCheck } from "@/components/auth/AuthCheck";
 
 export default function Dashboard() {
-  const { settings, updateLeftSidebarWidth } = useUISettings();
+  const { settings } = useUISettings();
   
   // Track if component has mounted to prevent hydration mismatch
   const [hasMounted, setHasMounted] = useState(false);
@@ -38,23 +38,11 @@ export default function Dashboard() {
   // Loading states
   const [loadingBooks, setLoadingBooks] = useState(false);
   const [loadingSparks, setLoadingSparks] = useState(false);
-  
-  // Left sidebar resize functionality
-  const [isResizing, setIsResizing] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(settings.leftSidebar.width);
-  const resizeHandleRef = useRef<HTMLDivElement>(null);
 
   // Set hasMounted to true after the component mounts
   useEffect(() => {
     setHasMounted(true);
   }, []);
-
-  // Update local state when settings change (but not during resize)
-  useEffect(() => {
-    if (hasMounted && !isResizing) {
-      setSidebarWidth(settings.leftSidebar.width);
-    }
-  }, [hasMounted, settings.leftSidebar.width, isResizing]);
 
   // Function to load books data
   const loadBooks = async () => {
@@ -131,65 +119,11 @@ export default function Dashboard() {
     }
   };
 
-  // Handle resize for left sidebar
-  useEffect(() => {
-    if (!resizeHandleRef.current) return;
-
-    const handleMouseDown = (e: MouseEvent) => {
-      e.preventDefault();
-      setIsResizing(true);
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-
-      // Get the new width based on mouse position
-      const newWidth = e.clientX;
-      
-      // Apply constraints
-      if (newWidth >= UI_SETTINGS.LEFT_SIDEBAR.MIN_WIDTH && 
-          newWidth <= UI_SETTINGS.LEFT_SIDEBAR.MAX_WIDTH) {
-        setSidebarWidth(newWidth);
-      }
-    };
-
-    const handleMouseUp = (e: MouseEvent) => {
-      if (isResizing) {
-        // Calculate the final width directly to avoid stale state
-        const finalWidth = e.clientX;
-        // Apply constraints to ensure valid width
-        const validWidth = Math.max(
-          UI_SETTINGS.LEFT_SIDEBAR.MIN_WIDTH,
-          Math.min(finalWidth, UI_SETTINGS.LEFT_SIDEBAR.MAX_WIDTH)
-        );
-        // First update local state
-        setSidebarWidth(validWidth);
-        // Then save to localStorage
-        updateLeftSidebarWidth(validWidth);
-      }
-      setIsResizing(false);
-    };
-
-    const resizeHandle = resizeHandleRef.current;
-    resizeHandle.addEventListener('mousedown', handleMouseDown);
-    
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      resizeHandle.removeEventListener('mousedown', handleMouseDown);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing, updateLeftSidebarWidth]);
-
   // Width of icons-only part of the left sidebar when projects sidebar is open
   const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
 
-  // Use settings value directly since we're guaranteed it's loaded
-  const displayWidth = sidebarWidth;
+  // Calculate if any nested sidebar is open
+  const isNestedSidebarOpen = booksSidebarOpen || sparksSidebarOpen;
 
   return (
     <AuthCheck>
@@ -200,79 +134,63 @@ export default function Dashboard() {
             toggleRightSidebar={toggleRightSidebar}
           />
           <div className="flex flex-1 overflow-hidden">
-            {/* Left sidebar container with fixed width */}
-            <div 
-              className="relative h-full" 
-              style={{ 
-                width: leftSidebarOpen ? `${displayWidth}px` : '0px',
-                minWidth: leftSidebarOpen ? `${displayWidth}px` : '0px',
-                transition: isResizing ? 'none' : 'width 300ms ease-in-out, min-width 300ms ease-in-out'
-              }}
-            >
-              {/* Main sidebar - always full width */}
-              <LeftSidebar 
-                isOpen={leftSidebarOpen} 
-                setIsOpen={setLeftSidebarOpen}
-                activeSidebarItem={activeSidebarItem}
-                toggleProjectsSidebar={toggleSidebar}
-                isProjectsSidebarOpen={booksSidebarOpen || sparksSidebarOpen}
-              />
+            {/* Left sidebar container */}
+            {leftSidebarOpen && (
+              <div className="relative h-full">
+                {/* Main sidebar component handles its own width and resizing */}
+                <LeftSidebar 
+                  isOpen={leftSidebarOpen} 
+                  setIsOpen={setLeftSidebarOpen}
+                  activeSidebarItem={activeSidebarItem}
+                  toggleProjectsSidebar={toggleSidebar}
+                  isProjectsSidebarOpen={isNestedSidebarOpen}
+                />
 
-              {/* Books sidebar overlays on top of the left sidebar, leaving space for icons */}
-              {booksSidebarOpen && (
-                <div 
-                  className="absolute top-0 h-full z-10"
-                  style={{ 
-                    left: `${iconWidth}px`,
-                    width: `${displayWidth - iconWidth}px`
-                  }}
-                >
-                  <NestedSidebar
-                    isOpen={booksSidebarOpen}
-                    title="Books"
-                    icon={<Book className="h-5 w-5" />}
-                    items={books}
-                    activeItemId={activeBook}
-                    setActiveItemId={setActiveBook}
-                    onClose={() => setBooksSidebarOpen(false)}
-                    isLoading={loadingBooks}
-                  />
-                </div>
-              )}
-              
-              {/* Sparks sidebar overlays on top of the left sidebar, leaving space for icons */}
-              {sparksSidebarOpen && (
-                <div 
-                  className="absolute top-0 h-full z-10"
-                  style={{ 
-                    left: `${iconWidth}px`,
-                    width: `${displayWidth - iconWidth}px`
-                  }}
-                >
-                  <NestedSidebar
-                    isOpen={sparksSidebarOpen}
-                    title="Sparks"
-                    icon={<Sparkles className="h-5 w-5" />}
-                    items={sparks}
-                    activeItemId={activeSpark}
-                    setActiveItemId={setActiveSpark}
-                    onClose={() => setSparksSidebarOpen(false)}
-                    isLoading={loadingSparks}
-                  />
-                </div>
-              )}
-              
-              {/* Resize handle for left sidebar */}
-              <div
-                ref={resizeHandleRef}
-                className="absolute inset-y-0 right-0 w-1 cursor-ew-resize hover:bg-border"
-                style={{
-                  display: (booksSidebarOpen || sparksSidebarOpen) ? 'none' : 'block'
-                }}
-              >
-                <div className="absolute top-1/2 right-0 h-8 w-1 bg-border rounded opacity-0 hover:opacity-100" />
+                {/* Books sidebar overlays on top of the left sidebar, leaving space for icons */}
+                {booksSidebarOpen && (
+                  <div 
+                    className="absolute top-0 h-full z-10"
+                    style={{ 
+                      left: `${iconWidth}px`,
+                      width: `${settings.leftSidebar.width - iconWidth}px`
+                    }}
+                  >
+                    <NestedSidebar
+                      isOpen={booksSidebarOpen}
+                      title="Books"
+                      icon={<Book className="h-5 w-5" />}
+                      items={books}
+                      activeItemId={activeBook}
+                      setActiveItemId={setActiveBook}
+                      onClose={() => setBooksSidebarOpen(false)}
+                      isLoading={loadingBooks}
+                    />
+                  </div>
+                )}
+                
+                {/* Sparks sidebar overlays on top of the left sidebar, leaving space for icons */}
+                {sparksSidebarOpen && (
+                  <div 
+                    className="absolute top-0 h-full z-10"
+                    style={{ 
+                      left: `${iconWidth}px`,
+                      width: `${settings.leftSidebar.width - iconWidth}px`
+                    }}
+                  >
+                    <NestedSidebar
+                      isOpen={sparksSidebarOpen}
+                      title="Sparks"
+                      icon={<Sparkles className="h-5 w-5" />}
+                      items={sparks}
+                      activeItemId={activeSpark}
+                      setActiveItemId={setActiveSpark}
+                      onClose={() => setSparksSidebarOpen(false)}
+                      isLoading={loadingSparks}
+                    />
+                  </div>
+                )}
               </div>
-            </div>
+            )}
             
             {/* Main content area - takes remaining space */}
             <div className="flex-1 overflow-hidden">
