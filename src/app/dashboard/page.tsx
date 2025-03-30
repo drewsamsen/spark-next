@@ -14,6 +14,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default function Dashboard() {
   const { settings, updateLeftSidebarWidth } = useUISettings();
+  
+  // Track if component has mounted to prevent hydration mismatch
+  const [hasMounted, setHasMounted] = useState(false);
+  
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
   
@@ -39,12 +43,17 @@ export default function Dashboard() {
   const [sidebarWidth, setSidebarWidth] = useState(settings.leftSidebar.width);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
 
+  // Set hasMounted to true after the component mounts
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   // Update local state when settings change (but not during resize)
   useEffect(() => {
-    if (!isResizing) {
+    if (hasMounted && !isResizing) {
       setSidebarWidth(settings.leftSidebar.width);
     }
-  }, [settings.leftSidebar.width, isResizing]);
+  }, [hasMounted, settings.leftSidebar.width, isResizing]);
 
   // Function to load books data
   const loadBooks = async () => {
@@ -143,10 +152,19 @@ export default function Dashboard() {
       }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
       if (isResizing) {
-        // Only update localStorage when drag is complete
-        updateLeftSidebarWidth(sidebarWidth);
+        // Calculate the final width directly to avoid stale state
+        const finalWidth = e.clientX;
+        // Apply constraints to ensure valid width
+        const validWidth = Math.max(
+          UI_SETTINGS.LEFT_SIDEBAR.MIN_WIDTH,
+          Math.min(finalWidth, UI_SETTINGS.LEFT_SIDEBAR.MAX_WIDTH)
+        );
+        // First update local state
+        setSidebarWidth(validWidth);
+        // Then save to localStorage
+        updateLeftSidebarWidth(validWidth);
       }
       setIsResizing(false);
     };
@@ -164,10 +182,13 @@ export default function Dashboard() {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, sidebarWidth, updateLeftSidebarWidth]);
+  }, [isResizing, updateLeftSidebarWidth]);
 
   // Width of icons-only part of the left sidebar when projects sidebar is open
   const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
+
+  // Use default width during server rendering and before mounting to prevent hydration mismatch
+  const displayWidth = hasMounted ? sidebarWidth : UI_SETTINGS.LEFT_SIDEBAR.DEFAULT_WIDTH;
 
   return (
     <TooltipProvider>
@@ -181,8 +202,8 @@ export default function Dashboard() {
           <div 
             className="relative h-full" 
             style={{ 
-              width: leftSidebarOpen ? `${sidebarWidth}px` : '0px',
-              minWidth: leftSidebarOpen ? `${sidebarWidth}px` : '0px',
+              width: leftSidebarOpen ? `${displayWidth}px` : '0px',
+              minWidth: leftSidebarOpen ? `${displayWidth}px` : '0px',
               transition: isResizing ? 'none' : 'width 300ms ease-in-out, min-width 300ms ease-in-out'
             }}
           >
@@ -201,7 +222,7 @@ export default function Dashboard() {
                 className="absolute top-0 h-full z-10"
                 style={{ 
                   left: `${iconWidth}px`,
-                  width: `${sidebarWidth - iconWidth}px`
+                  width: `${displayWidth - iconWidth}px`
                 }}
               >
                 <NestedSidebar
@@ -223,7 +244,7 @@ export default function Dashboard() {
                 className="absolute top-0 h-full z-10"
                 style={{ 
                   left: `${iconWidth}px`,
-                  width: `${sidebarWidth - iconWidth}px`
+                  width: `${displayWidth - iconWidth}px`
                 }}
               >
                 <NestedSidebar

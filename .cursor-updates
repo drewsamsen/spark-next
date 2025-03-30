@@ -7,3 +7,7 @@
 - Added Storybook with Button component and stories, updated .cursorrules with Storybook guidelines
 - Captured screenshot of Button component stories in Storybook
 - Added localStorage persistence for right sidebar width to maintain user's preferred width across sessions.
+- Fixed issue with right sidebar width persistence by improving the save mechanism and directly interacting with localStorage.
+- Removed unused WebSocket configuration from tRPC client to eliminate browser console errors.
+- Fixed CSS transition conflicts in the right sidebar that caused incorrect width rendering on page reload.
+- Fixed React hydration mismatch errors by implementing hasMounted pattern for sidebar widths loaded from localStorage.

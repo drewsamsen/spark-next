@@ -13,22 +13,25 @@ interface RightSidebarProps {
 export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
   const { settings, updateRightSidebarWidth } = useUISettings();
   
+  // Track if component has mounted to prevent hydration mismatch
+  const [hasMounted, setHasMounted] = useState(false);
+  
   // Resize functionality
   const [isResizing, setIsResizing] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(settings.rightSidebar.width);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
 
-  // Set initial width from settings when component mounts
+  // Set hasMounted to true after the component mounts
   useEffect(() => {
-    setSidebarWidth(settings.rightSidebar.width);
+    setHasMounted(true);
   }, []);
 
-  // Update local state when settings change (but not during resize)
+  // Initialize sidebar width from settings after mount
   useEffect(() => {
-    if (!isResizing) {
+    if (hasMounted && !isResizing) {
       setSidebarWidth(settings.rightSidebar.width);
     }
-  }, [settings.rightSidebar.width, isResizing]);
+  }, [hasMounted, settings.rightSidebar.width, isResizing]);
 
   // Handle resize
   useEffect(() => {
@@ -52,10 +55,19 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
       }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
       if (isResizing) {
-        // Save the final sidebar width to localStorage
-        updateRightSidebarWidth(sidebarWidth);
+        // Calculate the final width directly to avoid stale state
+        const finalWidth = window.innerWidth - e.clientX;
+        // Apply constraints to ensure valid width
+        const validWidth = Math.max(
+          UI_SETTINGS.RIGHT_SIDEBAR.MIN_WIDTH,
+          Math.min(finalWidth, UI_SETTINGS.RIGHT_SIDEBAR.MAX_WIDTH)
+        );
+        // First update local state
+        setSidebarWidth(validWidth);
+        // Then save to localStorage
+        updateRightSidebarWidth(validWidth);
       }
       setIsResizing(false);
     };
@@ -73,17 +85,23 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, sidebarWidth, updateRightSidebarWidth]);
+  }, [isResizing, updateRightSidebarWidth]);
 
   if (!isOpen) return null;
 
+  // Use default width during server rendering and before mounting to prevent hydration mismatch
+  const width = hasMounted ? sidebarWidth : UI_SETTINGS.RIGHT_SIDEBAR.DEFAULT_WIDTH;
+  
+  // Construct style object only once at render time
+  const sidebarStyle = {
+    width: `${width}px`,
+    transition: isResizing ? 'none' : 'width 300ms ease-in-out'
+  };
+
   return (
     <div 
-      className="h-full border-l bg-sidebar overflow-hidden transition-all duration-300 ease-in-out animate-fade-in flex-shrink-0 relative"
-      style={{ 
-        width: `${sidebarWidth}px`,
-        transition: isResizing ? 'none' : 'width 300ms ease-in-out'
-      }}
+      className="h-full border-l bg-sidebar overflow-hidden flex-shrink-0 relative"
+      style={sidebarStyle}
     >
       {/* Resize handle */}
       <div
