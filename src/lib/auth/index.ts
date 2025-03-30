@@ -1,5 +1,3 @@
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "@/lib/db";
 import {
   getServerSession,
   type NextAuthOptions,
@@ -58,7 +56,12 @@ declare module "next-auth" {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // We'll replace the Prisma adapter with Supabase later
+  // For now, comment it out to prevent errors
+  // adapter: SupabaseAdapter({
+  //   url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  //   secret: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  // }),
   providers: [
     EmailProvider({
       server: {
@@ -73,7 +76,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: {
-    strategy: "database",
+    strategy: "jwt", // Changed from "database" to "jwt" since we removed the adapter
   },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
@@ -86,13 +89,11 @@ export const authOptions: NextAuthOptions = {
         // Enable this to restrict sign-ins to certain domains or allowlist
         const domainCheck = ALLOWED_DOMAINS.some((d) => email.endsWith(d));
         if (!domainCheck) {
-          const inAllowlist = await prisma.allowlist.findUnique({
-            where: { email },
-          });
-
-          if (!inAllowlist) {
-            return false;
-          }
+          // We'll implement this check with Supabase later
+          // const inAllowlist = await checkAllowlist(email);
+          // if (!inAllowlist) {
+          //   return false;
+          // }
         }
         */
 
@@ -102,16 +103,15 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
     },
-    async session({ session, user }) {
+    async session({ session, token }) {
       try {
+        // With JWT strategy, we get the token instead of user
         return {
           ...session,
           user: {
             ...session.user,
-            id: user.id,
-            role: user.role,
-            login: user.login,
-            isAdmin: user.isAdmin,
+            id: token.sub as string,
+            // We'll add more user properties here when we implement Supabase auth
           },
         };
       } catch (error) {
@@ -119,6 +119,16 @@ export const authOptions: NextAuthOptions = {
         return session;
       }
     },
+    async jwt({ token, user }) {
+      // Include user data in the token when it's available
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+        token.login = user.login;
+        token.isAdmin = user.isAdmin;
+      }
+      return token;
+    }
   },
   pages: {
     signIn: "/auth/signin",
