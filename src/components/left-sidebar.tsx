@@ -197,11 +197,11 @@ export default function LeftSidebar({
       };
 
   return (
-    <div className="h-full w-full bg-sidebar border-r z-20 relative"
+    <div className="h-full w-full bg-sidebar border-r z-20 relative dark:border-spark-dark-neutral/20"
          style={isProjectsSidebarOpen ? { width: `${sidebarWidth}px`, transition: 'none' } : undefined}>
       {/* Main sidebar content */}
       <div className="h-full flex flex-col" style={mainSidebarStyle}>
-        <div className="h-14 flex items-center border-b px-4 md:h-[57px]"></div>
+        <div className="h-14 flex items-center border-b px-4 md:h-[57px] dark:border-spark-dark-neutral/20"></div>
         <div className="flex-1 overflow-auto scrollbar-thin py-2">
           <nav className="grid gap-1 px-2">
             {sidebarItems.map((item) => (
@@ -211,13 +211,13 @@ export default function LeftSidebar({
                     <a
                       href={item.href || "#"}
                       onClick={(e) => handleNavItemClick(item, e)}
-                      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
+                      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
                       aria-label={item.tooltip}
                     >
                       {item.icon}
                     </a>
                   </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={-20} className="z-[200]">
+                  <TooltipContent side="right" sideOffset={-20} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
                     {item.tooltip}
                   </TooltipContent>
                 </Tooltip>
@@ -226,7 +226,7 @@ export default function LeftSidebar({
                   key={item.name}
                   href={item.href || "#"}
                   onClick={(e) => handleNavItemClick(item, e)}
-                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary"
+                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
                 >
                   {item.icon}
                   <span>{item.name}</span>
@@ -245,13 +245,13 @@ export default function LeftSidebar({
                       e.preventDefault();
                       toggleProjectsSidebar("Settings");
                     }}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary"
+                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
                     aria-label="Settings"
                   >
                     <Settings className="h-5 w-5" />
                   </a>
                 </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={-20} className="z-[200]">
+                <TooltipContent side="right" sideOffset={-20} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
                   Settings
                 </TooltipContent>
               </Tooltip>
@@ -262,7 +262,7 @@ export default function LeftSidebar({
                   e.preventDefault();
                   toggleProjectsSidebar("Settings");
                 }}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary"
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
               >
                 <Settings className="h-5 w-5" />
                 <span>Settings</span>
@@ -276,13 +276,13 @@ export default function LeftSidebar({
                   <a
                     href="/import"
                     onClick={handleImportClick}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary"
+                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
                     aria-label="Import"
                   >
                     <FileInput className="h-5 w-5" />
                   </a>
                 </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={-20} className="z-[200]">
+                <TooltipContent side="right" sideOffset={-20} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
                   Import
                 </TooltipContent>
               </Tooltip>
@@ -290,7 +290,7 @@ export default function LeftSidebar({
               <a
                 href="/import"
                 onClick={handleImportClick}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary"
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
               >
                 <FileInput className="h-5 w-5" />
                 <span>Import</span>
@@ -304,7 +304,7 @@ export default function LeftSidebar({
       {!isProjectsSidebarOpen && (
         <div
           ref={resizeHandleRef}
-          className="absolute right-0 inset-y-0 w-2 bg-transparent hover:bg-spark-primary/20 cursor-ew-resize z-30"
+          className="absolute right-0 inset-y-0 w-2 bg-transparent hover:bg-spark-primary/20 dark:hover:bg-spark-dark-primary/20 cursor-ew-resize z-30"
           title="Drag to resize"
           style={{ transition: isResizing ? 'none' : 'opacity 200ms ease-in-out' }}
         />

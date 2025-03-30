@@ -54,3 +54,6 @@
 - Implemented client-side navigation with dedicated route groups and an AppShell component to avoid full page reloads between app sections.
 - Added a custom color palette with coral and teal colors, enhancing the application's visual appeal across buttons, icons, and UI elements.
 - Refactored color system to use semantic naming (brand, primary, secondary, neutral, base) rather than appearance-based names, making future theme changes easier.
+- Enhanced dark mode with a dedicated color palette, improved contrast, and consistent styling across all components for better accessibility and user experience.
+- Updated dark mode sidebars to have matching background colors, ensuring consistent appearance between the header and both left and right sidebars.
+- Improved right sidebar styling in dark mode by updating borders, property item borders, and resize handle hover states to match the subtle styling of the left sidebar for better visual consistency.

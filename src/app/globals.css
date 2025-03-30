@@ -16,7 +16,7 @@ body {
 }
 
 body {
-  @apply flex w-full flex-col bg-gradient-to-br from-blue-50 to-red-50 text-slate-900 dark:from-slate-900 dark:to-slate-800 dark:text-slate-100;
+  @apply flex w-full flex-col bg-background text-foreground dark:bg-spark-dark-backdrop dark:text-slate-100;
 }
 
 #__next {
@@ -121,40 +121,51 @@ body {
   }
 
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-    --muted: 223 47% 11%;
-    --muted-foreground: 215.4 16.3% 56.9%;
-    --accent: 216 34% 17%;
+    --background: 221 39% 7%;
+    --foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20.2% 70%;
+    --accent: 187 50% 36%;
     --accent-foreground: 210 40% 98%;
     --popover: 224 71% 4%;
     --popover-foreground: 215 20.2% 65.1%;
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
-    --card: 224 71% 4%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --card: 221 39% 11%;
     --card-foreground: 213 31% 91%;
-    --primary: 210 40% 98%;
+    --primary: 187 92% 36%;
     --primary-foreground: 222.2 47.4% 1.2%;
-    --secondary: 222.2 47.4% 11.2%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 35 90% 60%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-    --ring: 216 34% 17%;
+    --ring: 187 50% 36%;
     
-    /* Sidebar colors - Dark mode */
-    --sidebar: 224 71% 4%;
-    --sidebar-foreground: 213 31% 91%;
-    --sidebar-accent: 216 34% 17%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-muted: 223 47% 11%;
-    --sidebar-muted-foreground: 215.4 16.3% 56.9%;
-    --sidebar-border: 216 34% 17%;
+    /* Sidebar colors - Dark mode - Updated to match main background */
+    --sidebar: 221 39% 7%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-accent: 187 50% 25%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-muted: 217 33% 17%;
+    --sidebar-muted-foreground: 215 20.2% 70%;
+    --sidebar-border: 217 33% 17%;
   }
 }
 
 @layer base {
   body {
     @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+/* Custom dark mode utilities */
+@layer utilities {
+  .dark-card {
+    @apply dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20;
+  }
+  
+  .dark-hover {
+    @apply hover:bg-spark-neutral/10 dark:hover:bg-spark-dark-neutral/20;
   }
 }
 
@@ -221,4 +232,9 @@ body {
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   @apply bg-muted-foreground/50;
+}
+
+/* Dark mode focus outline */
+.dark *:focus-visible {
+  @apply outline-spark-dark-primary/70 outline-offset-2;
 }

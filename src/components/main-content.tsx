@@ -11,25 +11,25 @@ export default function MainContent() {
       icon: <Calendar className="h-6 w-6" />,
       title: "Calendar",
       description: "View and manage your schedule",
-      color: "bg-spark-primary/20 dark:bg-spark-primary/30 text-spark-primary dark:text-spark-primary"
+      color: "bg-spark-primary/20 dark:bg-spark-dark-primary/30 text-spark-primary dark:text-spark-dark-primary"
     },
     {
       icon: <Users className="h-6 w-6" />,
       title: "Contacts",
       description: "Manage your network connections",
-      color: "bg-spark-brand/20 dark:bg-spark-brand/30 text-spark-brand dark:text-spark-brand"
+      color: "bg-spark-brand/20 dark:bg-spark-dark-brand/30 text-spark-brand dark:text-spark-dark-brand"
     },
     {
       icon: <FileText className="h-6 w-6" />,
       title: "Documents",
       description: "View and edit your documents",
-      color: "bg-spark-secondary/20 dark:bg-spark-secondary/30 text-spark-secondary dark:text-spark-secondary"
+      color: "bg-spark-secondary/20 dark:bg-spark-dark-secondary/30 text-spark-secondary dark:text-spark-dark-secondary"
     },
     {
       icon: <Settings className="h-6 w-6" />,
       title: "Settings",
       description: "Customize your experience",
-      color: "bg-spark-neutral/20 dark:bg-spark-neutral/30 text-spark-neutral dark:text-spark-neutral"
+      color: "bg-spark-neutral/20 dark:bg-spark-dark-neutral/30 text-spark-neutral dark:text-spark-dark-neutral"
     }
   ];
 
@@ -40,7 +40,7 @@ export default function MainContent() {
       description: "Set up a new project workspace with customizable templates",
       date: "Today",
       status: "In Progress",
-      statusColor: "bg-spark-primary"
+      statusColor: "bg-spark-primary dark:bg-spark-dark-primary"
     },
     {
       title: "Review analytics dashboard",
@@ -54,14 +54,14 @@ export default function MainContent() {
       description: "Revise and update user guides for recent feature changes",
       date: "3 days ago",
       status: "Pending",
-      statusColor: "bg-spark-brand"
+      statusColor: "bg-spark-brand dark:bg-spark-dark-brand"
     },
     {
       title: "Plan marketing campaign",
       description: "Develop strategy for Q4 product launch",
       date: "1 week ago",
       status: "In Review",
-      statusColor: "bg-spark-secondary"
+      statusColor: "bg-spark-secondary dark:bg-spark-dark-secondary"
     }
   ];
 
@@ -71,7 +71,7 @@ export default function MainContent() {
         {/* Welcome section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Welcome to <span className="text-spark-brand">Spark</span></h1>
+            <h1 className="text-2xl font-bold tracking-tight">Welcome to <span className="text-spark-brand dark:text-spark-dark-brand">Spark</span></h1>
             <p className="text-muted-foreground">
               Your intelligent workspace for personal knowledge management
             </p>
@@ -82,7 +82,7 @@ export default function MainContent() {
               <input
                 type="search"
                 placeholder="Search in dashboard..."
-                className="rounded-md border bg-background py-2 pl-8 pr-3 text-sm outline-none focus:ring-1 focus:ring-spark-primary"
+                className="rounded-md border bg-background py-2 pl-8 pr-3 text-sm outline-none focus:ring-1 focus:ring-spark-primary dark:focus:ring-spark-dark-primary dark:border-spark-dark-neutral/30"
               />
             </div>
             <Button variant="primary">
@@ -99,7 +99,7 @@ export default function MainContent() {
             {items.map((item, index) => (
               <div 
                 key={index}
-                className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow dark-card"
               >
                 <div className="flex items-start gap-4">
                   <div className={cn("p-2 rounded-full", item.color)}>
@@ -120,11 +120,11 @@ export default function MainContent() {
         {/* List section */}
         <div>
           <h2 className="font-semibold text-lg mb-4">Recent Activities</h2>
-          <div className="border rounded-lg divide-y overflow-hidden">
+          <div className="border border-sidebar rounded-lg divide-y divide-sidebar overflow-hidden dark-card">
             {listItems.map((item, index) => (
               <div 
                 key={index}
-                className="p-4 bg-background hover:bg-spark-neutral/10 transition-colors"
+                className="p-4 bg-background hover:bg-spark-neutral/10 dark:hover:bg-spark-dark-neutral/20 transition-colors"
               >
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-medium">{item.title}</h3>
@@ -147,23 +147,23 @@ export default function MainContent() {
             <Button variant="branded" size="sm">View All</Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="border rounded-lg p-4 hover:border-spark-primary transition-colors group">
-              <div className="h-40 rounded border flex items-center justify-center bg-spark-primary/10 group-hover:bg-spark-primary/20 transition-colors mb-2">
-                <FileText className="h-10 w-10 text-spark-primary/70" />
+            <div className="border border-sidebar rounded-lg p-4 hover:border-spark-primary dark:hover:border-spark-dark-primary transition-colors group dark-card">
+              <div className="h-40 rounded border border-sidebar flex items-center justify-center bg-spark-primary/10 dark:bg-spark-dark-primary/20 group-hover:bg-spark-primary/20 dark:group-hover:bg-spark-dark-primary/30 transition-colors mb-2">
+                <FileText className="h-10 w-10 text-spark-primary/70 dark:text-spark-dark-primary/80" />
               </div>
               <h3 className="font-medium truncate">Project Proposal.pdf</h3>
               <p className="text-xs text-muted-foreground">Updated 2 hours ago</p>
             </div>
-            <div className="border rounded-lg p-4 hover:border-spark-brand transition-colors group">
-              <div className="h-40 rounded border flex items-center justify-center bg-spark-brand/10 group-hover:bg-spark-brand/20 transition-colors mb-2">
-                <FileText className="h-10 w-10 text-spark-brand/70" />
+            <div className="border border-sidebar rounded-lg p-4 hover:border-spark-brand dark:hover:border-spark-dark-brand transition-colors group dark-card">
+              <div className="h-40 rounded border border-sidebar flex items-center justify-center bg-spark-brand/10 dark:bg-spark-dark-brand/20 group-hover:bg-spark-brand/20 dark:group-hover:bg-spark-dark-brand/30 transition-colors mb-2">
+                <FileText className="h-10 w-10 text-spark-brand/70 dark:text-spark-dark-brand/80" />
               </div>
               <h3 className="font-medium truncate">Meeting Notes.docx</h3>
               <p className="text-xs text-muted-foreground">Updated yesterday</p>
             </div>
-            <div className="border rounded-lg p-4 hover:border-spark-secondary transition-colors group">
-              <div className="h-40 rounded border flex items-center justify-center bg-spark-secondary/10 group-hover:bg-spark-secondary/20 transition-colors mb-2">
-                <FileText className="h-10 w-10 text-spark-secondary/70" />
+            <div className="border border-sidebar rounded-lg p-4 hover:border-spark-secondary dark:hover:border-spark-dark-secondary transition-colors group dark-card">
+              <div className="h-40 rounded border border-sidebar flex items-center justify-center bg-spark-secondary/10 dark:bg-spark-dark-secondary/20 group-hover:bg-spark-secondary/20 dark:group-hover:bg-spark-dark-secondary/30 transition-colors mb-2">
+                <FileText className="h-10 w-10 text-spark-secondary/70 dark:text-spark-dark-secondary/80" />
               </div>
               <h3 className="font-medium truncate">Research Data.xlsx</h3>
               <p className="text-xs text-muted-foreground">Updated 3 days ago</p>

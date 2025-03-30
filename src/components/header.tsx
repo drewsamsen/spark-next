@@ -50,7 +50,7 @@ export default function Header({
   };
   
   return (
-    <header className="border-b bg-background">
+    <header className="border-b bg-background dark:border-spark-dark-neutral/20">
       <div className="flex h-14 items-center justify-between px-4">
         {/* Left section */}
         <div className="flex items-center gap-2">
@@ -65,12 +65,12 @@ export default function Header({
               onClick={handleLogoClick} 
               className="flex items-center gap-1 hover:opacity-80"
             >
-              <LogoIcon className="h-5 w-5 text-spark-brand" />
+              <LogoIcon className="h-5 w-5 text-spark-brand dark:text-spark-dark-brand" />
               <span className="font-medium text-lg hidden md:inline-block">Spark</span>
             </a>
           ) : (
             <Link href="/dashboard" className="flex items-center gap-1 hover:opacity-80">
-              <LogoIcon className="h-5 w-5 text-spark-brand" />
+              <LogoIcon className="h-5 w-5 text-spark-brand dark:text-spark-dark-brand" />
               <span className="font-medium text-lg hidden md:inline-block">Spark</span>
             </Link>
           )}
@@ -88,7 +88,7 @@ export default function Header({
             <input
               type="search"
               placeholder="Search..."
-              className="w-full rounded-md border bg-background pl-9 py-2 text-sm outline-none focus:ring-1 focus:ring-spark-primary"
+              className="w-full rounded-md border bg-background pl-9 py-2 text-sm outline-none focus:ring-1 focus:ring-spark-primary dark:focus:ring-spark-dark-primary dark:border-spark-dark-neutral/30"
             />
           </div>
         </div>

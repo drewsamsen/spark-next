@@ -70,12 +70,16 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
     if (isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ew-resize';
     }
 
     return () => {
       resizeHandle.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      if (isResizing) {
+        document.body.style.cursor = '';
+      }
     };
   }, [isResizing, updateRightSidebarWidth]);
 
@@ -89,19 +93,21 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
 
   return (
     <div 
-      className="h-full border-l bg-sidebar overflow-hidden flex-shrink-0 relative"
+      className="h-full border-l border-sidebar bg-sidebar overflow-hidden flex-shrink-0 relative"
       style={sidebarStyle}
     >
       {/* Resize handle */}
       <div
         ref={resizeHandleRef}
-        className="absolute inset-y-0 left-0 w-1 cursor-ew-resize hover:bg-border"
+        className="absolute inset-y-0 left-0 w-2 bg-transparent hover:bg-spark-primary/20 dark:hover:bg-spark-dark-primary/20 cursor-ew-resize z-30"
+        title="Drag to resize"
+        style={{ transition: isResizing ? 'none' : 'opacity 200ms ease-in-out' }}
       >
-        <div className="absolute top-1/2 left-0 h-8 w-1 bg-border rounded opacity-0 hover:opacity-100" />
+        <div className="absolute top-1/2 left-0 h-8 w-1 bg-transparent hover:bg-spark-primary/20 dark:hover:bg-spark-dark-primary/20 rounded opacity-0 hover:opacity-100" />
       </div>
         
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b p-4">
+        <div className="flex items-center justify-between border-b border-sidebar p-4">
           <h2 className="text-sm font-medium">Inspector</h2>
           <Button 
             variant="ghost" 
@@ -126,19 +132,19 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
             <div className="space-y-2">
               <h3 className="text-sm font-medium leading-none">Properties</h3>
               <div className="grid gap-1.5">
-                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border p-2 text-sm">
+                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border border-sidebar p-2 text-sm">
                   <span className="font-medium">Type</span>
                   <span className="truncate">-</span>
                 </div>
-                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border p-2 text-sm">
+                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border border-sidebar p-2 text-sm">
                   <span className="font-medium">Created</span>
                   <span className="truncate">-</span>
                 </div>
-                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border p-2 text-sm">
+                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border border-sidebar p-2 text-sm">
                   <span className="font-medium">Updated</span>
                   <span className="truncate">-</span>
                 </div>
-                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border p-2 text-sm">
+                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border border-sidebar p-2 text-sm">
                   <span className="font-medium">Status</span>
                   <span className="truncate">-</span>
                 </div>
@@ -148,15 +154,15 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
             <div className="space-y-2">
               <h3 className="text-sm font-medium leading-none">Statistics</h3>
               <div className="grid gap-1.5">
-                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border p-2 text-sm">
+                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border border-sidebar p-2 text-sm">
                   <span className="font-medium">Words</span>
                   <span className="truncate">-</span>
                 </div>
-                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border p-2 text-sm">
+                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border border-sidebar p-2 text-sm">
                   <span className="font-medium">Highlights</span>
                   <span className="truncate">-</span>
                 </div>
-                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border p-2 text-sm">
+                <div className="grid grid-cols-2 items-center gap-1.5 rounded-md border border-sidebar p-2 text-sm">
                   <span className="font-medium">Notes</span>
                   <span className="truncate">-</span>
                 </div>

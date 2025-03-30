@@ -69,6 +69,15 @@ export default {
           secondary: "#F0941F",
           neutral: "#90A19D",
           base: "#363432",
+          dark: {
+            brand: "#FF7A43",
+            primary: "#00A2B8",
+            secondary: "#FFB347",
+            neutral: "#607A76",
+            base: "#1E1D1B",
+            surface: "#282726",
+            backdrop: "#121110"
+          }
         },
         beige: "#f8e8e0",
         "dark-beige": "#fcf3ed",
