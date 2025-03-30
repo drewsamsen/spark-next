@@ -16,6 +16,7 @@ import { ModeToggle } from "@/components/theme/ModeToggle";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { LogoIcon } from "@/components/icons/LogoIcon";
 
 interface HeaderProps {
   toggleLeftSidebar: () => void;
@@ -45,7 +46,7 @@ export default function Header({ toggleLeftSidebar, toggleRightSidebar }: Header
           </Button>
           
           <Link href="/dashboard" className="flex items-center gap-1 hover:opacity-80">
-            <Blocks className="h-5 w-5" />
+            <LogoIcon className="h-5 w-5" />
             <span className="font-medium text-lg hidden md:inline-block">Spark</span>
           </Link>
           

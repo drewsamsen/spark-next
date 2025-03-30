@@ -49,3 +49,5 @@
 - Implemented proper layout structure with a single shared layout file supporting nested components, fixing circular dependency issues with context providers.
 - Simplified application structure with direct route paths (dashboard/page.tsx, import/page.tsx) and a shared dashboard layout component, eliminating route groups.
 - Improved navigation by changing Inbox to Dashboard in the sidebar, making the app name in header link to dashboard, and adding dynamic breadcrumbs.
+- Created a custom LogoIcon component that can be updated with the site's SVG logo and integrated it into the header.
+- Implemented the custom leaf/flame SVG logo into the LogoIcon component for use in the application header.
