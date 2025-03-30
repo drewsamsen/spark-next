@@ -56,7 +56,7 @@ export function useUserSettings(): UseUserSettingsReturn {
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      dedupingInterval: 60000, // 1 minute
+      dedupingInterval: 600000, // 10 minute
       fallbackData: DEFAULT_USER_SETTINGS
     }
   );
