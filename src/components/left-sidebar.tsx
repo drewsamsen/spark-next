@@ -45,6 +45,7 @@ export default function LeftSidebar({
   isProjectsSidebarOpen
 }: LeftSidebarProps) {
   const { settings, updateLeftSidebarWidth } = useUISettings();
+  const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
 
   // Resize functionality
   const [isResizing, setIsResizing] = useState(false);
@@ -58,29 +59,9 @@ export default function LeftSidebar({
     }
   }, [settings.leftSidebar.width, isResizing]);
 
-  // Reset resize handlers when nested sidebar state changes
-  useEffect(() => {
-    // When the nested sidebar closes, we need to ensure resize handlers are reattached
-    if (!isProjectsSidebarOpen && resizeHandleRef.current) {
-      // Force a refresh of the resize handler
-      const currentHandle = resizeHandleRef.current;
-      
-      // Trigger a small timeout to allow the DOM to update
-      setTimeout(() => {
-        if (currentHandle) {
-          // Simulate a mouse leave and enter to refresh the event binding
-          const leaveEvent = new MouseEvent('mouseleave');
-          const enterEvent = new MouseEvent('mouseenter');
-          currentHandle.dispatchEvent(leaveEvent);
-          currentHandle.dispatchEvent(enterEvent);
-        }
-      }, 50);
-    }
-  }, [isProjectsSidebarOpen]);
-
   // Handle resize
   useEffect(() => {
-    if (!resizeHandleRef.current) return;
+    if (!resizeHandleRef.current || isProjectsSidebarOpen) return;
 
     const handleMouseDown = (e: MouseEvent) => {
       e.preventDefault();
@@ -123,20 +104,20 @@ export default function LeftSidebar({
     if (isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
-      // Add cursor styling to the entire document during resize
       document.body.style.cursor = 'ew-resize';
     }
 
     return () => {
-      resizeHandle.removeEventListener('mousedown', handleMouseDown);
+      if (resizeHandle) {
+        resizeHandle.removeEventListener('mousedown', handleMouseDown);
+      }
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
-      // Reset cursor
       if (isResizing) {
         document.body.style.cursor = '';
       }
     };
-  }, [isResizing, updateLeftSidebarWidth]);
+  }, [isResizing, updateLeftSidebarWidth, isProjectsSidebarOpen]);
 
   // Sidebar items configuration
   const sidebarItems: NavItem[] = [
@@ -188,16 +169,19 @@ export default function LeftSidebar({
 
   if (!isOpen) return null;
 
-  // Always use the full sidebar width, regardless of nested sidebar state
-  const sidebarStyle = { 
-    width: `${sidebarWidth}px`, 
-    transition: isResizing ? 'none' : 'width 300ms ease-in-out' 
-  };
+  // Calculate styles for different states
+  const mainSidebarStyle = isProjectsSidebarOpen
+    ? { width: `${iconWidth}px`, transition: 'none' }
+    : { 
+        width: `${sidebarWidth}px`, 
+        transition: 'none' 
+      };
 
   return (
-    <div className="h-full w-full bg-sidebar border-r transition-all duration-300 ease-in-out z-10 relative">
+    <div className="h-full w-full bg-sidebar border-r z-10 relative"
+         style={isProjectsSidebarOpen ? { width: `${sidebarWidth}px`, transition: 'none' } : undefined}>
       {/* Main sidebar content */}
-      <div className="h-full flex flex-col" style={sidebarStyle}>
+      <div className="h-full flex flex-col" style={mainSidebarStyle}>
         <div className="h-14 flex items-center border-b px-4 md:h-[57px]"></div>
         <div className="flex-1 overflow-auto scrollbar-thin py-2">
           <nav className="grid gap-1 px-2">
@@ -281,13 +265,15 @@ export default function LeftSidebar({
         </div>
       </div>
       
-      {/* Resize handle - always render regardless of sidebar mode */}
-      <div
-        ref={resizeHandleRef}
-        className="absolute right-0 inset-y-0 w-2 bg-transparent hover:bg-blue-500/20 cursor-ew-resize z-30"
-        title="Drag to resize"
-        style={{ transition: isResizing ? 'none' : 'opacity 200ms ease-in-out' }}
-      />
+      {/* Resize handle - only show when nested sidebar is closed */}
+      {!isProjectsSidebarOpen && (
+        <div
+          ref={resizeHandleRef}
+          className="absolute right-0 inset-y-0 w-2 bg-transparent hover:bg-blue-500/20 cursor-ew-resize z-30"
+          title="Drag to resize"
+          style={{ transition: isResizing ? 'none' : 'opacity 200ms ease-in-out' }}
+        />
+      )}
     </div>
   );
 } 

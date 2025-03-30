@@ -151,8 +151,7 @@ export default function Dashboard() {
                   <div 
                     className="absolute top-0 h-full z-10"
                     style={{ 
-                      left: `${iconWidth}px`,
-                      width: `${settings.leftSidebar.width - iconWidth}px`
+                      left: `${iconWidth}px`
                     }}
                   >
                     <NestedSidebar
@@ -173,8 +172,7 @@ export default function Dashboard() {
                   <div 
                     className="absolute top-0 h-full z-10"
                     style={{ 
-                      left: `${iconWidth}px`,
-                      width: `${settings.leftSidebar.width - iconWidth}px`
+                      left: `${iconWidth}px`
                     }}
                   >
                     <NestedSidebar

@@ -3,10 +3,11 @@
 import { cn } from "@/lib/utils";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SidebarItem } from "@/lib/mock-api/types";
+import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
 
 // Sort types
 type SortField = 'name' | 'highlightsCount' | 'date';
@@ -40,6 +41,13 @@ export default function NestedSidebar({
 }: NestedSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sort, setSort] = useState<SortState>({ field: 'name', direction: 'asc' });
+  const { settings, updateLeftSidebarWidth } = useUISettings();
+  const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
+  
+  // Resize functionality
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeHandleRef = useRef<HTMLDivElement>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(settings.leftSidebar.width - iconWidth);
   
   // Load sort preferences from localStorage
   useEffect(() => {
@@ -57,6 +65,79 @@ export default function NestedSidebar({
   useEffect(() => {
     localStorage.setItem(`${title.toLowerCase()}-sort`, JSON.stringify(sort));
   }, [sort, title]);
+  
+  // Update width when settings change (but not during resize)
+  useEffect(() => {
+    if (!isResizing) {
+      setSidebarWidth(settings.leftSidebar.width - iconWidth);
+    }
+  }, [settings.leftSidebar.width, isResizing, iconWidth]);
+
+  // Handle resize
+  useEffect(() => {
+    if (!resizeHandleRef.current) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      // The nested sidebar width is the mouse position minus the icon width
+      const nestedWidth = Math.max(e.clientX - iconWidth, UI_SETTINGS.LEFT_SIDEBAR.MIN_WIDTH - iconWidth);
+      
+      // Calculate the total sidebar width (nested + icon)
+      const totalWidth = nestedWidth + iconWidth;
+      
+      // Apply constraints for the total width
+      if (totalWidth >= UI_SETTINGS.LEFT_SIDEBAR.MIN_WIDTH && 
+          totalWidth <= UI_SETTINGS.LEFT_SIDEBAR.MAX_WIDTH) {
+        setSidebarWidth(nestedWidth);
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (isResizing) {
+        // Calculate the nested sidebar width
+        const nestedWidth = Math.max(e.clientX - iconWidth, UI_SETTINGS.LEFT_SIDEBAR.MIN_WIDTH - iconWidth);
+        
+        // Calculate the total sidebar width (nested + icon) with constraints
+        const totalWidth = Math.max(
+          UI_SETTINGS.LEFT_SIDEBAR.MIN_WIDTH,
+          Math.min(nestedWidth + iconWidth, UI_SETTINGS.LEFT_SIDEBAR.MAX_WIDTH)
+        );
+        
+        // Update the nested sidebar width state
+        setSidebarWidth(totalWidth - iconWidth);
+        
+        // Save the total width to user settings
+        updateLeftSidebarWidth(totalWidth);
+      }
+      setIsResizing(false);
+    };
+
+    const resizeHandle = resizeHandleRef.current;
+    resizeHandle.addEventListener('mousedown', handleMouseDown);
+    
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      // Add cursor styling to the entire document during resize
+      document.body.style.cursor = 'ew-resize';
+    }
+
+    return () => {
+      resizeHandle.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      // Reset cursor
+      if (isResizing) {
+        document.body.style.cursor = '';
+      }
+    };
+  }, [isResizing, iconWidth, updateLeftSidebarWidth]);
 
   const handleSort = (field: SortField) => {
     setSort(prev => ({
@@ -94,9 +175,16 @@ export default function NestedSidebar({
 
   // If the sidebar isn't open, don't render anything
   if (!isOpen) return null;
+  
+  // Apply width to the sidebar
+  const nestedSidebarStyle = { 
+    width: `${sidebarWidth}px`,
+    transition: isResizing ? 'none' : 'none'
+  };
 
   return (
-    <div className="h-full border-l bg-sidebar transition-all duration-300 ease-in-out animate-fade-in w-full overflow-hidden">
+    <div className="h-full border-l border-r bg-sidebar animate-fade-in overflow-hidden relative"
+         style={nestedSidebarStyle}>
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b p-4">
           <div className="flex items-center gap-2">
@@ -201,6 +289,13 @@ export default function NestedSidebar({
           </div>
         </nav>
       </div>
+      
+      {/* Resize handle for nested sidebar */}
+      <div
+        ref={resizeHandleRef}
+        className="absolute right-0 inset-y-0 w-2 bg-transparent hover:bg-blue-500/20 cursor-ew-resize z-30"
+        title="Drag to resize"
+      />
     </div>
   );
 } 

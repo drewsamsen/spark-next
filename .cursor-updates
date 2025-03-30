@@ -29,3 +29,8 @@
 - Fixed tRPC module imports and updated authentication to use the local Supabase client, resolving build errors.
 - Completely removed unused tRPC framework code, including client/server files, API routes, and dependencies to simplify the codebase.
 - Fixed left sidebar resize functionality after closing nested sidebar by enhancing resize handle visibility and refreshing event listeners.
+- Implemented resizable nested sidebar allowing users to resize the entire sidebar even when the nested sidebar is open.
+- Improved sidebar resize UX by moving resize functionality to the nested sidebar when open and back to the main sidebar when closed.
+- Removed all width transitions when opening or closing nested sidebars for immediate visual feedback and snappier interface.
+- Fixed DOM manipulation error in sidebar resize code by simplifying the approach and removing React key conflicts.
+- Added right border to nested sidebar to match the left sidebar's appearance for consistent UI styling.
