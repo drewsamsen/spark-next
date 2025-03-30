@@ -4,9 +4,8 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import Link from "next/link";
+import { LogoIcon } from "@/components/icons/LogoIcon";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -34,29 +33,30 @@ export default function LoginPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-spark-primary dark:border-spark-dark-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-white to-neutral-50 dark:from-neutral-900 dark:to-neutral-950 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-background to-background/95 dark:from-spark-dark-backdrop dark:to-spark-dark-backdrop/95 px-4">
       <div className="absolute top-0 w-full p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link href="/" className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-            Spark
+          <Link href="/" className="flex items-center gap-2 text-2xl font-bold">
+            <LogoIcon className="h-8 w-8 text-spark-brand dark:text-spark-dark-brand" />
+            <span className="text-spark-primary dark:text-spark-dark-primary">Spark</span>
           </Link>
         </div>
       </div>
 
       <LoginForm />
       
-      <div className="mt-8 text-center text-sm text-neutral-600 dark:text-neutral-400">
+      <div className="mt-8 text-center text-sm text-muted-foreground">
         <p>
           Don't have an account?{" "}
           <button 
             onClick={() => alert("Registration not implemented yet")}
-            className="text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-spark-primary dark:text-spark-dark-primary hover:underline"
           >
             Sign up
           </button>
@@ -65,8 +65,6 @@ export default function LoginPage() {
           Use test@example.com / password123 to log in
         </p>
       </div>
-      
-      <ToastContainer position="top-right" theme="colored" />
     </div>
   );
 } 

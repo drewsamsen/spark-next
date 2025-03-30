@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 interface AuthCheckProps {
@@ -9,13 +9,23 @@ interface AuthCheckProps {
   redirectTo?: string;
 }
 
-export function AuthCheck({ children, redirectTo = "/" }: AuthCheckProps) {
+export function AuthCheck({ children, redirectTo = "/login" }: AuthCheckProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = getSupabaseBrowserClient();
-
+  
+  // Skip auth check on login page
+  const isLoginPage = pathname === '/login';
+  
   useEffect(() => {
+    // Don't perform auth check on login page
+    if (isLoginPage) {
+      setIsLoading(false);
+      return;
+    }
+    
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -52,7 +62,7 @@ export function AuthCheck({ children, redirectTo = "/" }: AuthCheckProps) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [redirectTo, router, supabase]);
+  }, [redirectTo, router, supabase, isLoginPage]);
 
   if (isLoading) {
     return (
@@ -62,5 +72,6 @@ export function AuthCheck({ children, redirectTo = "/" }: AuthCheckProps) {
     );
   }
 
-  return isAuthenticated ? <>{children}</> : null;
+  // Return children directly on login page, otherwise only when authenticated
+  return isLoginPage || isAuthenticated ? <>{children}</> : null;
 } 

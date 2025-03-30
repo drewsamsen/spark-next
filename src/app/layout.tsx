@@ -8,10 +8,11 @@ import { ThemeAwareToast } from "@/components/theme/ThemeAwareToast";
 import { UISettingsProvider } from '@/contexts/ui-settings-context';
 import { ToastContainer } from "react-toastify";
 import { AuthCheck } from "@/components/auth/AuthCheck";
+import AppShell from './AppShell';
 
 export const metadata: Metadata = {
-  title: "",
-  description: "",
+  title: "Spark - Knowledge Management",
+  description: "Your intelligent workspace for personal knowledge management",
   icons: {
     icon: "/favicon.ico",
   },
@@ -29,7 +30,7 @@ export default function RootLayout({
           <ClientProvider>
             <UISettingsProvider>
               <AuthCheck>
-                {children}
+                <AppShell>{children}</AppShell>
                 <ToastContainer position="top-right" theme="colored" />
               </AuthCheck>
             </UISettingsProvider>
