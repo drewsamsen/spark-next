@@ -1,6 +1,8 @@
 'use client';
 
 import { UISettingsProvider } from '@/contexts/ui-settings-context';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function DashboardLayout({
   children,
@@ -11,6 +13,7 @@ export default function DashboardLayout({
     <UISettingsProvider>
       <div className="h-screen flex flex-col">
         {children}
+        <ToastContainer position="top-right" theme="colored" />
       </div>
     </UISettingsProvider>
   );

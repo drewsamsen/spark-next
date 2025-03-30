@@ -11,6 +11,7 @@ import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
 import { mockApi } from "@/lib/mock-api";
 import { SidebarItem } from "@/lib/mock-api/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthCheck } from "@/components/auth/AuthCheck";
 
 export default function Dashboard() {
   const { settings, updateLeftSidebarWidth } = useUISettings();
@@ -190,7 +191,7 @@ export default function Dashboard() {
   // Use default width during server rendering and before mounting to prevent hydration mismatch
   const displayWidth = hasMounted ? sidebarWidth : UI_SETTINGS.LEFT_SIDEBAR.DEFAULT_WIDTH;
 
-  return (
+  const dashboardContent = (
     <TooltipProvider>
       <div className="flex h-screen flex-col">
         <Header 
@@ -260,27 +261,33 @@ export default function Dashboard() {
               </div>
             )}
             
-            {/* Resize handle for the left sidebar */}
-            <div
+            {/* Resize handle */}
+            <div 
               ref={resizeHandleRef}
-              className="absolute top-0 right-0 h-full w-1 bg-transparent cursor-ew-resize hover:bg-border z-20"
-            >
-              <div className="absolute top-1/2 right-0 h-8 w-1 bg-border rounded opacity-0 hover:opacity-100" />
-            </div>
+              className="absolute top-0 right-0 h-full w-1 cursor-ew-resize hover:bg-blue-500"
+              style={{ 
+                opacity: leftSidebarOpen ? 1 : 0,
+                transition: 'opacity 300ms ease-in-out'
+              }}
+            ></div>
           </div>
-          
-          {/* Main content */}
-          <div className="flex-1 overflow-hidden">
-            <MainContent />
-          </div>
+
+          {/* Main content area */}
+          <MainContent />
           
           {/* Right sidebar */}
           <RightSidebar 
-            isOpen={rightSidebarOpen}
+            isOpen={rightSidebarOpen} 
             setIsOpen={setRightSidebarOpen}
           />
         </div>
       </div>
     </TooltipProvider>
+  );
+
+  return (
+    <AuthCheck redirectTo="/login">
+      {dashboardContent}
+    </AuthCheck>
   );
 } 

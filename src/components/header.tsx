@@ -15,6 +15,7 @@ import {
   Settings
 } from "lucide-react";
 import { ModeToggle } from "@/components/theme/ModeToggle";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 interface HeaderProps {
   toggleLeftSidebar: () => void;
@@ -83,6 +84,8 @@ export default function Header({ toggleLeftSidebar, toggleRightSidebar }: Header
             <PlusSquare className="h-4 w-4" />
             <span className="hidden md:inline-block">New</span>
           </Button>
+          
+          <LogoutButton />
         </div>
       </div>
     </header>
