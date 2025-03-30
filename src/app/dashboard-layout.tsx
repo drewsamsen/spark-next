@@ -215,7 +215,7 @@ export default function DashboardLayout({
           )}
           
           {/* Main content area - takes remaining space */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-auto h-full">
             {children}
           </div>
           

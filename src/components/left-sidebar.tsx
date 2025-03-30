@@ -217,7 +217,7 @@ export default function LeftSidebar({
                       {item.icon}
                     </a>
                   </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={-20} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
+                  <TooltipContent side="right" sideOffset={-10} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
                     {item.tooltip}
                   </TooltipContent>
                 </Tooltip>
@@ -251,7 +251,7 @@ export default function LeftSidebar({
                     <Settings className="h-5 w-5" />
                   </a>
                 </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={-20} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
+                <TooltipContent side="right" sideOffset={-10} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
                   Settings
                 </TooltipContent>
               </Tooltip>
@@ -282,7 +282,7 @@ export default function LeftSidebar({
                     <FileInput className="h-5 w-5" />
                   </a>
                 </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={-20} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
+                <TooltipContent side="right" sideOffset={-10} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
                   Import
                 </TooltipContent>
               </Tooltip>
