@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useUserSettings } from "@/hooks/use-user-settings";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +15,13 @@ import {
 
 export function ModeToggle() {
   const { setTheme } = useTheme();
+  const { updateTheme } = useUserSettings();
+
+  // Update both theme contexts and save to user settings
+  const handleThemeChange = async (theme: string) => {
+    setTheme(theme);
+    await updateTheme(theme as 'light' | 'dark' | 'system');
+  };
 
   return (
     <DropdownMenu>
@@ -25,13 +33,13 @@ export function ModeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("light")}>
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("dark")}>
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("system")}>
           System
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -26,7 +26,7 @@ export const createServerClient = () => {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
-    },
+    }
   });
 };
 

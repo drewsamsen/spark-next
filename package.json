@@ -53,6 +53,7 @@
     "react-toastify": "^11.0.3",
     "resend": "^4.0.1",
     "superjson": "^2.2.2",
+    "swr": "^2.3.3",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.1"
