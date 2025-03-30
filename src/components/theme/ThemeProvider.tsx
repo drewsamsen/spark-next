@@ -14,7 +14,7 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ 
   children, 
-  defaultTheme = "system",
+  defaultTheme = "light",
   ...props 
 }: ThemeProviderProps) {
   // Use theme from server (middleware) as default if available
@@ -31,7 +31,7 @@ export function ThemeProvider({
           .find(row => row.startsWith('theme='))
           ?.split('=')[1];
           
-        if (headerTheme) {
+        if (headerTheme && (headerTheme === 'light' || headerTheme === 'dark')) {
           setTheme(headerTheme);
         }
       } catch (error) {
@@ -47,6 +47,7 @@ export function ThemeProvider({
       {...props} 
       defaultTheme={theme} 
       attribute="class"
+      enableSystem={false}
     >
       {children}
     </NextThemeProvider>

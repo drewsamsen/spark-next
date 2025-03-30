@@ -58,7 +58,7 @@ export type Database = {
 
 // Define the structure of our user settings
 export interface UserSettings {
-  theme?: 'light' | 'dark' | 'system';
+  theme?: 'light' | 'dark';
   rightSidebar?: {
     width: number;
   };
@@ -70,7 +70,7 @@ export interface UserSettings {
 
 // Default settings values
 export const DEFAULT_USER_SETTINGS: UserSettings = {
-  theme: 'system',
+  theme: 'light',
   rightSidebar: {
     width: 384 // Default width (96px * 4)
   },

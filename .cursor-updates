@@ -19,3 +19,4 @@
 - Implemented client-side authentication with Supabase Auth, including login form, auth check component, and logout button.
 - Added user settings with database persistence to replace localStorage for authenticated users.
 - Fixed authentication token passing between client and API routes for user settings.
+- Simplified theme toggle in header to directly toggle between light and dark (removed system option and dropdown).

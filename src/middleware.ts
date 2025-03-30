@@ -22,8 +22,8 @@ export async function middleware(request: NextRequest) {
       
       // Set user settings in cookies for access in client components
       if (userSettings?.settings) {
-        // Get theme from user settings (fallback to 'system')
-        const theme = userSettings.settings.theme || 'system';
+        // Get theme from user settings (fallback to 'light')
+        const theme = userSettings.settings.theme === 'dark' ? 'dark' : 'light';
         
         // Add theme to cookies
         response.cookies.set({
