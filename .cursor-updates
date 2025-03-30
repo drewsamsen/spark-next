@@ -34,3 +34,10 @@
 - Removed all width transitions when opening or closing nested sidebars for immediate visual feedback and snappier interface.
 - Fixed DOM manipulation error in sidebar resize code by simplifying the approach and removing React key conflicts.
 - Added right border to nested sidebar to match the left sidebar's appearance for consistent UI styling.
+- Added tooltips to main left sidebar icons when the nested sidebar is open to improve navigation and discoverability.
+- Fixed tooltip visibility issues by adding proper z-index, forcing mount, and improving the hover area for sidebar icons.
+- Fixed tooltip flashing issue when opening nested sidebar and adjusted z-index hierarchy to ensure proper tooltip display.
+- Fixed nested sidebar content visibility issue by correcting z-index values to use valid Tailwind classes.
+- Improved z-index hierarchy to ensure tooltips display above nested sidebar content while maintaining proper event handling.
+- Fixed tooltip rendering by implementing a Portal pattern to ensure tooltips are rendered at the root DOM level, preventing z-index stacking context issues.
+- Updated tooltips to appear instantly with no delay and positioned them 20px to the left for better UI placement.

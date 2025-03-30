@@ -127,7 +127,7 @@ export default function Dashboard() {
 
   return (
     <AuthCheck>
-      <TooltipProvider>
+      <TooltipProvider delayDuration={0} skipDelayDuration={0}>
         <div className="flex h-screen flex-col">
           <Header 
             toggleLeftSidebar={toggleLeftSidebar}
@@ -149,7 +149,7 @@ export default function Dashboard() {
                 {/* Books sidebar overlays on top of the left sidebar, leaving space for icons */}
                 {booksSidebarOpen && (
                   <div 
-                    className="absolute top-0 h-full z-10"
+                    className="absolute top-0 h-full z-[25]"
                     style={{ 
                       left: `${iconWidth}px`
                     }}
@@ -170,7 +170,7 @@ export default function Dashboard() {
                 {/* Sparks sidebar overlays on top of the left sidebar, leaving space for icons */}
                 {sparksSidebarOpen && (
                   <div 
-                    className="absolute top-0 h-full z-10"
+                    className="absolute top-0 h-full z-[25]"
                     style={{ 
                       left: `${iconWidth}px`
                     }}

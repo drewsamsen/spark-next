@@ -178,7 +178,7 @@ export default function LeftSidebar({
       };
 
   return (
-    <div className="h-full w-full bg-sidebar border-r z-10 relative"
+    <div className="h-full w-full bg-sidebar border-r z-20 relative"
          style={isProjectsSidebarOpen ? { width: `${sidebarWidth}px`, transition: 'none' } : undefined}>
       {/* Main sidebar content */}
       <div className="h-full flex flex-col" style={mainSidebarStyle}>
@@ -187,7 +187,7 @@ export default function LeftSidebar({
           <nav className="grid gap-1 px-2">
             {sidebarItems.map((item) => (
               isProjectsSidebarOpen ? (
-                <Tooltip key={item.name} delayDuration={300}>
+                <Tooltip key={item.name} delayDuration={0}>
                   <TooltipTrigger asChild>
                     <a
                       href={item.href || "#"}
@@ -195,13 +195,14 @@ export default function LeftSidebar({
                       className={cn(
                         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                         activeSidebarItem === item.name ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground",
-                        "pl-3 pr-0 justify-start w-[60px]"
+                        "pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
                       )}
+                      aria-label={item.tooltip}
                     >
                       {item.icon}
                     </a>
                   </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={5}>
+                  <TooltipContent side="right" sideOffset={-20} className="z-[200]">
                     {item.tooltip}
                   </TooltipContent>
                 </Tooltip>
@@ -224,7 +225,7 @@ export default function LeftSidebar({
           <div className="mt-auto" />
           <div className="mt-4 grid gap-1 px-2">
             {isProjectsSidebarOpen ? (
-              <Tooltip delayDuration={300}>
+              <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <a
                     href="#"
@@ -235,13 +236,14 @@ export default function LeftSidebar({
                     className={cn(
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       activeSidebarItem === "Settings" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "",
-                      "pl-3 pr-0 justify-start w-[60px]"
+                      "pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
                     )}
+                    aria-label="Settings"
                   >
                     <Settings className="h-5 w-5" />
                   </a>
                 </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={5}>
+                <TooltipContent side="right" sideOffset={-20} className="z-[200]">
                   Settings
                 </TooltipContent>
               </Tooltip>
@@ -254,7 +256,8 @@ export default function LeftSidebar({
                 }}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  activeSidebarItem === "Settings" ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
+                  activeSidebarItem === "Settings" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "",
+                  "pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
                 )}
               >
                 <Settings className="h-5 w-5" />
