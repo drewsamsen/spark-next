@@ -16,7 +16,7 @@ A Next.js template that combines commonly used tools and libraries for building 
 
 ## 🎯 Overview
 
-This template includes [Next.js 14](https://nextjs.org/) with the App Router, [Supabase](https://supabase.com) for the database, [Resend](https://resend.com) for transactional emails, and optional integrations with various AI providers and AWS services.
+This template includes [Next.js 14](https://nextjs.org/) with the App Router, [Supabase](https://supabase.com) for the database and authentication, [Resend](https://resend.com) for transactional emails, and optional integrations with various AI providers and AWS services.
 
 > ⚠️ **Note**: This is my personal template with tools that I personally have experience with and think are solid options for building modern full-stack web application. Your preferences very likely differ, so feel free to fork and modify it for your own use. I won't be accepting pull requests for additional features, but I'll be happy to help you out if you have any questions.
 
@@ -27,9 +27,7 @@ This template includes [Next.js 14](https://nextjs.org/) with the App Router, [S
 - [**Next.js 14**](https://nextjs.org/) - React framework with App Router
 - [**TypeScript**](https://www.typescriptlang.org/) - Type safety throughout
 - [**tRPC**](https://trpc.io/) - End-to-end type-safe APIs
-- [**Prisma**](https://www.prisma.io/) - Database ORM and schema management
-- [**NextAuth.js**](https://next-auth.js.org/) - Authentication with Prisma adapter
-- [**Supabase**](https://supabase.com) - Postgres database with realtime and auth
+- [**Supabase**](https://supabase.com) - Postgres database with built-in authentication and Row Level Security
 
 ### 🎨 UI & Styling
 
@@ -74,20 +72,36 @@ This template includes [Next.js 14](https://nextjs.org/) with the App Router, [S
 npm install
 ```
 
-3. Copy `.env.example` to `.env` and configure your environment variables
-4. Set up your database:
+3. Copy `.env.example` to `.env.local` and configure your environment variables
+4. Start Supabase locally (requires [Docker](https://www.docker.com/) and [Supabase CLI](https://supabase.com/docs/guides/cli)):
 
 ```bash
-npx prisma migrate dev
+supabase start
 ```
 
-5. Start the development server:
+5. Set up your database with the setup script:
+
+```bash
+npm run setup
+```
+
+6. Verify your database setup:
+
+```bash
+npm run test-db
+```
+
+7. Start the development server:
 
 ```bash
 npm run dev
 ```
 
 Visit [http://localhost:3000](http://localhost:3000) to see your app.
+
+You can log in with the test user:
+- Email: test@example.com
+- Password: password123
 
 ## 📁 Project Structure
 
@@ -98,18 +112,20 @@ Visit [http://localhost:3000](http://localhost:3000) to see your app.
     - `api/` - tRPC routers
     - `utils/` - Shared utilities
   - `stories/` - Storybook files
-- `prisma/` - Database schema
+- `supabase/` - Supabase migrations and configurations
+  - `migrations/` - Database migrations
+- `scripts/` - Setup and utility scripts
 
 ## 🚀 Deployment
 
-This template is optimized for deployment on [Vercel](https://vercel.com).
+This template is optimized for deployment on [Vercel](https://vercel.com) with a Supabase database.
 
 ### Database Setup
 
 1. Create a new Supabase project at [supabase.com](https://supabase.com)
-2. Get your database connection strings from Supabase:
-   - Project Settings → Database
-   - Copy both the URI (for `DATABASE_URL`) and Direct Connection (for `DIRECT_URL`)
+2. Get your API keys from the Supabase dashboard:
+   - Project Settings → API
+   - Copy the URL, anon key, and service role key
 
 ### Vercel Setup
 
@@ -117,20 +133,19 @@ This template is optimized for deployment on [Vercel](https://vercel.com).
 2. Go to [vercel.com/new](https://vercel.com/new)
 3. Import your repository
 4. Configure the following environment variables:
-   - `DATABASE_URL` - Your Supabase database URL
-   - `DIRECT_URL` - Your Supabase direct connection URL
-   - `NEXTAUTH_SECRET` - Generate with `openssl rand -base64 32`
-   - `NEXTAUTH_URL` - Your production URL (e.g., https://your-app.vercel.app)
+   - `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon key
+   - `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key
    - Add any other variables from `.env.example` that you're using
 5. Deploy!
 
 ### Post-Deployment
 
-1. Run database migrations in the Vercel deployment:
+1. Apply migrations to your production Supabase project:
 
 ```bash
-npx vercel env pull .env.production.local  # Pull production env vars
-npx prisma migrate deploy                  # Deploy migrations to production
+supabase link --project-ref your-project-ref
+supabase db push
 ```
 
 2. Set up your custom domain in Vercel (optional):

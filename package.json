@@ -10,7 +10,10 @@
     "lint": "next lint",
     "vercel-build": "next build",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "setup": "node scripts/setup.js",
+    "setup-and-dev": "npm run setup && npm run dev",
+    "test-db": "node scripts/test-connection.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.709.0",
@@ -29,9 +32,11 @@
     "@trpc/react-query": "next",
     "@trpc/server": "next",
     "@types/react-datepicker": "^6.2.0",
+    "chalk": "^5.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.4.7",
     "framer-motion": "^11.15.0",
     "groq-sdk": "^0.12.0",
     "inngest": "^3.27.5",
