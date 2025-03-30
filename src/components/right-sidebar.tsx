@@ -18,6 +18,11 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
   const [sidebarWidth, setSidebarWidth] = useState(settings.rightSidebar.width);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
 
+  // Set initial width from settings when component mounts
+  useEffect(() => {
+    setSidebarWidth(settings.rightSidebar.width);
+  }, []);
+
   // Update local state when settings change (but not during resize)
   useEffect(() => {
     if (!isResizing) {
@@ -49,6 +54,7 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
 
     const handleMouseUp = () => {
       if (isResizing) {
+        // Save the final sidebar width to localStorage
         updateRightSidebarWidth(sidebarWidth);
       }
       setIsResizing(false);
