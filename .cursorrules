@@ -55,4 +55,4 @@ IMPORTANT:
 - Always add a one-sentence summary of changes to `.cursor-updates` file in markdown format at the end of every agent interaction.
 - If you forget, the user can type the command "finish" and you will run the build and update `.cursor-updates`.
 - Do not run `git add` or `git commit` after making changes. The user will handle git.
-- If you want to make changes that are related to what I asked, and useful, pause to ask me. For example, if I ask "Fix the authentication error", if you fix the error and then see that we should also restructure our authentication code, pause and say "I see that we should probably also restructure our authentication code - okay to proceed?"
+- Do not over-deliver. If you see opportunities for a good next step, pause and make the suggestion to the user. Do not automatically try and do too much.

@@ -8,7 +8,7 @@ import useSWR from 'swr';
 
 // Interface for useUserSettings hook return value
 interface UseUserSettingsReturn {
-  settings: UserSettings;
+  settings: UserSettings | null;
   isLoading: boolean;
   error: Error | null;
   updateSettings: (newSettings: Partial<UserSettings>) => Promise<void>;
@@ -48,16 +48,17 @@ const fetcher = async (url: string) => {
 export function useUserSettings(): UseUserSettingsReturn {
   const supabase = getSupabaseBrowserClient();
   const [userId, setUserId] = useState<string | null>(null);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
   
   // Use SWR for data fetching with caching and revalidation
-  const { data, error, mutate } = useSWR<UserSettings>(
+  const { data, error, mutate, isLoading: isSWRLoading } = useSWR<UserSettings>(
     userId ? '/api/user-settings' : null,
     fetcher,
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       dedupingInterval: 600000, // 10 minute
-      fallbackData: DEFAULT_USER_SETTINGS
+      // Remove fallbackData to prevent default values from being used before actual data is loaded
     }
   );
 
@@ -73,8 +74,10 @@ export function useUserSettings(): UseUserSettingsReturn {
         } else {
           console.log('No authenticated user found');
         }
+        setIsAuthChecked(true);
       } catch (error) {
         console.error('Error checking auth:', error);
+        setIsAuthChecked(true);
       }
     };
     
@@ -91,6 +94,7 @@ export function useUserSettings(): UseUserSettingsReturn {
           setUserId(null);
           console.log('User not authenticated');
         }
+        setIsAuthChecked(true);
       }
     );
     
@@ -119,9 +123,12 @@ export function useUserSettings(): UseUserSettingsReturn {
       
       // Optimistically update local data
       mutate(
-        {
-          ...data,
-          ...newSettings,
+        (currentData) => {
+          if (!currentData) return DEFAULT_USER_SETTINGS;
+          return {
+            ...currentData,
+            ...newSettings,
+          };
         },
         false
       );
@@ -151,7 +158,7 @@ export function useUserSettings(): UseUserSettingsReturn {
       // Revert to the previous data on error
       mutate();
     }
-  }, [userId, data, mutate, supabase]);
+  }, [userId, mutate, supabase]);
 
   // Helper function to update theme
   const updateTheme = useCallback(
@@ -187,9 +194,18 @@ export function useUserSettings(): UseUserSettingsReturn {
     [updateSettings, data]
   );
 
+  // We're loading if:
+  // 1. Auth check hasn't completed yet, OR
+  // 2. We're authenticated and SWR is still loading, OR
+  // 3. We're authenticated but data hasn't arrived yet
+  const isLoading = !isAuthChecked || (userId !== null && (isSWRLoading || !data));
+
+  // If user is not authenticated after auth check is complete, use default settings
+  const settings = !userId && isAuthChecked ? DEFAULT_USER_SETTINGS : data || null;
+
   return {
-    settings: data || DEFAULT_USER_SETTINGS,
-    isLoading: !error && !data && userId !== null,
+    settings,
+    isLoading,
     error: error || null,
     updateSettings,
     updateTheme,

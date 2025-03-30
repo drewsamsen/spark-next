@@ -188,106 +188,107 @@ export default function Dashboard() {
   // Width of icons-only part of the left sidebar when projects sidebar is open
   const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
 
-  // Use default width during server rendering and before mounting to prevent hydration mismatch
-  const displayWidth = hasMounted ? sidebarWidth : UI_SETTINGS.LEFT_SIDEBAR.DEFAULT_WIDTH;
-
-  const dashboardContent = (
-    <TooltipProvider>
-      <div className="flex h-screen flex-col">
-        <Header 
-          toggleLeftSidebar={toggleLeftSidebar}
-          toggleRightSidebar={toggleRightSidebar}
-        />
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left sidebar container with fixed width */}
-          <div 
-            className="relative h-full" 
-            style={{ 
-              width: leftSidebarOpen ? `${displayWidth}px` : '0px',
-              minWidth: leftSidebarOpen ? `${displayWidth}px` : '0px',
-              transition: isResizing ? 'none' : 'width 300ms ease-in-out, min-width 300ms ease-in-out'
-            }}
-          >
-            {/* Main sidebar - always full width */}
-            <LeftSidebar 
-              isOpen={leftSidebarOpen} 
-              setIsOpen={setLeftSidebarOpen}
-              activeSidebarItem={activeSidebarItem}
-              toggleProjectsSidebar={toggleSidebar}
-              isProjectsSidebarOpen={booksSidebarOpen || sparksSidebarOpen}
-            />
-
-            {/* Books sidebar overlays on top of the left sidebar, leaving space for icons */}
-            {booksSidebarOpen && (
-              <div 
-                className="absolute top-0 h-full z-10"
-                style={{ 
-                  left: `${iconWidth}px`,
-                  width: `${displayWidth - iconWidth}px`
-                }}
-              >
-                <NestedSidebar
-                  isOpen={booksSidebarOpen}
-                  title="Books"
-                  icon={<Book className="h-5 w-5" />}
-                  items={books}
-                  activeItemId={activeBook}
-                  setActiveItemId={setActiveBook}
-                  onClose={() => setBooksSidebarOpen(false)}
-                  isLoading={loadingBooks}
-                />
-              </div>
-            )}
-            
-            {/* Sparks sidebar overlays on top of the left sidebar, leaving space for icons */}
-            {sparksSidebarOpen && (
-              <div 
-                className="absolute top-0 h-full z-10"
-                style={{ 
-                  left: `${iconWidth}px`,
-                  width: `${displayWidth - iconWidth}px`
-                }}
-              >
-                <NestedSidebar
-                  isOpen={sparksSidebarOpen}
-                  title="Sparks"
-                  icon={<Sparkles className="h-5 w-5" />}
-                  items={sparks}
-                  activeItemId={activeSpark}
-                  setActiveItemId={setActiveSpark}
-                  onClose={() => setSparksSidebarOpen(false)}
-                  isLoading={loadingSparks}
-                />
-              </div>
-            )}
-            
-            {/* Resize handle */}
-            <div 
-              ref={resizeHandleRef}
-              className="absolute top-0 right-0 h-full w-1 cursor-ew-resize hover:bg-blue-500"
-              style={{ 
-                opacity: leftSidebarOpen ? 1 : 0,
-                transition: 'opacity 300ms ease-in-out'
-              }}
-            ></div>
-          </div>
-
-          {/* Main content area */}
-          <MainContent />
-          
-          {/* Right sidebar */}
-          <RightSidebar 
-            isOpen={rightSidebarOpen} 
-            setIsOpen={setRightSidebarOpen}
-          />
-        </div>
-      </div>
-    </TooltipProvider>
-  );
+  // Use settings value directly since we're guaranteed it's loaded
+  const displayWidth = sidebarWidth;
 
   return (
-    <AuthCheck redirectTo="/login">
-      {dashboardContent}
+    <AuthCheck>
+      <TooltipProvider>
+        <div className="flex h-screen flex-col">
+          <Header 
+            toggleLeftSidebar={toggleLeftSidebar}
+            toggleRightSidebar={toggleRightSidebar}
+          />
+          <div className="flex flex-1 overflow-hidden">
+            {/* Left sidebar container with fixed width */}
+            <div 
+              className="relative h-full" 
+              style={{ 
+                width: leftSidebarOpen ? `${displayWidth}px` : '0px',
+                minWidth: leftSidebarOpen ? `${displayWidth}px` : '0px',
+                transition: isResizing ? 'none' : 'width 300ms ease-in-out, min-width 300ms ease-in-out'
+              }}
+            >
+              {/* Main sidebar - always full width */}
+              <LeftSidebar 
+                isOpen={leftSidebarOpen} 
+                setIsOpen={setLeftSidebarOpen}
+                activeSidebarItem={activeSidebarItem}
+                toggleProjectsSidebar={toggleSidebar}
+                isProjectsSidebarOpen={booksSidebarOpen || sparksSidebarOpen}
+              />
+
+              {/* Books sidebar overlays on top of the left sidebar, leaving space for icons */}
+              {booksSidebarOpen && (
+                <div 
+                  className="absolute top-0 h-full z-10"
+                  style={{ 
+                    left: `${iconWidth}px`,
+                    width: `${displayWidth - iconWidth}px`
+                  }}
+                >
+                  <NestedSidebar
+                    isOpen={booksSidebarOpen}
+                    title="Books"
+                    icon={<Book className="h-5 w-5" />}
+                    items={books}
+                    activeItemId={activeBook}
+                    setActiveItemId={setActiveBook}
+                    onClose={() => setBooksSidebarOpen(false)}
+                    isLoading={loadingBooks}
+                  />
+                </div>
+              )}
+              
+              {/* Sparks sidebar overlays on top of the left sidebar, leaving space for icons */}
+              {sparksSidebarOpen && (
+                <div 
+                  className="absolute top-0 h-full z-10"
+                  style={{ 
+                    left: `${iconWidth}px`,
+                    width: `${displayWidth - iconWidth}px`
+                  }}
+                >
+                  <NestedSidebar
+                    isOpen={sparksSidebarOpen}
+                    title="Sparks"
+                    icon={<Sparkles className="h-5 w-5" />}
+                    items={sparks}
+                    activeItemId={activeSpark}
+                    setActiveItemId={setActiveSpark}
+                    onClose={() => setSparksSidebarOpen(false)}
+                    isLoading={loadingSparks}
+                  />
+                </div>
+              )}
+              
+              {/* Resize handle for left sidebar */}
+              <div
+                ref={resizeHandleRef}
+                className="absolute inset-y-0 right-0 w-1 cursor-ew-resize hover:bg-border"
+                style={{
+                  display: (booksSidebarOpen || sparksSidebarOpen) ? 'none' : 'block'
+                }}
+              >
+                <div className="absolute top-1/2 right-0 h-8 w-1 bg-border rounded opacity-0 hover:opacity-100" />
+              </div>
+            </div>
+            
+            {/* Main content area - takes remaining space */}
+            <div className="flex-1 overflow-hidden">
+              <MainContent />
+            </div>
+            
+            {/* Right sidebar */}
+            {rightSidebarOpen && (
+              <RightSidebar 
+                isOpen={rightSidebarOpen} 
+                setIsOpen={setRightSidebarOpen} 
+              />
+            )}
+          </div>
+        </div>
+      </TooltipProvider>
     </AuthCheck>
   );
 } 

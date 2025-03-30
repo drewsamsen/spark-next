@@ -20,3 +20,5 @@
 - Added user settings with database persistence to replace localStorage for authenticated users.
 - Fixed authentication token passing between client and API routes for user settings.
 - Simplified theme toggle in header to directly toggle between light and dark (removed system option and dropdown).
+- Fixed sidebar width layout shifts by implementing a delayed rendering approach - component won't render until user settings are fully loaded.
+- Cleaned up implementation by removing unused code, components, and dependencies.

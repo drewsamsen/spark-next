@@ -11,6 +11,7 @@ export default function DashboardLayout({
 }) {
   return (
     <UISettingsProvider>
+      {/* The UISettingsProvider will not render children until settings are loaded */}
       <div className="h-screen flex flex-col">
         {children}
         <ToastContainer position="top-right" theme="colored" />

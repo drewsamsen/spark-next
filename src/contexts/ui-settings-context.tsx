@@ -56,20 +56,14 @@ const validateLeftSidebarWidth = (width: number): boolean => {
 
 export const UISettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Use our userSettings hook to manage settings with database persistence
-  const { settings: userSettings, updateRightSidebarWidth, updateLeftSidebarWidth } = useUserSettings();
+  const { settings: userSettings, updateRightSidebarWidth: saveRightSidebarWidth, 
+          updateLeftSidebarWidth: saveLeftSidebarWidth, isLoading: isUserSettingsLoading } = useUserSettings();
   
   // Track if component has mounted to prevent hydration mismatch
   const [hasMounted, setHasMounted] = useState(false);
   
-  // Initialize with default values until we know if the user is logged in
-  const [settings, setSettings] = useState<UISettings>({
-    rightSidebar: {
-      width: DEFAULT_RIGHT_SIDEBAR_WIDTH
-    },
-    leftSidebar: {
-      width: DEFAULT_LEFT_SIDEBAR_WIDTH
-    }
-  });
+  // Initialize with null - we won't set real values until user settings are loaded
+  const [settings, setSettings] = useState<UISettings | null>(null);
   
   // Set hasMounted to true after the component mounts
   useEffect(() => {
@@ -94,40 +88,40 @@ export const UISettingsProvider: React.FC<{ children: ReactNode }> = ({ children
 
   // Update functions for specific settings
   const handleUpdateRightSidebarWidth = (width: number) => {
-    if (validateRightSidebarWidth(width)) {
-      // First update the local state
-      setSettings(prevSettings => ({
-        ...prevSettings,
-        rightSidebar: {
-          ...prevSettings.rightSidebar,
-          width
-        }
-      }));
-      
-      // Then persist to user settings if available
-      updateRightSidebarWidth(width).catch(error => {
-        console.error('Failed to update right sidebar width in user settings:', error);
-      });
-    }
+    if (!settings || !validateRightSidebarWidth(width)) return;
+    
+    // First update the local state
+    setSettings(prevSettings => ({
+      ...prevSettings!,
+      rightSidebar: {
+        ...prevSettings!.rightSidebar,
+        width
+      }
+    }));
+    
+    // Then persist to user settings if available
+    saveRightSidebarWidth(width).catch(error => {
+      console.error('Failed to update right sidebar width in user settings:', error);
+    });
   };
 
   // Update function for left sidebar
   const handleUpdateLeftSidebarWidth = (width: number) => {
-    if (validateLeftSidebarWidth(width)) {
-      // First update the local state
-      setSettings(prevSettings => ({
-        ...prevSettings,
-        leftSidebar: {
-          ...prevSettings.leftSidebar,
-          width
-        }
-      }));
-      
-      // Then persist to user settings if available
-      updateLeftSidebarWidth(width).catch(error => {
-        console.error('Failed to update left sidebar width in user settings:', error);
-      });
-    }
+    if (!settings || !validateLeftSidebarWidth(width)) return;
+    
+    // First update the local state
+    setSettings(prevSettings => ({
+      ...prevSettings!,
+      leftSidebar: {
+        ...prevSettings!.leftSidebar,
+        width
+      }
+    }));
+    
+    // Then persist to user settings if available
+    saveLeftSidebarWidth(width).catch(error => {
+      console.error('Failed to update left sidebar width in user settings:', error);
+    });
   };
   
   // Reset functions
@@ -139,9 +133,21 @@ export const UISettingsProvider: React.FC<{ children: ReactNode }> = ({ children
     handleUpdateLeftSidebarWidth(DEFAULT_LEFT_SIDEBAR_WIDTH);
   };
 
+  // Calculate loading state
+  // We're loading if:
+  // 1. Component hasn't mounted yet, OR
+  // 2. User settings are still loading, OR
+  // 3. Settings have not been initialized
+  const isLoading = !hasMounted || isUserSettingsLoading || !settings;
+
+  // Don't render the children until we have valid settings
+  if (isLoading) {
+    return null;
+  }
+
   // Context value
   const value: UISettingsContextValue = {
-    settings,
+    settings: settings!,
     updateRightSidebarWidth: handleUpdateRightSidebarWidth,
     resetRightSidebarWidth,
     updateLeftSidebarWidth: handleUpdateLeftSidebarWidth,
