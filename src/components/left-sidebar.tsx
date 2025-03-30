@@ -13,7 +13,8 @@ import {
   PlusCircle,
   Sparkles,
   Inbox,
-  Zap
+  Zap,
+  FileInput
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -122,9 +123,10 @@ export default function LeftSidebar({
   // Sidebar items configuration
   const sidebarItems: NavItem[] = [
     {
-      name: "Inbox",
-      icon: <Inbox className="h-5 w-5" />,
-      tooltip: "Inbox"
+      name: "Dashboard",
+      icon: <Home className="h-5 w-5" />,
+      tooltip: "Dashboard",
+      href: "/dashboard"
     },
     {
       name: "Upload",
@@ -235,8 +237,7 @@ export default function LeftSidebar({
                     }}
                     className={cn(
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      activeSidebarItem === "Settings" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "",
-                      "pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
+                      activeSidebarItem === "Settings" ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
                     )}
                     aria-label="Settings"
                   >
@@ -256,12 +257,43 @@ export default function LeftSidebar({
                 }}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  activeSidebarItem === "Settings" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "",
-                  "pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
+                  activeSidebarItem === "Settings" ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
                 )}
               >
                 <Settings className="h-5 w-5" />
                 <span>Settings</span>
+              </a>
+            )}
+
+            {/* Import option */}
+            {isProjectsSidebarOpen ? (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <a
+                    href="/import"
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      activeSidebarItem === "Import" ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
+                    )}
+                    aria-label="Import"
+                  >
+                    <FileInput className="h-5 w-5" />
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={-20} className="z-[200]">
+                  Import
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <a
+                href="/import"
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  activeSidebarItem === "Import" ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
+                )}
+              >
+                <FileInput className="h-5 w-5" />
+                <span>Import</span>
               </a>
             )}
           </div>

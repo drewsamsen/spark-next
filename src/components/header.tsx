@@ -8,14 +8,14 @@ import {
   PanelRightOpen,
   ChevronRight,
   Blocks,
-  PlusSquare,
   Search,
   Bell,
-  BadgeHelp,
   Settings
 } from "lucide-react";
 import { ModeToggle } from "@/components/theme/ModeToggle";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 interface HeaderProps {
   toggleLeftSidebar: () => void;
@@ -23,6 +23,17 @@ interface HeaderProps {
 }
 
 export default function Header({ toggleLeftSidebar, toggleRightSidebar }: HeaderProps) {
+  const pathname = usePathname();
+  
+  // Extract current page name from pathname
+  const getPageName = () => {
+    if (pathname === "/" || pathname === "/dashboard") return "Dashboard";
+    
+    // Remove leading slash and capitalize first letter
+    const path = pathname.substring(1);
+    return path.charAt(0).toUpperCase() + path.slice(1);
+  };
+  
   return (
     <header className="border-b bg-background">
       <div className="flex h-14 items-center justify-between px-4">
@@ -33,14 +44,14 @@ export default function Header({ toggleLeftSidebar, toggleRightSidebar }: Header
             <span className="sr-only">Toggle left sidebar</span>
           </Button>
           
-          <div className="flex items-center gap-1">
+          <Link href="/dashboard" className="flex items-center gap-1 hover:opacity-80">
             <Blocks className="h-5 w-5" />
             <span className="font-medium text-lg hidden md:inline-block">Spark</span>
-          </div>
+          </Link>
           
           <div className="hidden md:flex items-center gap-1">
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Dashboard</span>
+            <span className="text-muted-foreground">{getPageName()}</span>
           </div>
         </div>
         
@@ -63,11 +74,6 @@ export default function Header({ toggleLeftSidebar, toggleRightSidebar }: Header
             <span className="sr-only">Notifications</span>
           </Button>
           
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <BadgeHelp className="h-4 w-4" />
-            <span className="sr-only">Help</span>
-          </Button>
-          
           <ModeToggle />
           
           <Button variant="ghost" size="icon" onClick={toggleRightSidebar} className="h-8 w-8">
@@ -78,11 +84,6 @@ export default function Header({ toggleLeftSidebar, toggleRightSidebar }: Header
           <Button variant="ghost" size="icon" className="h-8 w-8">
             <Settings className="h-4 w-4" />
             <span className="sr-only">Settings</span>
-          </Button>
-          
-          <Button variant="ghost" size="sm" className="gap-1">
-            <PlusSquare className="h-4 w-4" />
-            <span className="hidden md:inline-block">New</span>
           </Button>
           
           <LogoutButton />

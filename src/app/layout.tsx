@@ -5,6 +5,9 @@ import { Metadata } from "next";
 import ClientProvider from "@/components/ClientProvider";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ThemeAwareToast } from "@/components/theme/ThemeAwareToast";
+import { UISettingsProvider } from '@/contexts/ui-settings-context';
+import { ToastContainer } from "react-toastify";
+import { AuthCheck } from "@/components/auth/AuthCheck";
 
 export const metadata: Metadata = {
   title: "",
@@ -24,7 +27,12 @@ export default function RootLayout({
       <body>
         <ThemeProvider defaultTheme="light" enableSystem={false}>
           <ClientProvider>
-            {children}
+            <UISettingsProvider>
+              <AuthCheck>
+                {children}
+                <ToastContainer position="top-right" theme="colored" />
+              </AuthCheck>
+            </UISettingsProvider>
             <ThemeAwareToast />
           </ClientProvider>
         </ThemeProvider>

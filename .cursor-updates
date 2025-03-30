@@ -41,3 +41,11 @@
 - Improved z-index hierarchy to ensure tooltips display above nested sidebar content while maintaining proper event handling.
 - Fixed tooltip rendering by implementing a Portal pattern to ensure tooltips are rendered at the root DOM level, preventing z-index stacking context issues.
 - Updated tooltips to appear instantly with no delay and positioned them 20px to the left for better UI placement.
+- Removed the New button and question mark help icon from the header for a cleaner interface.
+- Made the Settings button in the left sidebar full-width to match other menu items for visual consistency.
+- Added Import option to the left sidebar below Settings and created a new blank import page for future functionality.
+- Refactored application structure to use a shared layout pattern with proper route groups, enabling consistent UI across dashboard, import, and future pages.
+- Simplified layout structure with a single layout file that includes header, sidebars, and content area, shared by dashboard and import pages.
+- Implemented proper layout structure with a single shared layout file supporting nested components, fixing circular dependency issues with context providers.
+- Simplified application structure with direct route paths (dashboard/page.tsx, import/page.tsx) and a shared dashboard layout component, eliminating route groups.
+- Improved navigation by changing Inbox to Dashboard in the sidebar, making the app name in header link to dashboard, and adding dynamic breadcrumbs.
