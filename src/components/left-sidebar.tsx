@@ -211,11 +211,7 @@ export default function LeftSidebar({
                     <a
                       href={item.href || "#"}
                       onClick={(e) => handleNavItemClick(item, e)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                        activeSidebarItem === item.name ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground",
-                        "pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
-                      )}
+                      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
                       aria-label={item.tooltip}
                     >
                       {item.icon}
@@ -230,10 +226,7 @@ export default function LeftSidebar({
                   key={item.name}
                   href={item.href || "#"}
                   onClick={(e) => handleNavItemClick(item, e)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                    activeSidebarItem === item.name ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground"
-                  )}
+                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary"
                 >
                   {item.icon}
                   <span>{item.name}</span>
@@ -252,10 +245,7 @@ export default function LeftSidebar({
                       e.preventDefault();
                       toggleProjectsSidebar("Settings");
                     }}
-                    className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      activeSidebarItem === "Settings" ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
-                    )}
+                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary"
                     aria-label="Settings"
                   >
                     <Settings className="h-5 w-5" />
@@ -272,10 +262,7 @@ export default function LeftSidebar({
                   e.preventDefault();
                   toggleProjectsSidebar("Settings");
                 }}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  activeSidebarItem === "Settings" ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
-                )}
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary"
               >
                 <Settings className="h-5 w-5" />
                 <span>Settings</span>
@@ -289,10 +276,7 @@ export default function LeftSidebar({
                   <a
                     href="/import"
                     onClick={handleImportClick}
-                    className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      (activeSidebarItem === "Import" || currentPath === "/import") ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
-                    )}
+                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary"
                     aria-label="Import"
                   >
                     <FileInput className="h-5 w-5" />
@@ -306,10 +290,7 @@ export default function LeftSidebar({
               <a
                 href="/import"
                 onClick={handleImportClick}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  (activeSidebarItem === "Import" || currentPath === "/import") ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
-                )}
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary"
               >
                 <FileInput className="h-5 w-5" />
                 <span>Import</span>
@@ -323,7 +304,7 @@ export default function LeftSidebar({
       {!isProjectsSidebarOpen && (
         <div
           ref={resizeHandleRef}
-          className="absolute right-0 inset-y-0 w-2 bg-transparent hover:bg-blue-500/20 cursor-ew-resize z-30"
+          className="absolute right-0 inset-y-0 w-2 bg-transparent hover:bg-spark-primary/20 cursor-ew-resize z-30"
           title="Drag to resize"
           style={{ transition: isResizing ? 'none' : 'opacity 200ms ease-in-out' }}
         />

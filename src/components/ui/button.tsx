@@ -20,6 +20,12 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800 dark:hover:text-neutral-50",
         link: "text-neutral-900 underline-offset-4 hover:underline dark:text-neutral-50",
+        primary: 
+          "bg-spark-primary text-white hover:bg-spark-primary/90 dark:bg-spark-primary dark:text-white dark:hover:bg-spark-primary/90",
+        accent: 
+          "bg-spark-brand text-white hover:bg-spark-brand/90 dark:bg-spark-brand dark:text-white dark:hover:bg-spark-brand/90",
+        branded: 
+          "bg-spark-secondary text-spark-base hover:bg-spark-secondary/90 dark:bg-spark-secondary dark:text-spark-base dark:hover:bg-spark-secondary/90",
       },
       size: {
         default: "h-10 px-4 py-2",

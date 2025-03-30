@@ -65,12 +65,12 @@ export default function Header({
               onClick={handleLogoClick} 
               className="flex items-center gap-1 hover:opacity-80"
             >
-              <LogoIcon className="h-5 w-5" />
+              <LogoIcon className="h-5 w-5 text-spark-brand" />
               <span className="font-medium text-lg hidden md:inline-block">Spark</span>
             </a>
           ) : (
             <Link href="/dashboard" className="flex items-center gap-1 hover:opacity-80">
-              <LogoIcon className="h-5 w-5" />
+              <LogoIcon className="h-5 w-5 text-spark-brand" />
               <span className="font-medium text-lg hidden md:inline-block">Spark</span>
             </Link>
           )}
@@ -88,7 +88,7 @@ export default function Header({
             <input
               type="search"
               placeholder="Search..."
-              className="w-full rounded-md border bg-background pl-9 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-md border bg-background pl-9 py-2 text-sm outline-none focus:ring-1 focus:ring-spark-primary"
             />
           </div>
         </div>

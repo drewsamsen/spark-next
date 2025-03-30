@@ -63,6 +63,13 @@ export default {
         },
       },
       colors: {
+        spark: {
+          brand: "#EF6024",
+          primary: "#196774",
+          secondary: "#F0941F",
+          neutral: "#90A19D",
+          base: "#363432",
+        },
         beige: "#f8e8e0",
         "dark-beige": "#fcf3ed",
         "dark-blue": "#1D265D",
@@ -76,7 +83,6 @@ export default {
         "github-purple": "#6e5494",
         pink: "#ff7bff",
         orange: "#FFBA00",
-        "base-black": "#191818",
         blueGray: {
           50: "#F8FAFC",
           100: "#F1F5F9",

@@ -52,3 +52,5 @@
 - Created a custom LogoIcon component that can be updated with the site's SVG logo and integrated it into the header.
 - Implemented the custom leaf/flame SVG logo into the LogoIcon component for use in the application header.
 - Implemented client-side navigation with dedicated route groups and an AppShell component to avoid full page reloads between app sections.
+- Added a custom color palette with coral and teal colors, enhancing the application's visual appeal across buttons, icons, and UI elements.
+- Refactored color system to use semantic naming (brand, primary, secondary, neutral, base) rather than appearance-based names, making future theme changes easier.
