@@ -10,10 +10,13 @@ import {
   Calendar,
   MessagesSquare,
   PlusCircle,
-  Sparkles
+  Sparkles,
+  Inbox,
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import Link from "next/link";
 
 interface LeftSidebarProps {
   isOpen: boolean;
@@ -21,6 +24,15 @@ interface LeftSidebarProps {
   activeSidebarItem: string | null;
   toggleProjectsSidebar: (item: string) => void;
   isProjectsSidebarOpen: boolean;
+}
+
+// Nav item interface
+interface NavItem {
+  name: string;
+  icon: React.ReactNode;
+  tooltip: string;
+  hasSubmenu?: boolean;
+  href?: string;
 }
 
 export default function LeftSidebar({
@@ -31,23 +43,11 @@ export default function LeftSidebar({
   isProjectsSidebarOpen
 }: LeftSidebarProps) {
   // Sidebar items configuration
-  const sidebarItems = [
+  const sidebarItems: NavItem[] = [
     {
-      name: "Home",
-      icon: <Home className="h-5 w-5" />,
-      tooltip: "Home"
-    },
-    {
-      name: "Books",
-      icon: <Book className="h-5 w-5" />,
-      tooltip: "Books",
-      hasSubmenu: true
-    },
-    {
-      name: "Sparks",
-      icon: <Sparkles className="h-5 w-5" />,
-      tooltip: "Sparks",
-      hasSubmenu: true
+      name: "Inbox",
+      icon: <Inbox className="h-5 w-5" />,
+      tooltip: "Inbox"
     },
     {
       name: "Upload",
@@ -56,101 +56,127 @@ export default function LeftSidebar({
       href: "/upload"
     },
     {
+      name: "Books",
+      icon: <Book className="h-5 w-5" />,
+      tooltip: "Books",
+      hasSubmenu: true
+    },
+    {
       name: "Documents",
       icon: <FileText className="h-5 w-5" />,
       tooltip: "Documents"
     },
     {
-      name: "Calendar",
-      icon: <Calendar className="h-5 w-5" />,
-      tooltip: "Calendar"
+      name: "Sparks",
+      icon: <Sparkles className="h-5 w-5" />,
+      tooltip: "Sparks",
+      hasSubmenu: true
     },
     {
-      name: "Messages",
-      icon: <MessagesSquare className="h-5 w-5" />,
-      tooltip: "Messages"
+      name: "Synthesize",
+      icon: <Zap className="h-5 w-5" />,
+      tooltip: "Synthesize"
     },
   ];
 
-  const bottomItems = [
-    {
-      name: "Settings",
-      icon: <Settings className="h-5 w-5" />,
-      tooltip: "Settings"
-    },
-    {
-      name: "New Item",
-      icon: <PlusCircle className="h-5 w-5" />,
-      tooltip: "Create new item"
+  const handleNavItemClick = (item: NavItem, e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (item.href) {
+      // Handle navigation to external routes
+      window.location.href = item.href;
+    } else {
+      toggleProjectsSidebar(item.name);
     }
-  ];
+  };
 
   if (!isOpen) return null;
 
   return (
-    <div className="h-full w-full bg-sidebar border-r flex flex-col overflow-hidden">
-      {/* Sidebar content */}
-      <div className="flex flex-col flex-1 overflow-y-auto scrollbar-thin">
-        {/* Top items */}
-        <nav className="flex flex-col items-start px-2 py-4 gap-1">
-          {sidebarItems.map((item) => (
-            <Tooltip key={item.name} delayDuration={300}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
+    <div className="h-full w-full bg-sidebar border-r transition-all duration-300 ease-in-out z-10">
+      <div className="flex h-full flex-col">
+        <div className="h-14 flex items-center border-b px-4 md:h-[57px]"></div>
+        <div className="flex-1 overflow-auto scrollbar-thin py-2">
+          <nav className="grid gap-1 px-2">
+            {sidebarItems.map((item) => (
+              isProjectsSidebarOpen ? (
+                <Tooltip key={item.name} delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <a
+                      href={item.href || "#"}
+                      onClick={(e) => handleNavItemClick(item, e)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        activeSidebarItem === item.name ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground",
+                        "pl-3 pr-0 justify-start w-[60px]"
+                      )}
+                    >
+                      {item.icon}
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={5}>
+                    {item.tooltip}
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <a
+                  key={item.name}
+                  href={item.href || "#"}
+                  onClick={(e) => handleNavItemClick(item, e)}
                   className={cn(
-                    "flex items-center justify-center h-10 w-full transition-colors",
-                    isProjectsSidebarOpen && item.hasSubmenu && activeSidebarItem === item.name
-                      ? "bg-sidebar-accent/50 text-foreground"
-                      : activeSidebarItem === item.name
-                      ? "bg-sidebar-accent text-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    activeSidebarItem === item.name ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground"
                   )}
-                  onClick={() => {
-                    if (item.hasSubmenu) {
-                      toggleProjectsSidebar(item.name);
-                    } else {
-                      toggleProjectsSidebar(item.name);
-                    }
-                  }}
                 >
-                  <span className="sr-only">{item.name}</span>
-                  <div className="flex items-center">
-                    {item.icon}
-                  </div>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{item.tooltip}</TooltipContent>
-            </Tooltip>
-          ))}
-        </nav>
-      </div>
-
-      {/* Bottom items */}
-      <nav className="flex flex-col items-start px-2 py-4 border-t gap-1">
-        {bottomItems.map((item) => (
-          <Tooltip key={item.name} delayDuration={300}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "flex items-center justify-center h-10 w-full transition-colors",
-                  activeSidebarItem === item.name
-                    ? "bg-sidebar-accent text-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
-                )}
-                onClick={() => toggleProjectsSidebar(item.name)}
-              >
-                <span className="sr-only">{item.name}</span>
-                <div className="flex items-center">
                   {item.icon}
-                </div>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">{item.tooltip}</TooltipContent>
-          </Tooltip>
-        ))}
-      </nav>
+                  <span>{item.name}</span>
+                </a>
+              )
+            ))}
+          </nav>
+          <div className="mt-auto" />
+          <div className="mt-4 grid gap-1 px-2">
+            {isProjectsSidebarOpen ? (
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleProjectsSidebar("Settings");
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      activeSidebarItem === "Settings" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "",
+                      "pl-3 pr-0 justify-start w-[60px]"
+                    )}
+                  >
+                    <Settings className="h-5 w-5" />
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={5}>
+                  Settings
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleProjectsSidebar("Settings");
+                }}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  activeSidebarItem === "Settings" ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
+                )}
+              >
+                <Settings className="h-5 w-5" />
+                <span>Settings</span>
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 

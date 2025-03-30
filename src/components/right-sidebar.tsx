@@ -73,7 +73,7 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
 
   return (
     <div 
-      className="h-full border-l bg-sidebar fixed right-0 top-14 overflow-hidden transition-all duration-300 ease-in-out animate-fade-in"
+      className="h-full border-l bg-sidebar overflow-hidden transition-all duration-300 ease-in-out animate-fade-in flex-shrink-0 relative"
       style={{ 
         width: `${sidebarWidth}px`,
         transition: isResizing ? 'none' : 'width 300ms ease-in-out'
