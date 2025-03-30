@@ -10,6 +10,7 @@ import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
 import { mockApi } from "@/lib/mock-api";
 import { SidebarItem } from "@/lib/mock-api/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useRouter, usePathname } from "next/navigation";
 
 // Dashboard layout component to be used by all app pages
 export default function DashboardLayout({
@@ -18,6 +19,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { settings } = useUISettings();
+  const router = useRouter();
+  const pathname = usePathname();
   
   // Track if component has mounted to prevent hydration mismatch
   const [hasMounted, setHasMounted] = useState(false);
@@ -96,6 +99,12 @@ export default function DashboardLayout({
     setRightSidebarOpen(!rightSidebarOpen);
   };
 
+  // Client-side navigation function
+  const navigateTo = (path: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    router.push(path);
+  };
+
   // Toggle nested sidebar visibility based on the clicked item
   const toggleSidebar = (item: string) => {
     if (item === "Books") {
@@ -143,6 +152,8 @@ export default function DashboardLayout({
         <Header 
           toggleLeftSidebar={toggleLeftSidebar}
           toggleRightSidebar={toggleRightSidebar}
+          navigateTo={navigateTo}
+          currentPath={pathname}
         />
         <div className="flex flex-1 overflow-hidden">
           {/* Left sidebar container */}
@@ -155,6 +166,8 @@ export default function DashboardLayout({
                 activeSidebarItem={activeSidebarItem}
                 toggleProjectsSidebar={toggleSidebar}
                 isProjectsSidebarOpen={isNestedSidebarOpen}
+                navigateTo={navigateTo}
+                currentPath={pathname}
               />
 
               {/* Books sidebar overlays on top of the left sidebar, leaving space for icons */}

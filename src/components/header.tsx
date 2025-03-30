@@ -21,18 +21,32 @@ import { LogoIcon } from "@/components/icons/LogoIcon";
 interface HeaderProps {
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
+  navigateTo?: (path: string, e: React.MouseEvent) => void;
+  currentPath?: string;
 }
 
-export default function Header({ toggleLeftSidebar, toggleRightSidebar }: HeaderProps) {
+export default function Header({ 
+  toggleLeftSidebar, 
+  toggleRightSidebar,
+  navigateTo,
+  currentPath = "/dashboard"
+}: HeaderProps) {
   const pathname = usePathname();
+  const activePath = currentPath || pathname;
   
   // Extract current page name from pathname
   const getPageName = () => {
-    if (pathname === "/" || pathname === "/dashboard") return "Dashboard";
+    if (activePath === "/" || activePath === "/dashboard") return "Dashboard";
     
     // Remove leading slash and capitalize first letter
-    const path = pathname.substring(1);
+    const path = activePath.substring(1);
     return path.charAt(0).toUpperCase() + path.slice(1);
+  };
+  
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (navigateTo) {
+      navigateTo("/dashboard", e);
+    }
   };
   
   return (
@@ -45,10 +59,21 @@ export default function Header({ toggleLeftSidebar, toggleRightSidebar }: Header
             <span className="sr-only">Toggle left sidebar</span>
           </Button>
           
-          <Link href="/dashboard" className="flex items-center gap-1 hover:opacity-80">
-            <LogoIcon className="h-5 w-5" />
-            <span className="font-medium text-lg hidden md:inline-block">Spark</span>
-          </Link>
+          {navigateTo ? (
+            <a 
+              href="/dashboard" 
+              onClick={handleLogoClick} 
+              className="flex items-center gap-1 hover:opacity-80"
+            >
+              <LogoIcon className="h-5 w-5" />
+              <span className="font-medium text-lg hidden md:inline-block">Spark</span>
+            </a>
+          ) : (
+            <Link href="/dashboard" className="flex items-center gap-1 hover:opacity-80">
+              <LogoIcon className="h-5 w-5" />
+              <span className="font-medium text-lg hidden md:inline-block">Spark</span>
+            </Link>
+          )}
           
           <div className="hidden md:flex items-center gap-1">
             <ChevronRight className="h-4 w-4 text-muted-foreground" />

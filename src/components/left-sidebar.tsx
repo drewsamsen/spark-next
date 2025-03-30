@@ -27,6 +27,8 @@ interface LeftSidebarProps {
   activeSidebarItem: string | null;
   toggleProjectsSidebar: (item: string) => void;
   isProjectsSidebarOpen: boolean;
+  navigateTo?: (path: string, e: React.MouseEvent) => void;
+  currentPath?: string;
 }
 
 // Nav item interface
@@ -43,7 +45,9 @@ export default function LeftSidebar({
   setIsOpen,
   activeSidebarItem,
   toggleProjectsSidebar,
-  isProjectsSidebarOpen
+  isProjectsSidebarOpen,
+  navigateTo,
+  currentPath
 }: LeftSidebarProps) {
   const { settings, updateLeftSidebarWidth } = useUISettings();
   const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
@@ -162,11 +166,24 @@ export default function LeftSidebar({
     e.preventDefault();
     
     if (item.href) {
-      // Handle navigation to external routes
-      window.location.href = item.href;
+      if (navigateTo) {
+        navigateTo(item.href, e);
+      } else {
+        // Fallback to traditional navigation
+        window.location.href = item.href;
+      }
     } else {
       toggleProjectsSidebar(item.name);
     }
+  };
+
+  // Update the Import link to use client navigation
+  const handleImportClick = (e: React.MouseEvent) => {
+    if (navigateTo) {
+      e.preventDefault();
+      navigateTo("/import", e);
+    }
+    // else will use default navigation
   };
 
   if (!isOpen) return null;
@@ -271,9 +288,10 @@ export default function LeftSidebar({
                 <TooltipTrigger asChild>
                   <a
                     href="/import"
+                    onClick={handleImportClick}
                     className={cn(
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      activeSidebarItem === "Import" ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
+                      (activeSidebarItem === "Import" || currentPath === "/import") ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
                     )}
                     aria-label="Import"
                   >
@@ -287,9 +305,10 @@ export default function LeftSidebar({
             ) : (
               <a
                 href="/import"
+                onClick={handleImportClick}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  activeSidebarItem === "Import" ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
+                  (activeSidebarItem === "Import" || currentPath === "/import") ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
                 )}
               >
                 <FileInput className="h-5 w-5" />

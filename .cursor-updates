@@ -51,3 +51,4 @@
 - Improved navigation by changing Inbox to Dashboard in the sidebar, making the app name in header link to dashboard, and adding dynamic breadcrumbs.
 - Created a custom LogoIcon component that can be updated with the site's SVG logo and integrated it into the header.
 - Implemented the custom leaf/flame SVG logo into the LogoIcon component for use in the application header.
+- Implemented client-side navigation with dedicated route groups and an AppShell component to avoid full page reloads between app sections.
