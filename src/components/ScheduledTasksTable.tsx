@@ -38,6 +38,15 @@ export default function ScheduledTasksTable() {
       requiresApiKey: true,
       apiKeySource: "readwise"
     },
+    {
+      id: "readwise-highlights-sync",
+      name: "Sync Readwise Highlights",
+      description: "Import highlights from your Readwise books into the database",
+      isSchedulable: false,
+      triggerEndpoint: "/api/inngest/trigger-sync-highlights",
+      requiresApiKey: true,
+      apiKeySource: "readwise"
+    },
     // More tasks will be added in the future
   ];
   

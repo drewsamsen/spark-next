@@ -43,6 +43,12 @@ export type AppEvents = {
       apiKey: string;
     }
   };
+  "readwise/sync-highlights": {
+    data: {
+      userId: string;
+      apiKey: string;
+    }
+  };
 };
 
 // Initialize Inngest with typed events
@@ -617,12 +623,380 @@ export const readwiseSyncBooksFn = inngest.createFunction(
   }
 );
 
+// Function to import highlights from Readwise to Supabase
+export const readwiseSyncHighlightsFn = inngest.createFunction(
+  { id: "readwise-sync-highlights" },
+  { event: "readwise/sync-highlights" },
+  async ({ event, step, logger }) => {
+    const { userId, apiKey } = event.data;
+    
+    logger.info("Starting Readwise highlights sync", { userId });
+    
+    if (!userId || !apiKey) {
+      logger.error("Missing user ID or API key");
+      return { 
+        success: false, 
+        error: "Missing user ID or API key",
+        isLastStep: true
+      };
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      logger.error("Missing Supabase configuration");
+      return { 
+        success: false, 
+        error: "Server configuration error",
+        isLastStep: true
+      };
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    try {
+      // Step 1: Fetch books with highlight counts to process (limit to 3 for now)
+      const bookResult = await step.run("fetch-books-to-sync", async () => {
+        logger.info("Step 1: Fetching books to sync highlights for");
+        
+        const { data, error } = await supabase
+          .from('books')
+          .select('id, rw_id, rw_title, rw_num_highlights')
+          .eq('user_id', userId)
+          .order('rw_title', { ascending: true })
+          .limit(3); // Limit to 3 books as requested
+          
+        if (error) {
+          logger.error("Error fetching books:", error);
+          throw error;
+        }
+        
+        logger.info(`Found ${data?.length || 0} books to check for highlights`);
+        return { books: data || [], success: true };
+      });
+      
+      if (!bookResult.success || bookResult.books.length === 0) {
+        logger.error("No books found to sync highlights for");
+        return { 
+          success: false, 
+          error: "No books found",
+          isLastStep: true
+        };
+      }
+
+      // Track overall sync statistics
+      let totalHighlightsInReadwise = 0;
+      let totalHighlightsInSupabase = 0;
+      let totalHighlightsInserted = 0;
+      let totalHighlightsUpdated = 0;
+      
+      // Step 2: Process each book's highlights
+      const syncResults = await step.run("sync-book-highlights", async () => {
+        const results = [];
+        
+        // Process each book one by one
+        for (const book of bookResult.books) {
+          logger.info(`Processing highlights for book: ${book.rw_title} (ID: ${book.id}, Readwise ID: ${book.rw_id})`);
+          
+          // Step 2a: Get existing highlights for this book from Supabase
+          const { data: existingHighlights, error: highlightsError } = await supabase
+            .from('highlights')
+            .select('id, rw_id, rw_updated')
+            .eq('user_id', userId)
+            .eq('book_id', book.id);
+            
+          if (highlightsError) {
+            logger.error(`Error fetching existing highlights for book ${book.id}:`, highlightsError);
+            results.push({
+              bookId: book.id,
+              rwBookId: book.rw_id,
+              title: book.rw_title,
+              success: false,
+              error: highlightsError.message
+            });
+            continue; // Skip to the next book
+          }
+          
+          const existingHighlightsCount = existingHighlights?.length || 0;
+          totalHighlightsInSupabase += existingHighlightsCount;
+          
+          logger.info(`Found ${existingHighlightsCount} existing highlights in Supabase for book ${book.rw_title}`);
+          
+          // Create a map of existing highlights for faster lookups
+          const highlightsMap = new Map();
+          existingHighlights?.forEach(highlight => {
+            highlightsMap.set(Number(highlight.rw_id), {
+              id: highlight.id,
+              rwUpdated: new Date(highlight.rw_updated || 0)
+            });
+          });
+          
+          // If we already have all the highlights (according to the book's highlight count), we can skip this book
+          if (existingHighlightsCount >= (book.rw_num_highlights || 0)) {
+            logger.info(`Book ${book.rw_title} already has all ${book.rw_num_highlights} highlights. Skipping.`);
+            results.push({
+              bookId: book.id,
+              rwBookId: book.rw_id,
+              title: book.rw_title,
+              success: true,
+              existing: existingHighlightsCount,
+              expected: book.rw_num_highlights,
+              inserted: 0,
+              updated: 0
+            });
+            continue; // Skip to the next book
+          }
+          
+          // Step 2b: Get highlights from Readwise API
+          logger.info(`Fetching highlights from Readwise API for book ${book.rw_title} (Readwise ID: ${book.rw_id})`);
+          
+          let nextUrl = `https://readwise.io/api/v2/highlights/?book_id=${book.rw_id}&page_size=1000`;
+          let highlightsToInsert = [];
+          let highlightsToUpdate = [];
+          let readwiseHighlightsCount = 0;
+          let page = 1;
+          
+          // Process all pages of highlights for this book
+          while (nextUrl) {
+            logger.info(`Fetching highlights page ${page} from ${nextUrl}`);
+            
+            // Add a small delay to respect rate limits
+            if (page > 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            try {
+              const response = await fetch(nextUrl, {
+                method: "GET",
+                headers: {
+                  "Authorization": `Token ${apiKey}`,
+                  "Content-Type": "application/json"
+                }
+              });
+              
+              if (!response.ok) {
+                const errorText = await response.text();
+                logger.error(`Readwise API error (${response.status}): ${errorText}`);
+                throw new Error(`Readwise API error (${response.status}): ${errorText}`);
+              }
+              
+              const data = await response.json();
+              const highlights = data.results || [];
+              
+              // Add the highlights from this page to the total count
+              readwiseHighlightsCount += highlights.length;
+              totalHighlightsInReadwise += highlights.length;
+              
+              logger.info(`Received ${highlights.length} highlights from Readwise API for book ${book.rw_title} (total so far: ${readwiseHighlightsCount})`);
+              
+              // Process each highlight
+              for (const highlight of highlights) {
+                // Map Readwise highlight properties to Supabase table columns
+                const highlightData = {
+                  user_id: userId,
+                  book_id: book.id,
+                  rw_id: highlight.id,
+                  rw_text: highlight.text,
+                  rw_note: highlight.note,
+                  rw_location: highlight.location,
+                  rw_location_type: highlight.location_type,
+                  rw_highlighted_at: highlight.highlighted_at,
+                  rw_url: highlight.url,
+                  rw_color: highlight.color,
+                  rw_updated: highlight.updated,
+                  rw_book_id: highlight.book_id,
+                  rw_tags: highlight.tags && highlight.tags.length > 0 ? highlight.tags : null
+                };
+                
+                // Check if highlight already exists
+                const existingHighlight = highlightsMap.get(Number(highlight.id));
+                
+                if (!existingHighlight) {
+                  // New highlight, add to insert batch
+                  highlightsToInsert.push(highlightData);
+                } else {
+                  // Existing highlight, check if update needed
+                  const newUpdated = new Date(highlight.updated);
+                  
+                  if (newUpdated > existingHighlight.rwUpdated) {
+                    // Highlight needs update
+                    highlightsToUpdate.push({
+                      ...highlightData,
+                      id: existingHighlight.id
+                    });
+                  }
+                }
+              }
+              
+              // Check if there's another page
+              nextUrl = data.next || null;
+              page++;
+              
+              // Safety check to prevent infinite loops
+              if (page > 50) {
+                logger.warn(`Reached 50 pages for book ${book.rw_title} - stopping to prevent potential infinite loop`);
+                break;
+              }
+            } catch (error) {
+              logger.error(`Error processing Readwise API page ${page} for book ${book.rw_title}:`, error);
+              throw error;
+            }
+          }
+          
+          logger.info(`Finished processing all highlights for book ${book.rw_title}. Ready to insert: ${highlightsToInsert.length}, Ready to update: ${highlightsToUpdate.length}`);
+          
+          // Step 2c: Insert and update highlights in batches
+          let insertedCount = 0;
+          let updatedCount = 0;
+          
+          // Insert new highlights in batches
+          if (highlightsToInsert.length > 0) {
+            logger.info(`Beginning insertion of ${highlightsToInsert.length} highlights for book ${book.rw_title}`);
+            
+            const batchSize = 100;
+            for (let i = 0; i < highlightsToInsert.length; i += batchSize) {
+              const batch = highlightsToInsert.slice(i, i + batchSize);
+              logger.info(`Inserting batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(highlightsToInsert.length/batchSize)}: ${batch.length} highlights`);
+              
+              const { error: insertError } = await supabase
+                .from('highlights')
+                .insert(batch);
+                
+              if (insertError) {
+                logger.error(`Error inserting highlights batch for book ${book.rw_title}:`, insertError);
+              } else {
+                insertedCount += batch.length;
+                totalHighlightsInserted += batch.length;
+                logger.info(`Successfully inserted batch: ${batch.length} highlights`);
+              }
+            }
+          }
+          
+          // Update existing highlights
+          if (highlightsToUpdate.length > 0) {
+            logger.info(`Beginning update of ${highlightsToUpdate.length} highlights for book ${book.rw_title}`);
+            
+            const batchSize = 100;
+            for (let i = 0; i < highlightsToUpdate.length; i += batchSize) {
+              const batch = highlightsToUpdate.slice(i, i + batchSize);
+              logger.info(`Updating batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(highlightsToUpdate.length/batchSize)}: ${batch.length} highlights`);
+              
+              for (const highlight of batch) {
+                const { id, ...updateData } = highlight;
+                const { error: updateError } = await supabase
+                  .from('highlights')
+                  .update(updateData)
+                  .eq('id', id);
+                  
+                if (updateError) {
+                  logger.error(`Error updating highlight ${highlight.rw_id}:`, updateError);
+                } else {
+                  updatedCount++;
+                  totalHighlightsUpdated++;
+                }
+              }
+            }
+          }
+          
+          logger.info(`Completed database operations for book ${book.rw_title}. Inserted: ${insertedCount}, Updated: ${updatedCount}`);
+          
+          // Add results for this book
+          results.push({
+            bookId: book.id,
+            rwBookId: book.rw_id,
+            title: book.rw_title,
+            success: true,
+            existing: existingHighlightsCount,
+            fromReadwise: readwiseHighlightsCount,
+            expected: book.rw_num_highlights,
+            inserted: insertedCount,
+            updated: updatedCount
+          });
+        }
+        
+        return results;
+      });
+      
+      // Step 3: Update user settings with the sync time
+      await step.run("update-last-synced", async () => {
+        logger.info("Updating user settings with highlights sync timestamp");
+        
+        // First get current settings
+        const { data: currentSettings, error: getError } = await supabase
+          .from('user_settings')
+          .select('integrations')
+          .eq('user_id', userId)
+          .single();
+        
+        if (getError) {
+          logger.error("Failed to get current user settings", getError);
+          return { success: false };
+        }
+        
+        // Merge existing settings with new highlightsSynced timestamp
+        const updatedSettings = {
+          integrations: {
+            ...(currentSettings?.integrations || {}),
+            readwise: {
+              ...(currentSettings?.integrations?.readwise || {}),
+              highlightsSynced: new Date().toISOString()
+            }
+          }
+        };
+        
+        // Update settings
+        const { error } = await supabase
+          .from('user_settings')
+          .update(updatedSettings)
+          .eq('user_id', userId);
+          
+        if (error) {
+          logger.error("Failed to update highlights synced timestamp", error);
+          return { success: false };
+        }
+        
+        logger.info("Successfully updated user settings with highlights sync timestamp");
+        return { success: true };
+      });
+      
+      logger.info("Highlights sync completed successfully", {
+        booksProcessed: bookResult.books.length,
+        totalHighlightsInReadwise,
+        totalHighlightsInSupabase,
+        totalHighlightsInserted,
+        totalHighlightsUpdated
+      });
+      
+      return { 
+        success: true, 
+        booksProcessed: bookResult.books.length,
+        totalHighlightsInReadwise,
+        totalHighlightsInSupabase,
+        totalHighlightsInserted,
+        totalHighlightsUpdated,
+        bookResults: syncResults,
+        isLastStep: true
+      };
+    } catch (error: any) {
+      logger.error("Error in Readwise highlights sync:", error);
+      return { 
+        success: false, 
+        error: error.message || "Unknown error during highlights sync",
+        isLastStep: true
+      };
+    }
+  }
+);
+
 // Export the serve function for use in API routes
 export const serveInngest = serve({
   client: inngest,
   functions: [
     readwiseCountBooksFn,
     readwiseConnectionTestFn,
-    readwiseSyncBooksFn
+    readwiseSyncBooksFn,
+    readwiseSyncHighlightsFn
   ],
 });
