@@ -173,6 +173,60 @@ supabase db push
    - Navigate to Domains
    - Add your domain and follow the DNS configuration instructions
 
+## Realtime Updates with Supabase
+
+This project uses Supabase Realtime to provide live updates to the UI when data changes in the database. This is particularly useful for background jobs and automated processes that run without direct user interaction.
+
+### How Realtime Works
+
+1. **Database Changes**: When data changes in the Supabase database, it triggers realtime events
+2. **Client Subscriptions**: The frontend subscribes to these events using custom hooks
+3. **Automatic UI Updates**: Components automatically update when relevant data changes
+
+### Using Realtime in Components
+
+To use realtime updates in your components:
+
+```tsx
+import { useRealtimeSubscription } from '@/hooks/use-realtime-subscription';
+
+function YourComponent() {
+  // Subscribe to changes on a specific table
+  const { isConnected } = useRealtimeSubscription(
+    { table: 'your_table_name' },
+    (payload) => {
+      // Handle the changes here
+      console.log('Data changed:', payload);
+      // Update your local state or fetch fresh data
+    }
+  );
+
+  return (
+    <div>
+      {isConnected && <div>Realtime connected!</div>}
+      // Rest of your component
+    </div>
+  );
+}
+```
+
+### Domain-Specific Hooks
+
+We've also created domain-specific hooks for common use cases:
+
+- `useFunctionLogs`: Manages function logs with realtime updates
+- Add more hooks as we develop more realtime features
+
+### Adding Realtime to New Tables
+
+To enable realtime for a new table:
+
+1. Create a migration that adds the table to the realtime publication
+2. Create appropriate RLS policies for the realtime messages
+3. Create a hook that leverages the base `useRealtimeSubscription` hook
+
+See the migration files for examples of how to set this up.
+
 ## 📝 License
 
 MIT License

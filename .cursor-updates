@@ -110,3 +110,11 @@
 - Redesigned Function Logs table with expandable rows to display full JSON result data inline, creating a more context-aware and space-efficient viewing experience without obscuring the rest of the interface.
 - Fixed and improved Readwise book import function by enhancing error handling, adding comprehensive logging throughout the execution flow, and ensuring proper return value structure with import/update counts.
 - Enhanced Readwise book import function to track and return additional metrics including total books found in Readwise and in Supabase, providing better visibility into the sync process.
+- Implemented Supabase Realtime for function logs with auto-updating UI, eliminating manual refresh needs and adding live status indicators, custom hooks, and reusable infrastructure for real-time updates across the application.
+- Fixed Supabase Realtime implementation by optimizing the hooks to prevent excessive polling, properly handling WebSocket connections, and implementing in-memory state updates for better performance and responsiveness.
+- Removed automatic scrolling to the function logs table when running Inngest functions from the settings page, allowing users to stay in context and view logs at their discretion.
+- Fixed issue with multiple success toasts appearing during Readwise book count polling by implementing a comparison against previous book count, ensuring only one toast notification is shown when the count changes.
+- Simplified Readwise integration architecture by removing book count storage in user settings, removing manual polling, and relying on Function Logs for displaying results, resulting in a cleaner separation of concerns.
+- Fixed duplicate "function completed successfully" toast notifications in Function Logs by adding tracking logic to prevent showing toasts for the same function completion multiple times.
+- Fixed issue with Readwise sync books function showing premature completion status in Function Logs by enhancing the Inngest middleware to detect and handle intermediate step results properly.
+- Implemented standardized `isLastStep` convention for all Inngest functions to reliably indicate when a multi-step function has truly completed, replacing the previous approach of detecting function-specific result fields.

@@ -9,6 +9,7 @@ const functionContexts = new Map<string, {
   functionId: string;
   functionName: string;
   logId?: string;
+  isCompleting?: boolean; // Flag to prevent double completion
 }>();
 
 /**
@@ -67,7 +68,8 @@ export const databaseLoggerMiddleware = {
         // Store function context for later use in transformOutput
         functionContexts.set(runId, {
           functionId,
-          functionName
+          functionName,
+          isCompleting: false
         });
         
         return {
@@ -78,7 +80,7 @@ export const databaseLoggerMiddleware = {
               
               const { data: existingLog } = await supabase
                 .from('function_logs')
-                .select('id')
+                .select('id, status')
                 .eq('run_id', runId)
                 .maybeSingle();
               
@@ -87,8 +89,12 @@ export const databaseLoggerMiddleware = {
                 const context = functionContexts.get(runId);
                 if (context) {
                   context.logId = existingLog.id;
+                  // If this log is already completed or failed, mark it as completing
+                  if (existingLog.status === 'completed' || existingLog.status === 'failed') {
+                    context.isCompleting = true;
+                  }
                   functionContexts.set(runId, context);
-                  debugLog(`Using existing log ${existingLog.id} for run ${runId}`);
+                  debugLog(`Using existing log ${existingLog.id} for run ${runId}, status: ${existingLog.status}`);
                 }
                 return;
               }
@@ -131,9 +137,31 @@ export const databaseLoggerMiddleware = {
             const context = functionContexts.get(runId);
             debugLog(`Context for runId ${runId}:`, context);
             
+            // Only update the log if we have a logId
             if (context?.logId) {
-              // Update the log status
-              updateLogStatus(context.logId, result);
+              // Check if this is an intermediate result or final result
+              if (result && !context.isCompleting) {
+                // Check if this is the final step using the isLastStep convention
+                const isFinalResult = result.isLastStep === true || 
+                                     (result.data && result.data.isLastStep === true);
+                
+                if (isFinalResult) {
+                  // This is marked as the final result, mark the function as completed
+                  context.isCompleting = true;
+                  functionContexts.set(runId, context);
+                  debugLog(`Processing final result for run ${runId} (marked with isLastStep)`);
+                  updateLogStatus(context.logId, result);
+                } else {
+                  // This is an intermediate step result, just update the data
+                  // but keep the function status as "started"
+                  debugLog(`Processing intermediate result for run ${runId}`);
+                  updateLogWithoutCompletingStatus(context.logId, result);
+                  return result;
+                }
+              } else {
+                // Update the log status (this is likely an error case)
+                updateLogStatus(context.logId, result);
+              }
             } else {
               debugLog(`No log ID found for run ${runId}`);
               
@@ -173,6 +201,28 @@ export const databaseLoggerMiddleware = {
 };
 
 /**
+ * Helper function to update log with data without changing status
+ */
+async function updateLogWithoutCompletingStatus(logId: string, result: any) {
+  try {
+    // Make sure we have a logId before trying to update
+    if (!logId) return;
+    
+    debugLog(`Updating log data for ${logId} without changing status`);
+    
+    // Update the result data while maintaining the 'started' status
+    await FunctionLogsService.updateFunctionLog(logId, {
+      status: 'started', // Keep the status as started
+      result_data: result.data || result // Update the result data
+    });
+    
+    debugLog(`Updated log ${logId} with data without changing status`);
+  } catch (err) {
+    console.error("Error updating function log data:", err);
+  }
+}
+
+/**
  * Helper function to update log status
  */
 async function updateLogStatus(logId: string, result: any) {
@@ -189,14 +239,15 @@ async function updateLogStatus(logId: string, result: any) {
       await FunctionLogsService.updateFunctionLog(logId, {
         status: "failed",
         error_message: result.error instanceof Error ? result.error.message : String(result.error),
-        error_stack: result.error instanceof Error ? result.error.stack : undefined
+        error_stack: result.error instanceof Error ? result.error.stack : undefined,
+        result_data: result.data || result
       });
       debugLog(`Updated log ${logId} as failed`);
     } else {
       // Log successful completion with result data
       await FunctionLogsService.updateFunctionLog(logId, {
         status: "completed",
-        result_data: result.data
+        result_data: result.data || result
       });
       debugLog(`Updated log ${logId} as completed`);
     }

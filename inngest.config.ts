@@ -3,6 +3,26 @@ import { serve } from "inngest/next";
 import { databaseLoggerMiddleware } from "./src/lib/inngest-db-logger-middleware";
 import { createClient } from "@supabase/supabase-js";
 
+/**
+ * IMPORTANT: Function Completion Convention
+ * 
+ * All Inngest functions MUST include `isLastStep: true` in their final return value.
+ * This marker is used by our database logger middleware to accurately track when a
+ * function has truly completed rather than just finished an intermediate step.
+ * 
+ * Example:
+ * ```
+ * return {
+ *   success: true,
+ *   // other data...
+ *   isLastStep: true  // Required for proper logging
+ * }
+ * ```
+ * 
+ * Without this marker, functions with multiple steps may appear to complete prematurely
+ * in logs and UI components.
+ */
+
 // Define event types for better type safety
 export type AppEvents = {
   "readwise/count-books": {
@@ -59,7 +79,8 @@ export const readwiseCountBooksFn = inngest.createFunction(
       logger.error("No Readwise API key provided");
       return { 
         success: false, 
-        error: "No API key provided" 
+        error: "No API key provided",
+        isLastStep: true
       };
     }
     
@@ -123,41 +144,19 @@ export const readwiseCountBooksFn = inngest.createFunction(
         };
       });
       
-      // Update user settings with the results via API call
-      await step.run("update-user-settings", async () => {
-        logger.info("Updating user settings with book count");
-        
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/readwise`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId,
-            bookCount: result.count,
-            syncTime: new Date().toISOString(),
-          }),
-        });
-        
-        if (!response.ok) {
-          logger.error("Failed to update user settings");
-          return { success: false, error: "Failed to update settings" };
-        }
-        
-        return { success: true };
-      });
-      
       logger.info("Book count completed successfully", { count: result.count });
       
       return { 
         success: true, 
-        bookCount: result.count
+        bookCount: result.count,
+        isLastStep: true
       };
     } catch (error) {
       logger.error("Error in Readwise function:", error);
       return { 
         success: false, 
-        error: error instanceof Error ? error.message : "Unknown error" 
+        error: error instanceof Error ? error.message : "Unknown error",
+        isLastStep: true
       };
     }
   }
@@ -177,7 +176,8 @@ export const readwiseConnectionTestFn = inngest.createFunction(
       logger.error("Missing user ID or API key");
       return { 
         success: false, 
-        error: "Missing user ID or API key" 
+        error: "Missing user ID or API key",
+        isLastStep: true
       };
     }
     
@@ -206,14 +206,16 @@ export const readwiseConnectionTestFn = inngest.createFunction(
             
             return { 
               success: false, 
-              error: errorData.detail || "Invalid API key" 
+              error: errorData.detail || "Invalid API key",
+              isLastStep: true
             };
           }
         } catch (error) {
           logger.error(`Connection error for user ${userId}:`, error);
           return { 
             success: false, 
-            error: error instanceof Error ? error.message : "Connection failed" 
+            error: error instanceof Error ? error.message : "Connection failed",
+            isLastStep: true
           };
         }
       });
@@ -249,12 +251,16 @@ export const readwiseConnectionTestFn = inngest.createFunction(
       
       logger.info("Connection test completed", { success: connectionResult.success });
       
-      return connectionResult;
+      return {
+        ...connectionResult, 
+        isLastStep: true
+      };
     } catch (error) {
       logger.error(`Error testing connection for user ${userId}:`, error);
       return { 
         success: false, 
-        error: error instanceof Error ? error.message : "Unknown error" 
+        error: error instanceof Error ? error.message : "Unknown error",
+        isLastStep: true
       };
     }
   }
@@ -277,7 +283,8 @@ export const readwiseSyncBooksFn = inngest.createFunction(
         readwiseBooks: 0,
         sparkBooks: 0,
         imported: 0,
-        updated: 0
+        updated: 0,
+        isLastStep: true
       };
     }
 
@@ -293,7 +300,8 @@ export const readwiseSyncBooksFn = inngest.createFunction(
         readwiseBooks: 0,
         sparkBooks: 0,
         imported: 0,
-        updated: 0 
+        updated: 0,
+        isLastStep: true
       };
     }
     
@@ -336,7 +344,8 @@ export const readwiseSyncBooksFn = inngest.createFunction(
           readwiseBooks: 0,
           sparkBooks: 0,
           imported: 0,
-          updated: 0
+          updated: 0,
+          isLastStep: true
         };
       }
       
@@ -590,7 +599,8 @@ export const readwiseSyncBooksFn = inngest.createFunction(
         imported: importResult.imported,
         updated: importResult.updated,
         readwiseBooks: importResult.readwiseBooks,
-        sparkBooks: sparkBooksCount
+        sparkBooks: sparkBooksCount,
+        isLastStep: true
       };
     } catch (error) {
       logger.error(`Error importing books for user ${userId}:`, error);
@@ -600,7 +610,8 @@ export const readwiseSyncBooksFn = inngest.createFunction(
         readwiseBooks: 0,
         sparkBooks: 0,
         imported: 0,
-        updated: 0
+        updated: 0,
+        isLastStep: true
       };
     }
   }

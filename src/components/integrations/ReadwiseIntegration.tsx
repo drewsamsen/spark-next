@@ -8,10 +8,8 @@ import { CheckCircle, XCircle } from "lucide-react";
 export default function ReadwiseIntegration() {
   const [apiKey, setApiKey] = useState("");
   const [isConnected, setIsConnected] = useState(false);
-  const [bookCount, setBookCount] = useState(0);
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isPolling, setIsPolling] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,7 +55,6 @@ export default function ReadwiseIntegration() {
         const readwiseSettings = data.integrations.readwise;
         setApiKey(readwiseSettings.apiKey || '');
         setIsConnected(readwiseSettings.isConnected || false);
-        setBookCount(readwiseSettings.bookCount || 0);
       }
     } catch (error) {
       // Only show toast for network or server errors, not for expected missing settings
@@ -85,8 +82,7 @@ export default function ReadwiseIntegration() {
           integrations: {
             readwise: {
               apiKey,
-              isConnected: false, // Reset connection status when changing the key
-              bookCount: 0
+              isConnected: false // Reset connection status when changing the key
             }
           }
         })
@@ -127,7 +123,26 @@ export default function ReadwiseIntegration() {
       
       if (response.status === 204) {
         toast.success('Connection successful! Your Readwise Access Token is valid.');
-        setIsConnected(true);
+        
+        // Update the connection status in settings
+        const updateResponse = await fetch('/api/user-settings', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            integrations: {
+              readwise: {
+                isConnected: true
+              }
+            }
+          })
+        });
+        
+        if (updateResponse.ok) {
+          setIsConnected(true);
+        }
       } else {
         const errorData = await response.json().catch(() => ({ detail: "Invalid Access Token" }));
         toast.error(`Connection failed: ${errorData.detail || 'Invalid Access Token'}`);
@@ -139,135 +154,6 @@ export default function ReadwiseIntegration() {
       setIsConnected(false);
     } finally {
       setIsTesting(false);
-    }
-  };
-
-  // Function to trigger the Readwise book count
-  const syncReadwiseBooks = async () => {
-    if (!token || !apiKey) return;
-    
-    try {
-      setIsPolling(true);
-      
-      // Get current user ID
-      const supabase = getSupabaseBrowserClient();
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
-        throw new Error("Failed to get user info");
-      }
-      
-      // Call our server endpoint to trigger the book count
-      const response = await fetch('/api/inngest/trigger-readwise', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          userId: userData.user.id,
-          apiKey: apiKey
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to trigger Readwise book count");
-      }
-      
-      toast.success("Book count started! Results will be updated shortly.");
-      
-      // Start polling for updates
-      startPollingForUpdates();
-    } catch (error) {
-      toast.error(`Error starting book count: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setIsPolling(false);
-    }
-  };
-
-  const startPollingForUpdates = () => {
-    setIsPolling(true);
-    let attempts = 0;
-    const maxAttempts = 20; // Maximum polling attempts
-    
-    const pollInterval = setInterval(async () => {
-      attempts++;
-      
-      if (attempts > maxAttempts) {
-        clearInterval(pollInterval);
-        setIsPolling(false);
-        return;
-      }
-      
-      try {
-        // Re-fetch the session to ensure we have a fresh token
-        const supabase = getSupabaseBrowserClient();
-        const { data: sessionData } = await supabase.auth.getSession();
-        const currentToken = sessionData.session?.access_token;
-        
-        if (!currentToken) {
-          toast.error("Session expired. Please refresh the page.");
-          clearInterval(pollInterval);
-          setIsPolling(false);
-          return;
-        }
-        
-        const response = await fetch('/api/user-settings?integration=readwise', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${currentToken}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to poll for updates: ${response.statusText}`);
-        }
-        
-        const settingsData = await response.json();
-        
-        if (settingsData && settingsData.integrations && settingsData.integrations.readwise) {
-          const readwiseSettings = settingsData.integrations.readwise;
-          setApiKey(readwiseSettings.apiKey || '');
-          setIsConnected(readwiseSettings.isConnected || false);
-          
-          // If book count has been updated and is greater than 0, we've got data!
-          if (readwiseSettings.bookCount > 0) {
-            setBookCount(readwiseSettings.bookCount);
-            toast.success(`Sync complete! Found ${readwiseSettings.bookCount} books.`);
-            clearInterval(pollInterval);
-            setIsPolling(false);
-          }
-        }
-      } catch (error) {
-        console.error('Error polling for updates:', error);
-        // Don't show an error toast here, just log to console
-      }
-    }, 3000); // Poll every 3 seconds
-    
-    return () => clearInterval(pollInterval);
-  };
-
-  const syncBooks = async () => {
-    // The syncBooks function can be removed or kept for backward compatibility
-    // but we won't expose it in the UI anymore
-    if (!token) {
-      toast.error("You must be logged in to sync books");
-      return;
-    }
-    
-    // Redirect to the Scheduled Tasks section
-    const tasksSection = document.getElementById('scheduled-tasks-section');
-    if (tasksSection) {
-      tasksSection.scrollIntoView({ behavior: 'smooth' });
-      
-      // Highlight the section briefly
-      tasksSection.classList.add('highlight-pulse');
-      setTimeout(() => {
-        tasksSection.classList.remove('highlight-pulse');
-      }, 2000);
-    } else {
-      // Fallback to the old implementation if element not found
-      await syncReadwiseBooks();
     }
   };
 
@@ -339,11 +225,6 @@ export default function ReadwiseIntegration() {
                   Successfully connected to Readwise
                 </p>
               </div>
-              {bookCount > 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 ml-6">
-                  {bookCount} books found in your Readwise account.
-                </p>
-              )}
             </div>
           </div>
         )}

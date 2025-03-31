@@ -101,18 +101,6 @@ export default function ScheduledTasksTable() {
       }
       
       toast.success(`${task.name} started successfully`);
-      
-      // For the Readwise book count, start polling to update the UI
-      if (task.id === "readwise-books-count") {
-        // Wait 1 second before redirecting to the logs view
-        setTimeout(() => {
-          // Scroll to the logs section
-          const logsElement = document.getElementById('function-logs-section');
-          if (logsElement) {
-            logsElement.scrollIntoView({ behavior: 'smooth' });
-          }
-        }, 1000);
-      }
     } catch (error) {
       toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {

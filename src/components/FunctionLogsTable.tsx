@@ -1,28 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { toast } from "react-toastify";
+import { useState } from "react";
 import { Search, RefreshCw, CheckCircle, XCircle, Clock, Filter, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
-
-// Define type for function log
-interface FunctionLog {
-  id: string;
-  function_name: string;
-  function_id: string;
-  run_id: string;
-  status: 'started' | 'completed' | 'failed';
-  started_at: string;
-  completed_at: string | null;
-  duration_ms: number | null;
-  input_params: any;
-  result_data: any;
-  error_message: string | null;
-  error_stack: string | null;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-}
+import { useFunctionLogs, FunctionLog } from "@/hooks/use-function-logs";
 
 interface FunctionLogsTableProps {
   className?: string;
@@ -34,79 +15,35 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
   const token = session?.access_token;
   
   // State
-  const [logs, setLogs] = useState<FunctionLog[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [totalLogs, setTotalLogs] = useState(0);
   const [offset, setOffset] = useState(0);
   const [limit] = useState(10);
   const [sortField, setSortField] = useState("started_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   
-  // Fetch logs when component mounts or filters change
-  useEffect(() => {
-    if (token) {
-      fetchLogs();
-    }
-  }, [token, offset, limit, statusFilter, sortField, sortDirection]);
-  
-  // Function to fetch logs from the API
-  const fetchLogs = async () => {
-    if (!token) return;
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Build query parameters
-      const queryParams = new URLSearchParams();
-      queryParams.append("limit", limit.toString());
-      queryParams.append("offset", offset.toString());
-      queryParams.append("order_by", sortField);
-      queryParams.append("order_direction", sortDirection);
-      
-      if (statusFilter) {
-        queryParams.append("status", statusFilter);
-      }
-      
-      // If there's a search term, try to match it against function name
-      if (searchTerm.trim()) {
-        queryParams.append("function_name", searchTerm.trim());
-      }
-      
-      // Make the API request
-      const response = await fetch(`/api/function-logs?${queryParams.toString()}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: response.statusText }));
-        throw new Error(errorData.error || `Failed to fetch logs: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      setLogs(data.logs);
-      setTotalLogs(data.pagination.total || 0);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to fetch function logs";
-      setError(errorMessage);
-      console.error("Error fetching logs:", err);
-      
-      // Only show toast for errors that aren't auth related
-      if (!errorMessage.includes("Unauthorized")) {
-        toast.error(errorMessage);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Use the function logs hook with filters
+  const {
+    logs,
+    isLoading,
+    error,
+    totalLogs,
+    fetchLogs,
+    autoRefreshEnabled,
+    toggleAutoRefresh,
+    realtimeConnected
+  } = useFunctionLogs(
+    {
+      limit,
+      offset,
+      order_by: sortField,
+      order_direction: sortDirection,
+      status: statusFilter as 'started' | 'completed' | 'failed' | undefined,
+      function_name: searchTerm.trim() || undefined
+    },
+    token
+  );
   
   // Handle search
   const handleSearch = (e: React.FormEvent) => {
@@ -208,7 +145,15 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
     <div className={`bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden ${className}`}>
       {/* Table Header with filters */}
       <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white">Function Logs</h3>
+        <div className="flex items-center">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Function Logs</h3>
+          {realtimeConnected && (
+            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
+              <span className={`mr-1 h-2 w-2 rounded-full ${autoRefreshEnabled ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></span>
+              {autoRefreshEnabled ? 'Live' : 'Paused'}
+            </span>
+          )}
+        </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto">
           {/* Search */}
@@ -241,6 +186,19 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
               <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             </div>
           </div>
+          
+          {/* Auto Refresh Toggle */}
+          <button
+            type="button"
+            onClick={toggleAutoRefresh}
+            className={`inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md ${
+              autoRefreshEnabled 
+                ? 'text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:text-blue-100 dark:hover:bg-blue-700' 
+                : 'text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+          >
+            {autoRefreshEnabled ? 'Auto-refresh On' : 'Auto-refresh Off'}
+          </button>
           
           {/* Refresh button */}
           <button

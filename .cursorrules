@@ -40,14 +40,11 @@ File & Folder Names
 - Shared types in `src/lib/types.ts`.
 - Sort imports (external → internal → sibling → styles).
 
-Storybook
+Inngest / Background Jobs
 
-- Place stories in `src/stories` with `.stories.tsx` extension.
-- One story file per component, matching component name.
-- Use autodocs for automatic documentation.
-- Include multiple variants and sizes in stories.
-- Test interactive features with actions.
-- Use relative imports from component directory.
+- Use `inngest.config.ts` for Inngest configuration.
+- We're using supabase realtime to detect when our functions are making changes to the database
+- Implemente standardized `isLastStep` convention for all Inngest functions to reliably indicate when a multi-step function has truly completed
 
 IMPORTANT:
 
