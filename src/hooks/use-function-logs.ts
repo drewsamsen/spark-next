@@ -42,7 +42,6 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalLogs, setTotalLogs] = useState(0);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   
   // Memoize filters to prevent unnecessary re-renders
   const filters = useMemo(() => initialFilters, [
@@ -131,8 +130,6 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
   
   // Handle realtime updates with a stable callback
   const handleRealtimeUpdate = useCallback((payload: any) => {
-    if (!autoRefreshEnabled) return;
-    
     console.log('Realtime update received:', payload);
     
     // Instead of refetching, update the data in-memory based on the payload
@@ -201,7 +198,7 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
       // Update total count
       setTotalLogs(prev => Math.max(0, prev - 1));
     }
-  }, [autoRefreshEnabled, filters, logs]);
+  }, [filters, logs]);
   
   // Subscribe to realtime updates - properly scoped
   const { isConnected } = useRealtimeSubscription<FunctionLog>(
@@ -209,19 +206,12 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
     handleRealtimeUpdate
   );
   
-  // Toggle auto-refresh
-  const toggleAutoRefresh = useCallback(() => {
-    setAutoRefreshEnabled(prev => !prev);
-  }, []);
-  
   return {
     logs,
     isLoading,
     error,
     totalLogs,
     fetchLogs,
-    autoRefreshEnabled,
-    toggleAutoRefresh,
     realtimeConnected: isConnected
   };
 } 

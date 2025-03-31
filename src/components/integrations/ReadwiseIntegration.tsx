@@ -170,22 +170,20 @@ export default function ReadwiseIntegration() {
             Readwise Access Token
           </label>
           
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="w-full md:w-2/3">
-              <input
-                id="readwise-api-key"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full p-2 h-10 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your Readwise Access Token"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Get your Access Token from <a href="https://readwise.io/access_token" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Readwise API settings</a>
-              </p>
-            </div>
+          <div className="flex flex-col gap-4">
+            <input
+              id="readwise-api-key"
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              className="w-1/2 p-2 h-10 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter your Readwise Access Token"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Get your Access Token from <a href="https://readwise.io/access_token" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Readwise API settings</a>
+            </p>
             
-            <div className="flex gap-2 flex-shrink-0">
+            <div className="flex gap-2">
               <button
                 onClick={saveApiKey}
                 disabled={isSaving}

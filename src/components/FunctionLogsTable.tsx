@@ -30,8 +30,6 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
     error,
     totalLogs,
     fetchLogs,
-    autoRefreshEnabled,
-    toggleAutoRefresh,
     realtimeConnected
   } = useFunctionLogs(
     {
@@ -146,11 +144,11 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
       {/* Table Header with filters */}
       <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Function Logs</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">History</h3>
           {realtimeConnected && (
             <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
-              <span className={`mr-1 h-2 w-2 rounded-full ${autoRefreshEnabled ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></span>
-              {autoRefreshEnabled ? 'Live' : 'Paused'}
+              <span className="mr-1 h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+              Live
             </span>
           )}
         </div>
@@ -171,7 +169,7 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
           </form>
           
           {/* Status filter */}
-          <div className="relative">
+          <div className="relative w-40">
             <select 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -186,19 +184,6 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
               <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             </div>
           </div>
-          
-          {/* Auto Refresh Toggle */}
-          <button
-            type="button"
-            onClick={toggleAutoRefresh}
-            className={`inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md ${
-              autoRefreshEnabled 
-                ? 'text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:text-blue-100 dark:hover:bg-blue-700' 
-                : 'text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-          >
-            {autoRefreshEnabled ? 'Auto-refresh On' : 'Auto-refresh Off'}
-          </button>
           
           {/* Refresh button */}
           <button

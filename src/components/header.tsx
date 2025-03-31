@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   PanelRightOpen,
   Search,
-  Bell,
   Settings
 } from "lucide-react";
 import { ModeToggle } from "@/components/theme/ModeToggle";
@@ -34,7 +33,7 @@ export default function Header({
   };
   
   return (
-    <header className="border-b bg-background dark:border-spark-dark-neutral/20">
+    <header className="border-b bg-neutral-50 dark:border-spark-dark-neutral/20 dark:bg-background">
       <div className="flex h-14 items-center justify-between px-4">
         {/* Left section */}
         <div className="flex items-center gap-2">
@@ -69,11 +68,6 @@ export default function Header({
         
         {/* Right section */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Bell className="h-4 w-4" />
-            <span className="sr-only">Notifications</span>
-          </Button>
-          
           <ModeToggle />
           
           <Button variant="ghost" size="icon" onClick={toggleRightSidebar} className="h-8 w-8">

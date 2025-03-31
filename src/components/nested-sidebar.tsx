@@ -263,7 +263,7 @@ export default function NestedSidebar({
   };
 
   return (
-    <div className="h-full border-l border-r bg-sidebar animate-fade-in overflow-hidden relative"
+    <div className="h-full border-l border-r bg-neutral-50 dark:bg-sidebar animate-fade-in overflow-hidden relative"
          style={nestedSidebarStyle}>
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b p-4">

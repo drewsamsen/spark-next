@@ -197,7 +197,7 @@ export default function LeftSidebar({
       };
 
   return (
-    <div className="h-full w-full bg-sidebar border-r z-20 relative dark:border-spark-dark-neutral/20"
+    <div className="h-full w-full bg-neutral-50 border-r z-20 relative dark:bg-sidebar dark:border-spark-dark-neutral/20"
          style={isProjectsSidebarOpen ? { width: `${sidebarWidth}px`, transition: 'none' } : undefined}>
       {/* Main sidebar content */}
       <div className="h-full flex flex-col" style={mainSidebarStyle}>
