@@ -18,6 +18,19 @@ const ReadwiseIntegration = dynamic(() => import('@/components/integrations/Read
   ),
 });
 
+// Import FunctionLogsTable with dynamic loading as well
+const FunctionLogsTable = dynamic(() => import('@/components/FunctionLogsTable'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+      <div className="animate-pulse h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+      <div className="h-64 bg-gray-100 dark:bg-gray-900 rounded-lg flex items-center justify-center">
+        <div className="animate-pulse h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+      </div>
+    </div>
+  ),
+});
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
 
@@ -71,6 +84,11 @@ export default function SettingsPage() {
             <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded">
               <p className="text-sm text-gray-500">No scheduled tasks configured yet.</p>
             </div>
+          </div>
+          
+          {/* Function Logs Table */}
+          <div className="mb-6">
+            <FunctionLogsTable />
           </div>
         </div>
       )}

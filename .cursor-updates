@@ -84,3 +84,5 @@
 - Simplified connection test by removing all polling functionality and using direct API calls with immediate results.
 - Removed unnecessary database updates from connection test, making it a pure validation check without side effects.
 - Removed book count display from Readwise integration UI for a cleaner, simpler interface.
+- Created function logs service and UI to track and display Inngest function execution.
+- Fixed authentication in function logs API to properly validate token from request header.

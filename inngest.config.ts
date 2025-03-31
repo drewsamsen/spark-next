@@ -1,5 +1,6 @@
 import { Inngest } from "inngest";
 import { serve } from "inngest/next";
+import { withLogging } from "./src/lib/inngest-logger";
 
 // Define event types for better type safety
 export type AppEvents = {
@@ -34,7 +35,7 @@ export const inngest = new Inngest({
 export const readwiseCountBooksFn = inngest.createFunction(
   { id: "readwise-count-books" },
   { event: "readwise/count-books" },
-  async ({ event, step }) => {
+  withLogging(async ({ event, step }) => {
     const { userId, apiKey } = event.data;
     
     if (!apiKey) {
@@ -138,14 +139,14 @@ export const readwiseCountBooksFn = inngest.createFunction(
         error: error instanceof Error ? error.message : "Unknown error" 
       };
     }
-  }
+  })
 );
 
 // Function to test Readwise connection (manually triggered only)
 export const readwiseConnectionTestFn = inngest.createFunction(
   { id: "readwise-connection-test" },
   { event: "readwise/test-connection" },
-  async ({ event, step }) => {
+  withLogging(async ({ event, step }) => {
     const { userId, apiKey } = event.data;
     
     if (!userId || !apiKey) {
@@ -224,7 +225,7 @@ export const readwiseConnectionTestFn = inngest.createFunction(
         error: error instanceof Error ? error.message : "Unknown error" 
       };
     }
-  }
+  })
 );
 
 // Export the serve function for use in API routes
