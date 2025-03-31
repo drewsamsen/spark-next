@@ -287,7 +287,7 @@ export default function NestedSidebar({
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search..."
+              placeholder={`Search ${title.toLowerCase()}...`}
               className="w-full rounded-md pl-8 text-sm"
               value={searchTerm}
               onChange={handleSearchChange}

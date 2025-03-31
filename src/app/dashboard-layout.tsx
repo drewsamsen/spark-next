@@ -180,6 +180,16 @@ export default function DashboardLayout({
   // Client-side navigation function
   const navigateTo = (path: string, e: React.MouseEvent) => {
     e.preventDefault();
+    
+    // Close any open nested sidebars when navigating to pages that aren't related to them
+    // This ensures nested sidebars close when clicking things like Settings
+    if (booksSidebarOpen && !path.includes("/book/")) {
+      setBooksSidebarOpen(false);
+    }
+    if (sparksSidebarOpen && !path.includes("/spark/")) {
+      setSparksSidebarOpen(false);
+    }
+    
     router.push(path);
   };
 
@@ -209,11 +219,13 @@ export default function DashboardLayout({
         setSparksSidebarOpen(true);
         setActiveSidebarItem("Sparks");
       }
-    } else if (item === "Settings") {
-      // Just set this as active - later we'll implement settings
-      setActiveSidebarItem(activeSidebarItem === "Settings" ? null : "Settings");
     } else {
       // For other items without nested sidebars
+      // Close any open nested sidebars
+      if (booksSidebarOpen) setBooksSidebarOpen(false);
+      if (sparksSidebarOpen) setSparksSidebarOpen(false);
+      
+      // Set the active item
       setActiveSidebarItem(activeSidebarItem === item ? null : item);
     }
   };
@@ -253,7 +265,6 @@ export default function DashboardLayout({
     <TooltipProvider delayDuration={0} skipDelayDuration={0}>
       <div className="flex h-screen flex-col">
         <Header 
-          toggleLeftSidebar={toggleLeftSidebar}
           toggleRightSidebar={toggleRightSidebar}
           navigateTo={navigateTo}
           currentPath={pathname}

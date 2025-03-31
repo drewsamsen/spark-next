@@ -3,11 +3,7 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
-  MenuIcon,
-  PanelRightClose,
   PanelRightOpen,
-  ChevronRight,
-  Blocks,
   Search,
   Bell,
   Settings
@@ -19,29 +15,17 @@ import Link from "next/link";
 import { LogoIcon } from "@/components/icons/LogoIcon";
 
 interface HeaderProps {
-  toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
   navigateTo?: (path: string, e: React.MouseEvent) => void;
   currentPath?: string;
 }
 
 export default function Header({ 
-  toggleLeftSidebar, 
   toggleRightSidebar,
   navigateTo,
   currentPath = "/dashboard"
 }: HeaderProps) {
   const pathname = usePathname();
-  const activePath = currentPath || pathname;
-  
-  // Extract current page name from pathname
-  const getPageName = () => {
-    if (activePath === "/" || activePath === "/dashboard") return "Dashboard";
-    
-    // Remove leading slash and capitalize first letter
-    const path = activePath.substring(1);
-    return path.charAt(0).toUpperCase() + path.slice(1);
-  };
   
   const handleLogoClick = (e: React.MouseEvent) => {
     if (navigateTo) {
@@ -54,11 +38,6 @@ export default function Header({
       <div className="flex h-14 items-center justify-between px-4">
         {/* Left section */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={toggleLeftSidebar} className="h-8 w-8">
-            <MenuIcon className="h-4 w-4" />
-            <span className="sr-only">Toggle left sidebar</span>
-          </Button>
-          
           {navigateTo ? (
             <a 
               href="/dashboard" 
@@ -74,11 +53,6 @@ export default function Header({
               <span className="font-medium text-lg hidden md:inline-block">Spark</span>
             </Link>
           )}
-          
-          <div className="hidden md:flex items-center gap-1">
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{getPageName()}</span>
-          </div>
         </div>
         
         {/* Center section */}
