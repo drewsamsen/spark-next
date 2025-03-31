@@ -218,6 +218,31 @@ export default function DashboardLayout({
     }
   };
 
+  // Handle book selection
+  const handleBookSelect = (bookId: string, rwId?: number) => {
+    setActiveBook(bookId); // Still set activeBook to the UUID for sidebar highlighting
+    
+    // If rwId is directly provided, use it for navigation
+    if (rwId) {
+      router.push(`/dashboard/book/${rwId}`);
+      return;
+    }
+    
+    // Fallback: find the selected book to get its rwId
+    const selectedBook = books.find(book => book.id === bookId);
+    
+    if (selectedBook && selectedBook.rwId) {
+      // Navigate using the Readwise ID
+      router.push(`/dashboard/book/${selectedBook.rwId}`);
+    }
+  };
+
+  // Update setActiveSpark to handle the rwId parameter
+  const handleSparkSelect = (sparkId: string, rwId?: number) => {
+    setActiveSpark(sparkId);
+    // Additional navigation logic for sparks can be added here
+  };
+
   // Width of icons-only part of the left sidebar when projects sidebar is open
   const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
 
@@ -262,7 +287,7 @@ export default function DashboardLayout({
                     icon={<Book className="h-5 w-5" />}
                     items={books}
                     activeItemId={activeBook}
-                    setActiveItemId={setActiveBook}
+                    setActiveItemId={handleBookSelect}
                     onClose={() => setBooksSidebarOpen(false)}
                     isLoading={loadingBooks}
                   />
@@ -283,7 +308,7 @@ export default function DashboardLayout({
                     icon={<Sparkles className="h-5 w-5" />}
                     items={sparks}
                     activeItemId={activeSpark}
-                    setActiveItemId={setActiveSpark}
+                    setActiveItemId={handleSparkSelect}
                     onClose={() => setSparksSidebarOpen(false)}
                     isLoading={loadingSparks}
                   />
@@ -293,7 +318,7 @@ export default function DashboardLayout({
           )}
           
           {/* Main content area */}
-          <main className="flex-1 overflow-hidden">
+          <main className="flex-1 overflow-auto">
             {children}
           </main>
           

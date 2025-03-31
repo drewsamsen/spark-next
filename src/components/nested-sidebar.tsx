@@ -24,7 +24,7 @@ interface NestedSidebarProps {
   icon: React.ReactNode;
   items: SidebarItem[];
   activeItemId: string | null;
-  setActiveItemId: (id: string) => void;
+  setActiveItemId: (id: string, rwId?: number) => void;
   onClose: () => void;
   isLoading?: boolean;
 }
@@ -348,7 +348,7 @@ export default function NestedSidebar({
               filteredAndSortedItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveItemId(item.id)}
+                  onClick={() => setActiveItemId(item.id, item.rwId)}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground max-w-full overflow-hidden",
                     activeItemId === item.id ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground"
