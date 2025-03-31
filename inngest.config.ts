@@ -9,9 +9,10 @@ export type AppEvents = {
       apiKey: string;
     };
   };
-  "readwise/connection-test": {
+  "readwise/test-connection": {
     data: {
-      timestamp: string;
+      userId: string;
+      apiKey: string;
     }
   };
 };
@@ -140,85 +141,89 @@ export const readwiseCountBooksFn = inngest.createFunction(
   }
 );
 
-// Function to test Readwise connection and sync books for all users
+// Function to test Readwise connection (manually triggered only)
 export const readwiseConnectionTestFn = inngest.createFunction(
   { id: "readwise-connection-test" },
-  { cron: "0 3 * * *" }, // Run at 3:00 AM UTC every day
-  async ({ step }) => {
-    // Get all users who have Readwise API keys configured
-    const users = await step.run("get-users-with-readwise", async () => {
-      try {
-        // Import here to avoid Node.js protocol issues in client-side code
-        const { createClient } = await import('@supabase/supabase-js');
-        
-        // Create a direct connection to Supabase
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-          process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-        );
-        
-        // Query for users with Readwise API keys
-        const { data, error } = await supabase
-          .from('user_settings')
-          .select('id, settings')
-          .not('settings->integrations->readwise->apiKey', 'is', null);
-        
-        if (error) {
-          console.error("Error fetching users with Readwise API keys:", error);
-          return [];
-        }
-        
-        // Filter and map to just the data we need
-        return data
-          .filter(user => 
-            user.settings?.integrations?.readwise?.apiKey && 
-            typeof user.settings.integrations.readwise.apiKey === 'string' &&
-            user.settings.integrations.readwise.apiKey.length > 0
-          )
-          .map(user => ({
-            userId: user.id,
-            apiKey: user.settings.integrations.readwise.apiKey
-          }));
-      } catch (error) {
-        console.error("Error in get-users-with-readwise:", error);
-        return [];
-      }
-    });
+  { event: "readwise/test-connection" },
+  async ({ event, step }) => {
+    const { userId, apiKey } = event.data;
     
-    console.log(`Found ${users.length} users with Readwise integration`);
+    if (!userId || !apiKey) {
+      return { 
+        success: false, 
+        error: "Missing user ID or API key" 
+      };
+    }
     
-    // Process each user sequentially
-    for (const [index, user] of users.entries()) {
-      try {
-        // Trigger Readwise count for this user
-        await step.run(`test-connection-user-${index}`, async () => {
-          console.log(`Testing Readwise connection for user ${user.userId} (${index + 1}/${users.length})`);
-          
-          await inngest.send({
-            name: "readwise/count-books",
-            data: {
-              userId: user.userId,
-              apiKey: user.apiKey
+    try {
+      // Test the Readwise API connection
+      const connectionResult = await step.run("test-readwise-connection", async () => {
+        console.log(`Testing Readwise connection for user ${userId}`);
+        
+        try {
+          // Try to connect to Readwise API
+          const response = await fetch('https://readwise.io/api/v2/auth/', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Token ${apiKey}`
             }
           });
           
-          // Add a delay between users to avoid hitting rate limits
-          if (index < users.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay
+          if (response.status === 204) {
+            console.log(`Connection successful for user ${userId}`);
+            return { success: true };
+          } else {
+            const errorData = await response.json()
+              .catch(() => ({ detail: "Invalid API key" }));
+            return { 
+              success: false, 
+              error: errorData.detail || "Invalid API key" 
+            };
+          }
+        } catch (error) {
+          console.error(`Connection error for user ${userId}:`, error);
+          return { 
+            success: false, 
+            error: error instanceof Error ? error.message : "Connection failed" 
+          };
+        }
+      });
+      
+      // Update user settings to mark connection as valid/invalid
+      if (connectionResult.success) {
+        await step.run("update-connection-status", async () => {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/user-settings`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId,
+              integrations: {
+                readwise: {
+                  isConnected: true
+                }
+              }
+            }),
+          });
+          
+          if (!response.ok) {
+            console.error("Failed to update connection status");
+            return { success: false };
           }
           
-          return { success: true, userId: user.userId };
+          return { success: true };
         });
-      } catch (error) {
-        console.error(`Error testing connection for user ${user.userId}:`, error);
-        // Continue with next user even if one fails
       }
+      
+      return connectionResult;
+    } catch (error) {
+      console.error(`Error testing connection for user ${userId}:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      };
     }
-    
-    return {
-      success: true,
-      usersProcessed: users.length
-    };
   }
 );
 

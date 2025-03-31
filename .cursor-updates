@@ -79,3 +79,8 @@
 - Created comprehensive Inngest documentation for developers with setup instructions, workflow, and best practices.
 - Added missing Inngest API route to fix 404 errors when running the Inngest dev server.
 - Simplified Inngest functions by removing unused handlers and renaming functions to better describe their purpose (readwise-count-books, readwise-connection-test).
+- Removed scheduled/automatic Inngest jobs, converted connection test to a manually triggered function via new API endpoint.
+- Completely separated connection test from book count functionality, making them independent operations that can be triggered individually.
+- Simplified connection test by removing all polling functionality and using direct API calls with immediate results.
+- Removed unnecessary database updates from connection test, making it a pure validation check without side effects.
+- Removed book count display from Readwise integration UI for a cleaner, simpler interface.

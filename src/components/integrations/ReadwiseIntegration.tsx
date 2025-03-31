@@ -125,30 +125,8 @@ export default function ReadwiseIntegration() {
       });
       
       if (response.status === 204) {
-        toast.success('Connection successful! Readwise API key is valid.');
+        toast.success('Connection successful! Your Readwise API key is valid.');
         setIsConnected(true);
-        
-        // Update settings to save that the connection is valid
-        const updateResponse = await fetch('/api/user-settings', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            integrations: {
-              readwise: {
-                apiKey,
-                isConnected: true,
-                bookCount: bookCount || 0
-              }
-            }
-          })
-        });
-        
-        if (!updateResponse.ok) {
-          console.error('Failed to update settings after successful connection test');
-        }
       } else {
         const errorData = await response.json().catch(() => ({ detail: "Invalid API key" }));
         toast.error(`Connection failed: ${errorData.detail || 'Invalid API key'}`);
@@ -162,7 +140,7 @@ export default function ReadwiseIntegration() {
       setIsTesting(false);
     }
   };
-  
+
   // Function to trigger the Readwise book count
   const syncReadwiseBooks = async () => {
     if (!token || !apiKey) return;
@@ -368,12 +346,6 @@ export default function ReadwiseIntegration() {
           </button>
         )}
       </div>
-      
-      {bookCount > 0 && (
-        <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded">
-          <p>Books in Readwise: <span className="font-semibold">{bookCount}</span></p>
-        </div>
-      )}
     </div>
   );
 } 
