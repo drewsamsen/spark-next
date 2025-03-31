@@ -4,16 +4,6 @@ import { inngest } from '@/../inngest.config';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the request body
-    const { userId, apiKey } = await request.json();
-
-    if (!userId || !apiKey) {
-      return NextResponse.json(
-        { error: 'Missing userId or apiKey' },
-        { status: 400 }
-      );
-    }
-
     // Check authentication
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -36,31 +26,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure the requesting user is the same as the userId in the payload
-    if (authData.user.id !== userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Cannot access another user\'s data' },
-        { status: 403 }
-      );
-    }
-
-    // Send the Inngest event
+    // Send the Inngest event manually
     await inngest.send({
-      name: "readwise/count-books",
+      name: "readwise/daily-sync",
       data: {
-        userId,
-        apiKey
+        timestamp: new Date().toISOString()
       }
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Readwise book count job triggered successfully'
+      message: 'Readwise daily sync job triggered manually'
     });
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to trigger Readwise book count job' },
+      { error: 'Failed to trigger Readwise sync job' },
       { status: 500 }
     );
   }

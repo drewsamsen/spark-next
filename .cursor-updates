@@ -74,3 +74,8 @@
 - Added static favicon.ico to public directory to prevent 500 errors caused by missing module references after builds.
 - Created custom SVG and PNG favicons based on the flame logo, properly referenced in document head for better cross-browser support.
 - Removed unused svg-to-ico and sharp dependencies after manually creating favicon files.
+- Implemented Readwise book counting with daily scheduled sync via Inngest, including pagination to handle large libraries.
+- Added rewrite rule for favicon.ico requests to prevent 500 errors during development and page transitions.
+- Created comprehensive Inngest documentation for developers with setup instructions, workflow, and best practices.
+- Added missing Inngest API route to fix 404 errors when running the Inngest dev server.
+- Simplified Inngest functions by removing unused handlers and renaming functions to better describe their purpose (readwise-count-books, readwise-connection-test).

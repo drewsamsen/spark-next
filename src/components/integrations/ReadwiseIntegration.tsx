@@ -163,7 +163,7 @@ export default function ReadwiseIntegration() {
     }
   };
   
-  // Function to trigger the full Readwise sync
+  // Function to trigger the Readwise book count
   const syncReadwiseBooks = async () => {
     if (!token || !apiKey) return;
     
@@ -177,7 +177,7 @@ export default function ReadwiseIntegration() {
         throw new Error("Failed to get user info");
       }
       
-      // Call our server endpoint to trigger the sync
+      // Call our server endpoint to trigger the book count
       const response = await fetch('/api/inngest/trigger-readwise', {
         method: 'POST',
         headers: {
@@ -192,15 +192,15 @@ export default function ReadwiseIntegration() {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to trigger Readwise sync");
+        throw new Error(errorData.error || "Failed to trigger Readwise book count");
       }
       
-      toast.success("Sync started! Results will be updated shortly.");
+      toast.success("Book count started! Results will be updated shortly.");
       
       // Start polling for updates
       startPollingForUpdates();
     } catch (error) {
-      toast.error(`Error starting sync: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Error starting book count: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setIsPolling(false);
     }
   };
@@ -268,6 +268,55 @@ export default function ReadwiseIntegration() {
     return () => clearInterval(pollInterval);
   };
 
+  const syncBooks = async () => {
+    if (!token) {
+      toast.error("You must be logged in to count books");
+      return;
+    }
+    
+    if (!apiKey) {
+      toast.error('Please enter and save your API key first');
+      return;
+    }
+    
+    setIsPolling(true);
+    try {
+      // Get current user ID
+      const supabase = getSupabaseBrowserClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
+        throw new Error("Failed to get user info");
+      }
+      
+      // Call our API endpoint that will trigger Inngest
+      const response = await fetch("/api/inngest/trigger-readwise", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: userData.user.id,
+          apiKey: apiKey
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to trigger book count");
+      }
+      
+      toast.success("Started counting your Readwise books!");
+      
+      // Poll for updates
+      startPollingForUpdates();
+    } catch (error) {
+      console.error('Error syncing books:', error);
+      toast.error(`Error counting books: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setIsPolling(false);
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
       <h2 className="text-xl font-semibold mb-4">Readwise Integration</h2>
@@ -292,7 +341,7 @@ export default function ReadwiseIntegration() {
         </p>
       </div>
       
-      <div className="flex space-x-4">
+      <div className="flex flex-wrap gap-4 mb-4">
         <button
           onClick={saveApiKey}
           disabled={isSaving}
@@ -308,6 +357,16 @@ export default function ReadwiseIntegration() {
         >
           Test Connection
         </button>
+        
+        {isConnected && (
+          <button
+            onClick={syncBooks}
+            disabled={isPolling}
+            className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50"
+          >
+            Sync Book Count
+          </button>
+        )}
       </div>
       
       {bookCount > 0 && (

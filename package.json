@@ -16,7 +16,8 @@
     "test-db": "node scripts/test-connection.js",
     "test-proddb": "node scripts/test-proddb.js",
     "test-login": "node scripts/test-login.js",
-    "proddb": "node scripts/run-with-proddb.js"
+    "proddb": "node scripts/run-with-proddb.js",
+    "inngest": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.709.0",
