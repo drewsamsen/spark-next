@@ -11,11 +11,15 @@ import { AuthCheck } from "@/components/auth/AuthCheck";
 import AppShell from './AppShell';
 
 export const metadata: Metadata = {
-  title: "Spark - Knowledge Management",
-  description: "Your intelligent workspace for personal knowledge management",
+  title: 'Spark | Your Knowledge Hub',
+  description: 'Organize your knowledge and spark new insights',
   icons: {
-    icon: "/favicon.ico",
-  },
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
+      { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.svg', type: 'image/svg+xml' }
+    ]
+  }
 };
 
 export default function RootLayout({

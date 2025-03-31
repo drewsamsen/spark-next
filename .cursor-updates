@@ -65,3 +65,12 @@
 - Made auth troubleshooting tools less prominent by redesigning the "Reset Auth State" button as a subtle text link at the bottom of the login form.
 - Cleaned up debugging code by removing debug file creation, reducing console logs, and making environment info display development-only.
 - Removed unnecessary temporary file mechanism (.use-proddb) since Supabase client now properly handles environment switching.
+- Created a top-level settings page with background jobs section for managing integrations like Readwise.
+- Fixed Readwise integration by properly retrieving Supabase auth tokens from localStorage.
+- Fixed authentication in Readwise integration to properly get session token directly from Supabase client rather than localStorage, preventing "must be logged in" errors.
+- Improved Readwise API key testing with direct validation against Readwise's authentication endpoint, separating the validation step from the full sync process.
+- Added a dedicated error handling mechanism to fix 500 errors on the Readwise settings page.
+- Simplified Readwise connection test to show a single toast notification with the result rather than multiple progress messages.
+- Added static favicon.ico to public directory to prevent 500 errors caused by missing module references after builds.
+- Created custom SVG and PNG favicons based on the flame logo, properly referenced in document head for better cross-browser support.
+- Removed unused svg-to-ico and sharp dependencies after manually creating favicon files.

@@ -107,10 +107,24 @@ export default function Header({
             <span className="sr-only">Toggle right sidebar</span>
           </Button>
           
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Settings className="h-4 w-4" />
-            <span className="sr-only">Settings</span>
-          </Button>
+          {navigateTo ? (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={(e) => navigateTo("/settings", e)}
+            >
+              <Settings className="h-4 w-4" />
+              <span className="sr-only">Settings</span>
+            </Button>
+          ) : (
+            <Link href="/settings">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Settings className="h-4 w-4" />
+                <span className="sr-only">Settings</span>
+              </Button>
+            </Link>
+          )}
           
           <LogoutButton />
         </div>

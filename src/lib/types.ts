@@ -65,6 +65,13 @@ export interface UserSettings {
   leftSidebar?: {
     width: number;
   };
+  integrations?: {
+    readwise?: {
+      apiKey?: string;
+      lastSyncTime?: string;
+      bookCount?: number;
+    }
+  };
   // Additional settings can be added here in the future
 }
 
@@ -76,5 +83,12 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   },
   leftSidebar: {
     width: 360 // Default width
+  },
+  integrations: {
+    readwise: {
+      apiKey: '',
+      lastSyncTime: '',
+      bookCount: 0
+    }
   }
 };

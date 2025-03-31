@@ -240,10 +240,12 @@ export default function LeftSidebar({
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <a
-                    href="#"
+                    href="/settings"
                     onClick={(e) => {
-                      e.preventDefault();
-                      toggleProjectsSidebar("Settings");
+                      if (navigateTo) {
+                        e.preventDefault();
+                        navigateTo("/settings", e);
+                      }
                     }}
                     className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
                     aria-label="Settings"
@@ -257,10 +259,12 @@ export default function LeftSidebar({
               </Tooltip>
             ) : (
               <a
-                href="#"
+                href="/settings"
                 onClick={(e) => {
-                  e.preventDefault();
-                  toggleProjectsSidebar("Settings");
+                  if (navigateTo) {
+                    e.preventDefault();
+                    navigateTo("/settings", e);
+                  }
                 }}
                 className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
               >

@@ -65,9 +65,17 @@ export async function GET(request: NextRequest) {
       .single();
     
     if (error) {
+      // PGRST116 is the Postgres error code for "no rows returned" in single mode
+      if (error.code === 'PGRST116') {
+        console.log('API: No settings found for user, returning defaults');
+        return NextResponse.json(DEFAULT_USER_SETTINGS);
+      }
+      
       console.error('API: Error getting settings:', error.message);
-      // If there's an error, return default settings
-      return NextResponse.json(DEFAULT_USER_SETTINGS);
+      return NextResponse.json(
+        { error: 'Failed to fetch user settings' },
+        { status: 500 }
+      );
     }
     
     console.log('API: Successfully fetched user settings');

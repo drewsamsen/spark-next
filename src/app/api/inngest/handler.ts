@@ -1,5 +1,5 @@
 import { serve } from "inngest/next";
-import { inngest } from "@/../inngest.config";
+import { inngest, readwiseFetchBooksFn } from "@/../inngest.config";
 
 const sendFn = inngest.createFunction(
   { name: "inngest/send", id: "inngest/send" },
@@ -9,7 +9,7 @@ const sendFn = inngest.createFunction(
   },
 );
 
-export const { POST, GET } = serve({
+export const { POST, GET, PUT } = serve({
   client: inngest,
-  functions: [sendFn],
+  functions: [sendFn, readwiseFetchBooksFn],
 });
