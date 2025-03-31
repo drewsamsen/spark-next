@@ -309,17 +309,22 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
               // Table rows with expandable content
               logs.map((log) => (
                 <>
-                  <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <tr 
+                    key={log.id} 
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${log.status === "completed" && log.result_data ? "cursor-pointer" : ""}`}
+                    onClick={() => {
+                      if (log.status === "completed" && log.result_data) {
+                        toggleRowExpansion(log.id);
+                      }
+                    }}
+                  >
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {log.status === "completed" && log.result_data && (
-                        <button 
-                          onClick={() => toggleRowExpansion(log.id)}
-                          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
-                        >
+                        <div className="text-gray-500 dark:text-gray-400">
                           {expandedRows[log.id] 
                             ? <ChevronDown className="w-4 h-4" /> 
                             : <ChevronRight className="w-4 h-4" />}
-                        </button>
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -338,10 +343,7 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
                       {log.status === "failed" && log.error_message ? (
                         <span className="text-red-500">{log.error_message}</span>
                       ) : log.status === "completed" && log.result_data ? (
-                        <span 
-                          onClick={() => toggleRowExpansion(log.id)}
-                          className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer"
-                        >
+                        <span className="text-gray-500 dark:text-gray-400">
                           {JSON.stringify(log.result_data).substring(0, 30)}
                           {JSON.stringify(log.result_data).length > 30 ? "..." : ""}
                         </span>
