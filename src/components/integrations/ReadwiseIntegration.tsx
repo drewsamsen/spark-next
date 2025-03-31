@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { CheckCircle, XCircle } from "lucide-react";
 
 export default function ReadwiseIntegration() {
   const [apiKey, setApiKey] = useState("");
@@ -110,7 +111,7 @@ export default function ReadwiseIntegration() {
     }
     
     if (!apiKey) {
-      toast.error('Please enter an API key first');
+      toast.error('Please enter an Access Token first');
       return;
     }
 
@@ -125,11 +126,11 @@ export default function ReadwiseIntegration() {
       });
       
       if (response.status === 204) {
-        toast.success('Connection successful! Your Readwise API key is valid.');
+        toast.success('Connection successful! Your Readwise Access Token is valid.');
         setIsConnected(true);
       } else {
-        const errorData = await response.json().catch(() => ({ detail: "Invalid API key" }));
-        toast.error(`Connection failed: ${errorData.detail || 'Invalid API key'}`);
+        const errorData = await response.json().catch(() => ({ detail: "Invalid Access Token" }));
+        toast.error(`Connection failed: ${errorData.detail || 'Invalid Access Token'}`);
         setIsConnected(false);
       }
     } catch (error) {
@@ -247,103 +248,120 @@ export default function ReadwiseIntegration() {
   };
 
   const syncBooks = async () => {
+    // The syncBooks function can be removed or kept for backward compatibility
+    // but we won't expose it in the UI anymore
     if (!token) {
-      toast.error("You must be logged in to count books");
+      toast.error("You must be logged in to sync books");
       return;
     }
     
-    if (!apiKey) {
-      toast.error('Please enter and save your API key first');
-      return;
-    }
-    
-    setIsPolling(true);
-    try {
-      // Get current user ID
-      const supabase = getSupabaseBrowserClient();
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
-        throw new Error("Failed to get user info");
-      }
+    // Redirect to the Scheduled Tasks section
+    const tasksSection = document.getElementById('scheduled-tasks-section');
+    if (tasksSection) {
+      tasksSection.scrollIntoView({ behavior: 'smooth' });
       
-      // Call our API endpoint that will trigger Inngest
-      const response = await fetch("/api/inngest/trigger-readwise", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          userId: userData.user.id,
-          apiKey: apiKey
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to trigger book count");
-      }
-      
-      toast.success("Started counting your Readwise books!");
-      
-      // Poll for updates
-      startPollingForUpdates();
-    } catch (error) {
-      console.error('Error syncing books:', error);
-      toast.error(`Error counting books: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setIsPolling(false);
+      // Highlight the section briefly
+      tasksSection.classList.add('highlight-pulse');
+      setTimeout(() => {
+        tasksSection.classList.remove('highlight-pulse');
+      }, 2000);
+    } else {
+      // Fallback to the old implementation if element not found
+      await syncReadwiseBooks();
     }
   };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
       <h2 className="text-xl font-semibold mb-4">Readwise Integration</h2>
-      <p className="text-gray-500 mb-4">
+      <p className="text-gray-500 dark:text-gray-400 mb-6">
         Connect your Readwise account to import your books, highlights and notes.
       </p>
       
-      <div className="mb-4">
-        <label htmlFor="readwise-api-key" className="block text-sm font-medium mb-2">
-          Readwise API Key
-        </label>
-        <input
-          id="readwise-api-key"
-          type="password"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Enter your Readwise API key"
-        />
-        <p className="text-sm text-gray-500 mt-1">
-          Get your API key from <a href="https://readwise.io/access_token" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Readwise API settings</a>
-        </p>
-      </div>
-      
-      <div className="flex flex-wrap gap-4 mb-4">
-        <button
-          onClick={saveApiKey}
-          disabled={isSaving}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-        >
-          Save API Key
-        </button>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <label htmlFor="readwise-api-key" className="block text-sm font-medium">
+            Readwise Access Token
+          </label>
+          
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="w-full md:w-2/3">
+              <input
+                id="readwise-api-key"
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full p-2 h-10 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your Readwise Access Token"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Get your Access Token from <a href="https://readwise.io/access_token" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Readwise API settings</a>
+              </p>
+            </div>
+            
+            <div className="flex gap-2 flex-shrink-0">
+              <button
+                onClick={saveApiKey}
+                disabled={isSaving}
+                className="h-10 px-4 bg-blue-500 text-white rounded text-sm font-medium hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+              >
+                {isSaving ? 'Saving...' : 'Save Access Token'}
+              </button>
+              
+              <button
+                onClick={testConnection}
+                disabled={isTesting || !apiKey}
+                className="h-10 px-4 bg-green-500 text-white rounded text-sm font-medium hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+              >
+                {isTesting ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Testing...
+                  </span>
+                ) : 'Test Connection'}
+              </button>
+            </div>
+          </div>
+        </div>
         
-        <button
-          onClick={testConnection}
-          disabled={isTesting || !apiKey}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
-        >
-          Test Connection
-        </button>
+        {apiKey && isConnected && (
+          <div className="p-4 border rounded-md border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 w-full md:w-1/2">
+            <div>
+              <h3 className="font-medium text-gray-900 dark:text-white">
+                Connection Status
+              </h3>
+              <div className="flex items-center mt-1">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Successfully connected to Readwise
+                </p>
+              </div>
+              {bookCount > 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 ml-6">
+                  {bookCount} books found in your Readwise account.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
         
-        {isConnected && (
-          <button
-            onClick={syncBooks}
-            disabled={isPolling}
-            className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50"
-          >
-            Sync Book Count
-          </button>
+        {apiKey && !isConnected && (
+          <div className="p-4 border rounded-md border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 w-full md:w-1/2">
+            <div>
+              <h3 className="font-medium text-gray-900 dark:text-white">
+                Connection Status
+              </h3>
+              <div className="flex items-center mt-1">
+                <XCircle className="h-4 w-4 text-red-500 mr-2 flex-shrink-0" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Not connected to Readwise
+                </p>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

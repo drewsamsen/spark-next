@@ -91,3 +91,12 @@
 - Fixed function log status updating issue by improving Inngest middleware to properly track function execution lifecycle.
 - Fixed issue with duplicate "started" entries in function logs by implementing robust deduplication across server processes and adding database-level uniqueness constraints.
 - Fixed function log status not updating from "started" to "completed" by refactoring the Inngest middleware implementation to match the expected hook structure.
+- Created a new Scheduled Tasks table to centralize management of Inngest functions, moving "Sync Book Count" functionality from the Readwise Integration section into the more organized tasks table.
+- Simplified Settings page by reducing tabs from four to two: Integrations and Background Jobs, moving the Readwise Integration to the Integrations tab for better organization.
+- Improved UI consistency by reducing button height across the application, particularly in the Readwise Integration and Scheduled Tasks components.
+- Updated terminology in Readwise integration from "API Key" to "Access Token" to match Readwise's official naming convention.
+- Improved Readwise Integration UI layout by making the input field half-width and positioning action buttons to the right, creating a more compact and organized interface.
+- Redesigned Readwise Integration component with a cleaner layout, properly sized buttons, and conditional rendering of connection status based on connection state.
+- Added colored status icons to the Readwise Integration connection status: green check circle for successful connections and red x circle for failed connections, improving visual feedback for users.
+- Streamlined Readwise Integration by removing redundant Test Connection button and reducing connection status box width to 50%, creating a more focused and space-efficient interface.
+- Removed the red "PRODUCTION DB" indicator from the header, eliminating unnecessary visual clutter when connecting to production databases during development.

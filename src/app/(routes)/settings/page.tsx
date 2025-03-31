@@ -18,6 +18,17 @@ const ReadwiseIntegration = dynamic(() => import('@/components/integrations/Read
   ),
 });
 
+// Import ScheduledTasksTable with dynamic loading
+const ScheduledTasksTable = dynamic(() => import('@/components/ScheduledTasksTable'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+      <div className="animate-pulse h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+      <div className="animate-pulse h-48 bg-gray-100 dark:bg-gray-900 rounded-lg"></div>
+    </div>
+  ),
+});
+
 // Import FunctionLogsTable with dynamic loading as well
 const FunctionLogsTable = dynamic(() => import('@/components/FunctionLogsTable'), {
   ssr: false,
@@ -32,14 +43,12 @@ const FunctionLogsTable = dynamic(() => import('@/components/FunctionLogsTable')
 });
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState("integrations");
 
-  // Tab navigation
+  // Tab navigation - changed to just two tabs
   const tabs = [
-    { id: "general", label: "General" },
+    { id: "integrations", label: "Integrations" },
     { id: "background-jobs", label: "Background Jobs" },
-    { id: "appearance", label: "Appearance" },
-    { id: "notifications", label: "Notifications" },
   ];
 
   return (
@@ -63,49 +72,31 @@ export default function SettingsPage() {
         ))}
       </div>
       
-      {/* General Settings */}
-      {activeTab === "general" && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">General Settings</h2>
-          <p className="text-gray-500">Configure your general application settings.</p>
+      {/* Integrations Tab */}
+      {activeTab === "integrations" && (
+        <div>
+          <ReadwiseIntegration />
+          
+          {/* Reserved space for future integrations */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6 opacity-50">
+            <h2 className="text-xl font-semibold mb-4">More Integrations</h2>
+            <p className="text-gray-500">Additional integration options will be available soon.</p>
+          </div>
         </div>
       )}
       
       {/* Background Jobs */}
       {activeTab === "background-jobs" && (
-        <div>
-          <ReadwiseIntegration />
-          
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Scheduled Tasks</h2>
-            <p className="text-gray-500">
-              View and manage your scheduled background tasks.
-            </p>
-            <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded">
-              <p className="text-sm text-gray-500">No scheduled tasks configured yet.</p>
-            </div>
+        <div>          
+          {/* Scheduled Tasks Table */}
+          <div id="scheduled-tasks-section" className="mb-6">
+            <ScheduledTasksTable />
           </div>
           
           {/* Function Logs Table */}
-          <div className="mb-6">
+          <div id="function-logs-section" className="mb-6">
             <FunctionLogsTable />
           </div>
-        </div>
-      )}
-      
-      {/* Appearance Settings */}
-      {activeTab === "appearance" && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Appearance</h2>
-          <p className="text-gray-500">Customize the appearance of your application.</p>
-        </div>
-      )}
-      
-      {/* Notification Settings */}
-      {activeTab === "notifications" && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Notifications</h2>
-          <p className="text-gray-500">Configure your notification preferences.</p>
         </div>
       )}
     </div>
