@@ -49,8 +49,6 @@ Inngest / Background Jobs
 IMPORTANT:
 
 - After all changes are made, ALWAYS build the project with `npm run build`. Ignore warnings, fix errors.
-- Always add a one-sentence summary of changes to `.cursor-updates` file in markdown format at the end of every agent interaction.
-- If you forget, the user can type the command "finish" and you will run the build and update `.cursor-updates`.
 - Do not run `git add` or `git commit` after making changes. The user will handle git.
 - Do not over-deliver. If you see opportunities for a good next step, pause and make the suggestion to the user. Do not automatically try and do too much.
 - When debugging, do not try multiple fixes at once. Try one thing at a time and ask the user to test if the fix worked before trying something else.

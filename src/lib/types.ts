@@ -44,6 +44,68 @@ export type Database = {
           updated_at?: string;
         };
       };
+      books: {
+        Row: {
+          id: string;
+          user_id: string;
+          rw_id: number;
+          rw_title: string | null;
+          rw_author: string | null;
+          rw_category: string | null;
+          rw_source: string | null;
+          rw_num_highlights: number | null;
+          rw_last_highlight_at: string | null;
+          rw_updated: string | null;
+          rw_cover_image_url: string | null;
+          rw_highlights_url: string | null;
+          rw_source_url: string | null;
+          rw_asin: string | null;
+          rw_tags: string[] | null;
+          rw_document_note: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          rw_id: number;
+          rw_title?: string | null;
+          rw_author?: string | null;
+          rw_category?: string | null;
+          rw_source?: string | null;
+          rw_num_highlights?: number | null;
+          rw_last_highlight_at?: string | null;
+          rw_updated?: string | null;
+          rw_cover_image_url?: string | null;
+          rw_highlights_url?: string | null;
+          rw_source_url?: string | null;
+          rw_asin?: string | null;
+          rw_tags?: string[] | null;
+          rw_document_note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          rw_id?: number;
+          rw_title?: string | null;
+          rw_author?: string | null;
+          rw_category?: string | null;
+          rw_source?: string | null;
+          rw_num_highlights?: number | null;
+          rw_last_highlight_at?: string | null;
+          rw_updated?: string | null;
+          rw_cover_image_url?: string | null;
+          rw_highlights_url?: string | null;
+          rw_source_url?: string | null;
+          rw_asin?: string | null;
+          rw_tags?: string[] | null;
+          rw_document_note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Functions: {
       get_tables_in_schema: {

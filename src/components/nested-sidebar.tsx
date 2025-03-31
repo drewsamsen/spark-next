@@ -29,6 +29,44 @@ interface NestedSidebarProps {
   isLoading?: boolean;
 }
 
+/**
+ * Create a consistent localStorage key
+ */
+function getStorageKey(title: string, type: string): string {
+  return `${title.toLowerCase()}-${type}`;
+}
+
+/**
+ * Load sort preferences from localStorage or return default
+ */
+function getSavedSort(title: string): SortState {
+  try {
+    const savedSort = localStorage.getItem(`${title.toLowerCase()}-sort`);
+    if (savedSort) {
+      return JSON.parse(savedSort);
+    }
+  } catch (error) {
+    console.error('Error loading sort settings from localStorage:', error);
+  }
+  // Default sort by name ascending
+  return { field: 'name', direction: 'asc' };
+}
+
+/**
+ * Load saved search term from localStorage
+ */
+function getSavedSearch(title: string): string {
+  try {
+    const savedSearch = localStorage.getItem(`${title.toLowerCase()}-search`);
+    if (savedSearch) {
+      return savedSearch;
+    }
+  } catch (error) {
+    console.error('Error loading search settings from localStorage:', error);
+  }
+  return "";
+}
+
 export default function NestedSidebar({ 
   isOpen, 
   title,
@@ -39,8 +77,8 @@ export default function NestedSidebar({
   onClose,
   isLoading = false
 }: NestedSidebarProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sort, setSort] = useState<SortState>({ field: 'name', direction: 'asc' });
+  const [searchTerm, setSearchTerm] = useState(() => getSavedSearch(title));
+  const [sort, setSort] = useState<SortState>(() => getSavedSort(title));
   const { settings, updateLeftSidebarWidth } = useUISettings();
   const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
   
@@ -49,18 +87,11 @@ export default function NestedSidebar({
   const resizeHandleRef = useRef<HTMLDivElement>(null);
   const [sidebarWidth, setSidebarWidth] = useState(settings.leftSidebar.width - iconWidth);
   
-  // Load sort preferences from localStorage
+  // Save search term to localStorage
   useEffect(() => {
-    const savedSort = localStorage.getItem(`${title.toLowerCase()}-sort`);
-    if (savedSort) {
-      try {
-        setSort(JSON.parse(savedSort));
-      } catch (error) {
-        console.error('Error parsing sort settings from localStorage', error);
-      }
-    }
-  }, [title]);
-
+    localStorage.setItem(`${title.toLowerCase()}-search`, searchTerm);
+  }, [searchTerm, title]);
+  
   // Save sort preferences to localStorage
   useEffect(() => {
     localStorage.setItem(`${title.toLowerCase()}-sort`, JSON.stringify(sort));
@@ -72,6 +103,21 @@ export default function NestedSidebar({
       setSidebarWidth(settings.leftSidebar.width - iconWidth);
     }
   }, [settings.leftSidebar.width, isResizing, iconWidth]);
+
+  // Force sort to be reapplied when items change (e.g., when data loads)
+  useEffect(() => {
+    if (items.length > 0) {
+      // This will trigger the existing sort logic to run with current settings
+      setSort(current => ({...current}));
+    }
+  }, [items]);
+
+  // Handle search input changes
+  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    // Search term is automatically saved to localStorage via the useEffect hook
+  };
 
   // Handle resize
   useEffect(() => {
@@ -144,6 +190,38 @@ export default function NestedSidebar({
       field,
       direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
+    // Sort settings are automatically saved to localStorage via the useEffect hook
+  };
+
+  // Helper function to parse date strings in various formats
+  const parseDate = (dateStr: string | null | undefined): Date | null => {
+    if (!dateStr) return null;
+    
+    try {
+      // Try to parse the date with various formats
+      // For "Aug '23" format, convert to a date object (August 2023)
+      if (dateStr.includes("'")) {
+        const parts = dateStr.split(" '");
+        const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(parts[0]);
+        const year = 2000 + parseInt(parts[1], 10);
+        if (month >= 0 && !isNaN(year)) {
+          return new Date(year, month, 1);
+        }
+      }
+      
+      // For "MM/YY" format
+      if (dateStr.includes("/")) {
+        const [month, year] = dateStr.split("/").map(Number);
+        const fullYear = 2000 + year; // Assuming 20xx for all years
+        return new Date(fullYear, month - 1, 1);
+      }
+      
+      // Fallback to trying to parse the string directly
+      return new Date(dateStr);
+    } catch (e) {
+      console.error("Error parsing date:", dateStr, e);
+      return null;
+    }
   };
 
   // Filter and sort items
@@ -159,16 +237,18 @@ export default function NestedSidebar({
         const countB = b.highlightsCount || 0;
         return sort.direction === 'asc' ? countA - countB : countB - countA;
       } else if (sort.field === 'date') {
-        // Handle date sorting (MM/YY format)
-        if (!a.date || !b.date) return 0;
+        // Parse dates properly for sorting
+        const dateA = parseDate(a.date);
+        const dateB = parseDate(b.date);
         
-        const [monthA, yearA] = a.date.split('/').map(Number);
-        const [monthB, yearB] = b.date.split('/').map(Number);
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return sort.direction === 'asc' ? -1 : 1;
+        if (!dateB) return sort.direction === 'asc' ? 1 : -1;
         
-        if (yearA !== yearB) {
-          return sort.direction === 'asc' ? yearA - yearB : yearB - yearA;
-        }
-        return sort.direction === 'asc' ? monthA - monthB : monthB - monthA;
+        // Compare the actual Date objects
+        return sort.direction === 'asc' 
+          ? dateA.getTime() - dateB.getTime() 
+          : dateB.getTime() - dateA.getTime();
       }
       return 0;
     });
@@ -210,7 +290,7 @@ export default function NestedSidebar({
               placeholder="Search..."
               className="w-full rounded-md pl-8 text-sm"
               value={searchTerm}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               disabled={isLoading}
             />
           </div>
@@ -257,7 +337,7 @@ export default function NestedSidebar({
                       <Skeleton className="h-5 w-32" />
                       <div className="flex items-center gap-2">
                         <Skeleton className="h-4 w-8" />
-                        <Skeleton className="h-4 w-10" />
+                        <Skeleton className="h-4 w-12" />
                       </div>
                     </div>
                   </div>
@@ -279,7 +359,7 @@ export default function NestedSidebar({
                     {item.highlightsCount !== undefined && (
                       <div className="flex items-center gap-2 ml-2 text-xs text-muted-foreground whitespace-nowrap">
                         <span className="font-medium">{item.highlightsCount}</span>
-                        {item.date && <span className="opacity-70">{item.date}</span>}
+                        {item.date && <span className="opacity-70 inline-block w-12 text-right">{item.date}</span>}
                       </div>
                     )}
                   </div>

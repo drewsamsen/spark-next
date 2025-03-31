@@ -8,9 +8,40 @@ import NestedSidebar from "@/components/nested-sidebar";
 import { Book, Sparkles } from "lucide-react";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
 import { mockApi } from "@/lib/mock-api";
+import { booksService } from "@/lib/books-service";
 import { SidebarItem } from "@/lib/mock-api/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRouter, usePathname } from "next/navigation";
+
+/**
+ * Load a boolean value from localStorage with fallback
+ */
+function loadBooleanFromStorage(key: string, defaultValue: boolean): boolean {
+  try {
+    const value = localStorage.getItem(key);
+    if (value !== null) {
+      return value === 'true';
+    }
+  } catch (error) {
+    console.error(`Error loading ${key} from localStorage:`, error);
+  }
+  return defaultValue;
+}
+
+/**
+ * Load a string value from localStorage with fallback
+ */
+function loadStringFromStorage(key: string, defaultValue: string | null): string | null {
+  try {
+    const value = localStorage.getItem(key);
+    if (value !== null) {
+      return value;
+    }
+  } catch (error) {
+    console.error(`Error loading ${key} from localStorage:`, error);
+  }
+  return defaultValue;
+}
 
 // Dashboard layout component to be used by all app pages
 export default function DashboardLayout({
@@ -25,6 +56,7 @@ export default function DashboardLayout({
   // Track if component has mounted to prevent hydration mismatch
   const [hasMounted, setHasMounted] = useState(false);
   
+  // Initialize state from localStorage on client-side only
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
   
@@ -48,15 +80,61 @@ export default function DashboardLayout({
   // Set hasMounted to true after the component mounts
   useEffect(() => {
     setHasMounted(true);
+    
+    // Load sidebar states from localStorage
+    if (typeof window !== 'undefined') {
+      setLeftSidebarOpen(loadBooleanFromStorage('leftSidebarOpen', true));
+      setRightSidebarOpen(loadBooleanFromStorage('rightSidebarOpen', true));
+      setBooksSidebarOpen(loadBooleanFromStorage('booksSidebarOpen', false));
+      setSparksSidebarOpen(loadBooleanFromStorage('sparksSidebarOpen', false));
+      setActiveSidebarItem(loadStringFromStorage('activeSidebarItem', null));
+      setActiveBook(loadStringFromStorage('activeBook', null));
+      setActiveSpark(loadStringFromStorage('activeSpark', null));
+    }
   }, []);
+
+  // Save sidebar states to localStorage
+  useEffect(() => {
+    if (hasMounted) {
+      localStorage.setItem('leftSidebarOpen', leftSidebarOpen.toString());
+      localStorage.setItem('rightSidebarOpen', rightSidebarOpen.toString());
+      localStorage.setItem('booksSidebarOpen', booksSidebarOpen.toString());
+      localStorage.setItem('sparksSidebarOpen', sparksSidebarOpen.toString());
+      if (activeSidebarItem) {
+        localStorage.setItem('activeSidebarItem', activeSidebarItem);
+      } else {
+        localStorage.removeItem('activeSidebarItem');
+      }
+      if (activeBook) {
+        localStorage.setItem('activeBook', activeBook);
+      } else {
+        localStorage.removeItem('activeBook');
+      }
+      if (activeSpark) {
+        localStorage.setItem('activeSpark', activeSpark);
+      } else {
+        localStorage.removeItem('activeSpark');
+      }
+    }
+  }, [
+    hasMounted, 
+    leftSidebarOpen, 
+    rightSidebarOpen, 
+    booksSidebarOpen, 
+    sparksSidebarOpen, 
+    activeSidebarItem,
+    activeBook,
+    activeSpark
+  ]);
 
   useEffect(() => {
     if (hasMounted) {
-      // Fetch books data
+      // Fetch books data from the real database
       const loadBooks = async () => {
         setLoadingBooks(true);
         try {
-          const data = await mockApi.getBooks();
+          // Use the real books service instead of mock API
+          const data = await booksService.getBooks();
           setBooks(data);
         } catch (error) {
           console.error("Failed to load books:", error);
@@ -214,16 +292,16 @@ export default function DashboardLayout({
             </div>
           )}
           
-          {/* Main content area - takes remaining space */}
-          <div className="flex-1 overflow-auto h-full">
+          {/* Main content area */}
+          <main className="flex-1 overflow-hidden">
             {children}
-          </div>
+          </main>
           
           {/* Right sidebar */}
           {rightSidebarOpen && (
             <RightSidebar 
               isOpen={rightSidebarOpen} 
-              setIsOpen={setRightSidebarOpen} 
+              setIsOpen={setRightSidebarOpen}
             />
           )}
         </div>

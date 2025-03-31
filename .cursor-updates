@@ -118,3 +118,6 @@
 - Fixed duplicate "function completed successfully" toast notifications in Function Logs by adding tracking logic to prevent showing toasts for the same function completion multiple times.
 - Fixed issue with Readwise sync books function showing premature completion status in Function Logs by enhancing the Inngest middleware to detect and handle intermediate step results properly.
 - Implemented standardized `isLastStep` convention for all Inngest functions to reliably indicate when a multi-step function has truly completed, replacing the previous approach of detecting function-specific result fields.
+- Replaced mock books data with real data from the Supabase database, implementing a books service that fetches books for the current authenticated user.
+- Enhanced book highlight count display in the sidebar by adding leading zeros with a subtle color to always show 3-digit numbers.
+- Fixed date width inconsistency in the books sidebar by setting a fixed width for dates, ensuring consistent alignment regardless of the date content.
