@@ -1,6 +1,6 @@
 import { Inngest } from "inngest";
 import { serve } from "inngest/next";
-import { withLogging } from "./src/lib/inngest-logger";
+import { databaseLoggerMiddleware } from "./src/lib/inngest-db-logger-middleware";
 
 // Define event types for better type safety
 export type AppEvents = {
@@ -28,18 +28,23 @@ export const inngest = new Inngest({
     signingKey: process.env.INNGEST_SIGNING_KEY
   }),
   // Enable validation in development
-  validateEvents: process.env.NODE_ENV === "development"
+  validateEvents: process.env.NODE_ENV === "development",
+  // Add our database logger middleware
+  middleware: [databaseLoggerMiddleware]
 });
 
 // Readwise book count function - counts total books, does not fetch full content
 export const readwiseCountBooksFn = inngest.createFunction(
   { id: "readwise-count-books" },
   { event: "readwise/count-books" },
-  withLogging(async ({ event, step }) => {
+  async ({ event, step, logger }) => {
     const { userId, apiKey } = event.data;
     
+    // Use the built-in logger for operational logs
+    logger.info("Starting Readwise book count", { userId });
+    
     if (!apiKey) {
-      console.error("No Readwise API key provided");
+      logger.error("No Readwise API key provided");
       return { 
         success: false, 
         error: "No API key provided" 
@@ -49,7 +54,7 @@ export const readwiseCountBooksFn = inngest.createFunction(
     try {
       // Fetch all books from Readwise API with pagination to count them
       const result = await step.run("count-books-from-readwise", async () => {
-        console.log(`Counting Readwise books for user ${userId}`);
+        logger.info(`Counting Readwise books for user ${userId}`);
         
         const readwiseUrl = "https://readwise.io/api/v2/books/";
         
@@ -59,7 +64,7 @@ export const readwiseCountBooksFn = inngest.createFunction(
         
         // Process all pages of results
         while (nextUrl) {
-          console.log(`Fetching page ${page} from ${nextUrl}`);
+          logger.info(`Fetching page ${page} from ${nextUrl}`);
           
           // Add a small delay to respect rate limits (20 requests per minute)
           if (page > 1) {
@@ -85,7 +90,7 @@ export const readwiseCountBooksFn = inngest.createFunction(
           const booksOnPage = data.results ? data.results.length : 0;
           totalBooks += booksOnPage;
           
-          console.log(`Page ${page}: Found ${booksOnPage} books. Total so far: ${totalBooks}`);
+          logger.info(`Page ${page}: Found ${booksOnPage} books. Total so far: ${totalBooks}`);
           
           // Check if there's another page
           nextUrl = data.next || null;
@@ -93,12 +98,12 @@ export const readwiseCountBooksFn = inngest.createFunction(
           
           // Safety check to prevent infinite loops
           if (page > 100) {
-            console.warn("Reached 100 pages - stopping to prevent potential infinite loop");
+            logger.warn("Reached 100 pages - stopping to prevent potential infinite loop");
             break;
           }
         }
         
-        console.log(`Finished counting. Total books: ${totalBooks}`);
+        logger.info(`Finished counting. Total books: ${totalBooks}`);
         
         return {
           count: totalBooks, 
@@ -108,6 +113,8 @@ export const readwiseCountBooksFn = inngest.createFunction(
       
       // Update user settings with the results via API call
       await step.run("update-user-settings", async () => {
+        logger.info("Updating user settings with book count");
+        
         const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/readwise`, {
           method: "POST",
           headers: {
@@ -121,35 +128,41 @@ export const readwiseCountBooksFn = inngest.createFunction(
         });
         
         if (!response.ok) {
-          console.error("Failed to update user settings");
+          logger.error("Failed to update user settings");
           return { success: false, error: "Failed to update settings" };
         }
         
         return { success: true };
       });
       
+      logger.info("Book count completed successfully", { count: result.count });
+      
       return { 
         success: true, 
         bookCount: result.count
       };
     } catch (error) {
-      console.error("Error in Readwise function:", error);
+      logger.error("Error in Readwise function:", error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : "Unknown error" 
       };
     }
-  })
+  }
 );
 
 // Function to test Readwise connection (manually triggered only)
 export const readwiseConnectionTestFn = inngest.createFunction(
   { id: "readwise-connection-test" },
   { event: "readwise/test-connection" },
-  withLogging(async ({ event, step }) => {
+  async ({ event, step, logger }) => {
     const { userId, apiKey } = event.data;
     
+    // Use the built-in logger for operational logs
+    logger.info("Testing Readwise connection", { userId });
+    
     if (!userId || !apiKey) {
+      logger.error("Missing user ID or API key");
       return { 
         success: false, 
         error: "Missing user ID or API key" 
@@ -159,7 +172,7 @@ export const readwiseConnectionTestFn = inngest.createFunction(
     try {
       // Test the Readwise API connection
       const connectionResult = await step.run("test-readwise-connection", async () => {
-        console.log(`Testing Readwise connection for user ${userId}`);
+        logger.info(`Testing Readwise connection for user ${userId}`);
         
         try {
           // Try to connect to Readwise API
@@ -171,18 +184,21 @@ export const readwiseConnectionTestFn = inngest.createFunction(
           });
           
           if (response.status === 204) {
-            console.log(`Connection successful for user ${userId}`);
+            logger.info(`Connection successful for user ${userId}`);
             return { success: true };
           } else {
             const errorData = await response.json()
               .catch(() => ({ detail: "Invalid API key" }));
+            
+            logger.warn(`Connection failed: ${errorData.detail || 'Invalid API key'}`);
+            
             return { 
               success: false, 
               error: errorData.detail || "Invalid API key" 
             };
           }
         } catch (error) {
-          console.error(`Connection error for user ${userId}:`, error);
+          logger.error(`Connection error for user ${userId}:`, error);
           return { 
             success: false, 
             error: error instanceof Error ? error.message : "Connection failed" 
@@ -193,6 +209,8 @@ export const readwiseConnectionTestFn = inngest.createFunction(
       // Update user settings to mark connection as valid/invalid
       if (connectionResult.success) {
         await step.run("update-connection-status", async () => {
+          logger.info("Updating connection status in user settings");
+          
           const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/user-settings`, {
             method: "PATCH",
             headers: {
@@ -209,7 +227,7 @@ export const readwiseConnectionTestFn = inngest.createFunction(
           });
           
           if (!response.ok) {
-            console.error("Failed to update connection status");
+            logger.error("Failed to update connection status");
             return { success: false };
           }
           
@@ -217,15 +235,17 @@ export const readwiseConnectionTestFn = inngest.createFunction(
         });
       }
       
+      logger.info("Connection test completed", { success: connectionResult.success });
+      
       return connectionResult;
     } catch (error) {
-      console.error(`Error testing connection for user ${userId}:`, error);
+      logger.error(`Error testing connection for user ${userId}:`, error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : "Unknown error" 
       };
     }
-  })
+  }
 );
 
 // Export the serve function for use in API routes

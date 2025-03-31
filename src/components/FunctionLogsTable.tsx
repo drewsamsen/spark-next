@@ -10,6 +10,7 @@ interface FunctionLog {
   id: string;
   function_name: string;
   function_id: string;
+  run_id: string;
   status: 'started' | 'completed' | 'failed';
   started_at: string;
   completed_at: string | null;

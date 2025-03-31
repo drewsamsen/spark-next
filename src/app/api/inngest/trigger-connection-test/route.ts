@@ -64,4 +64,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
+
+// Add the dynamic export to force this to be a dynamic route
+export const dynamic = 'force-dynamic'; 

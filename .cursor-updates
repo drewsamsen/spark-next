@@ -86,3 +86,8 @@
 - Removed book count display from Readwise integration UI for a cleaner, simpler interface.
 - Created function logs service and UI to track and display Inngest function execution.
 - Fixed authentication in function logs API to properly validate token from request header.
+- Improved Inngest function logging using middleware for more reliable tracking of function execution.
+- Added deduplication to function logs by using Inngest's run ID and uniqueness constraints.
+- Fixed function log status updating issue by improving Inngest middleware to properly track function execution lifecycle.
+- Fixed issue with duplicate "started" entries in function logs by implementing robust deduplication across server processes and adding database-level uniqueness constraints.
+- Fixed function log status not updating from "started" to "completed" by refactoring the Inngest middleware implementation to match the expected hook structure.
