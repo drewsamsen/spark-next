@@ -21,11 +21,20 @@ export default function ScheduledTasksTable() {
   // Define available tasks
   const availableTasks: ScheduledTask[] = [
     {
-      id: "readwise-count-books",
-      name: "Sync Readwise Books",
-      description: "Count and sync the number of books in your Readwise account",
+      id: "readwise-books-count",
+      name: "Count Readwise Books",
+      description: "Count the number of books in your Readwise account",
       isSchedulable: false, // Not schedulable yet
       triggerEndpoint: "/api/inngest/trigger-readwise",
+      requiresApiKey: true,
+      apiKeySource: "readwise"
+    },
+    {
+      id: "readwise-books-import",
+      name: "Import Readwise Books",
+      description: "Import all your books from Readwise into the database",
+      isSchedulable: false,
+      triggerEndpoint: "/api/inngest/trigger-sync-books",
       requiresApiKey: true,
       apiKeySource: "readwise"
     },
@@ -94,7 +103,7 @@ export default function ScheduledTasksTable() {
       toast.success(`${task.name} started successfully`);
       
       // For the Readwise book count, start polling to update the UI
-      if (task.id === "readwise-count-books") {
+      if (task.id === "readwise-books-count") {
         // Wait 1 second before redirecting to the logs view
         setTimeout(() => {
           // Scroll to the logs section

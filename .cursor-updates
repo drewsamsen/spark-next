@@ -100,3 +100,13 @@
 - Added colored status icons to the Readwise Integration connection status: green check circle for successful connections and red x circle for failed connections, improving visual feedback for users.
 - Streamlined Readwise Integration by removing redundant Test Connection button and reducing connection status box width to 50%, creating a more focused and space-efficient interface.
 - Removed the red "PRODUCTION DB" indicator from the header, eliminating unnecessary visual clutter when connecting to production databases during development.
+- Created a new migration file for the books table to store Readwise book data, including fields prefixed with "rw_" to maintain clear distinction between Supabase and Readwise IDs, with Row Level Security policies to ensure data privacy.
+- Implemented a book import feature to sync books from Readwise into the Supabase database, creating a new Inngest function to handle the synchronization with pagination for large libraries and adding a task button to the Scheduled Tasks interface.
+- Optimized book import performance by implementing batch processing that fetches all existing books once and performs comparisons in memory, reducing database queries from potentially thousands to just a handful of batch operations.
+- Fixed Map serialization issue in the Readwise book import function by separating data fetching from Map creation, ensuring proper object handling between Inngest steps.
+- Fixed book import ID type mismatch by explicitly converting between string and number IDs, ensuring consistent lookup between Readwise API data and database records.
+- Fixed Supabase database error in the Readwise book import function by removing an invalid aggregate query from the insert operation, resolving the PostgreSQL "aggregate functions not allowed in RETURNING" error.
+- Enhanced Function Logs table with expandable result data, allowing users to view the complete JSON result in a modal dialog instead of the previously truncated view.
+- Redesigned Function Logs table with expandable rows to display full JSON result data inline, creating a more context-aware and space-efficient viewing experience without obscuring the rest of the interface.
+- Fixed and improved Readwise book import function by enhancing error handling, adding comprehensive logging throughout the execution flow, and ensuring proper return value structure with import/update counts.
+- Enhanced Readwise book import function to track and return additional metrics including total books found in Readwise and in Supabase, providing better visibility into the sync process.
