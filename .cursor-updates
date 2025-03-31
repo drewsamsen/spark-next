@@ -57,3 +57,11 @@
 - Enhanced dark mode with a dedicated color palette, improved contrast, and consistent styling across all components for better accessibility and user experience.
 - Updated dark mode sidebars to have matching background colors, ensuring consistent appearance between the header and both left and right sidebars.
 - Improved right sidebar styling in dark mode by updating borders, property item borders, and resize handle hover states to match the subtle styling of the left sidebar for better visual consistency.
+- Fixed authentication issues with production database connection by implementing client reset mechanisms, better error handling, and improved diagnostics for easier troubleshooting.
+- Added interactive test-login script to directly test authentication credentials against local or production Supabase instances, helping developers quickly diagnose and resolve login issues.
+- Added "Reset Auth State" button to login page and implemented a robust client reset mechanism to solve authentication issues without requiring browser cache clearing.
+- Fixed critical issue in production database connection script where environment variables weren't being properly passed to the Next.js application, causing authentication requests to be sent to the wrong database.
+- Fixed session persistence issue by properly configuring Supabase client auth options and removing code that inadvertently cleared valid sessions during page navigation.
+- Made auth troubleshooting tools less prominent by redesigning the "Reset Auth State" button as a subtle text link at the bottom of the login form.
+- Cleaned up debugging code by removing debug file creation, reducing console logs, and making environment info display development-only.
+- Removed unnecessary temporary file mechanism (.use-proddb) since Supabase client now properly handles environment switching.

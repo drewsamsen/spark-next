@@ -103,6 +103,26 @@ You can log in with the test user:
 - Email: test@example.com
 - Password: password123
 
+### Working with Production Database
+
+This project includes a special development mode that connects to your production database while maintaining all development features:
+
+1. Create a `.env.proddb` file with your production Supabase credentials:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://your-production-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-production-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-production-service-role-key
+   ```
+
+2. Run the development server with production database:
+   ```bash
+   npm run proddb
+   ```
+
+3. When running in this mode, a red "PRODUCTION DB" indicator will appear in the header to remind you that you're connected to the production database.
+
+> ⚠️ **Warning**: Be extremely careful when using this mode as it connects to your real production database. Avoid making destructive changes or running tests that could modify production data.
+
 ## 📁 Project Structure
 
 - `app/` - Next.js app router pages and API routes

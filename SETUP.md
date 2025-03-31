@@ -49,6 +49,31 @@ After running the setup script, you can log in with:
 - Email: test@example.com
 - Password: password123
 
+## Connecting to Production Database
+
+For scenarios where you need to test against production data, we provide a special development mode that connects to your production Supabase database:
+
+1. Create a `.env.proddb` file in the project root with your production credentials:
+   ```
+   # Production Database Credentials
+   NEXT_PUBLIC_SUPABASE_URL=https://your-production-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-production-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-production-service-role-key
+   ```
+
+2. Run the development server with the production database connection:
+   ```bash
+   npm run proddb
+   ```
+
+3. A visual indicator (red "PRODUCTION DB" badge) will appear in the app header to remind you that you're working with production data.
+
+⚠️ **Important Safety Precautions:**
+- Add `.env.proddb` to your `.gitignore` to prevent accidentally committing production credentials
+- Be extremely careful when making changes to data - these changes will affect your live production database
+- Avoid running tests or operations that could modify or delete production data
+- Use this mode primarily for debugging issues that only appear in production or testing against real data
+
 ## Manual Auth Configuration
 
 The setup script will prompt you to manually configure the minimum password length to 8 characters in the Supabase Studio:

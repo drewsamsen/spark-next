@@ -115,6 +115,11 @@ export default function Header({
           <LogoutButton />
         </div>
       </div>
+      {process.env.NEXT_PUBLIC_USING_PROD_DB === 'true' && (
+        <div className="ml-3 px-3 py-1 text-xs font-medium bg-red-600 text-white rounded-full animate-pulse">
+          PRODUCTION DB
+        </div>
+      )}
     </header>
   );
 } 

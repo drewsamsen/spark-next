@@ -13,7 +13,10 @@
     "build-storybook": "storybook build",
     "setup": "node scripts/setup.js",
     "setup-and-dev": "npm run setup && npm run dev",
-    "test-db": "node scripts/test-connection.js"
+    "test-db": "node scripts/test-connection.js",
+    "test-proddb": "node scripts/test-proddb.js",
+    "test-login": "node scripts/test-login.js",
+    "proddb": "node scripts/run-with-proddb.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.709.0",
