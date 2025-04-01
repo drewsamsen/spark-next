@@ -4,25 +4,29 @@ import { Resource, ResourceType } from "./types";
 // Map resource types to their respective tables
 const RESOURCE_TABLES = {
   book: 'books',
-  highlight: 'highlights'
+  highlight: 'highlights',
+  spark: 'sparks'
 };
 
 // Map resource types to their category junction tables
 const CATEGORY_JUNCTION_TABLES = {
   book: 'book_categories',
-  highlight: 'highlight_categories'
+  highlight: 'highlight_categories',
+  spark: 'spark_categories'
 };
 
 // Map resource types to their tag junction tables
 const TAG_JUNCTION_TABLES = {
   book: 'book_tags',
-  highlight: 'highlight_tags'
+  highlight: 'highlight_tags',
+  spark: 'spark_tags'
 };
 
 // Map resource types to their primary key columns in junction tables
 const RESOURCE_ID_COLUMNS = {
   book: 'book_id',
-  highlight: 'highlight_id'
+  highlight: 'highlight_id',
+  spark: 'spark_id'
 };
 
 /**

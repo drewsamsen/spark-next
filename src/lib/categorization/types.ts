@@ -3,7 +3,7 @@
  */
 
 // Resource types supported by our categorization system
-export type ResourceType = 'book' | 'highlight';
+export type ResourceType = 'book' | 'highlight' | 'spark';
 
 // A generic interface for any categorizable resource
 export interface Resource {
