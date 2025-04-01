@@ -666,7 +666,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           .select('id, rw_id, rw_title, rw_num_highlights')
           .eq('user_id', userId)
           .order('rw_title', { ascending: true })
-          .limit(3); // Limit to 3 books as requested
+          .limit(10); // Limit to 3 books as requested
           
         if (error) {
           logger.error("Error fetching books:", error);
@@ -686,11 +686,11 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         };
       }
 
-      // Track overall sync statistics
-      let totalHighlightsInReadwise = 0;
-      let totalHighlightsInSupabase = 0;
-      let totalHighlightsInserted = 0;
-      let totalHighlightsUpdated = 0;
+      // Track overall sync statistics - these will be calculated from the results after processing
+      let totalReadwiseHighlights = 0;         // Total highlights in Readwise across all books
+      let totalExistingHighlights = 0;         // Highlights that were already in Supabase
+      let totalNewHighlightsInserted = 0;      // Highlights newly inserted in this sync
+      let totalHighlightsUpdated = 0;          // Highlights updated in this sync
       
       // Step 2: Process each book's highlights
       const syncResults = await step.run("sync-book-highlights", async () => {
@@ -720,7 +720,6 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           }
           
           const existingHighlightsCount = existingHighlights?.length || 0;
-          totalHighlightsInSupabase += existingHighlightsCount;
           
           logger.info(`Found ${existingHighlightsCount} existing highlights in Supabase for book ${book.rw_title}`);
           
@@ -787,7 +786,6 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
               
               // Add the highlights from this page to the total count
               readwiseHighlightsCount += highlights.length;
-              totalHighlightsInReadwise += highlights.length;
               
               logger.info(`Received ${highlights.length} highlights from Readwise API for book ${book.rw_title} (total so far: ${readwiseHighlightsCount})`);
               
@@ -868,7 +866,6 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
                 logger.error(`Error inserting highlights batch for book ${book.rw_title}:`, insertError);
               } else {
                 insertedCount += batch.length;
-                totalHighlightsInserted += batch.length;
                 logger.info(`Successfully inserted batch: ${batch.length} highlights`);
               }
             }
@@ -894,7 +891,6 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
                   logger.error(`Error updating highlight ${highlight.rw_id}:`, updateError);
                 } else {
                   updatedCount++;
-                  totalHighlightsUpdated++;
                 }
               }
             }
@@ -917,6 +913,23 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         }
         
         return results;
+      });
+      
+      // Calculate totals from the results
+      syncResults.forEach(result => {
+        if (result.success) {
+          if ('expected' in result) totalReadwiseHighlights += result.expected || 0;
+          if ('existing' in result) totalExistingHighlights += result.existing || 0;
+          if ('inserted' in result) totalNewHighlightsInserted += result.inserted || 0;
+          if ('updated' in result) totalHighlightsUpdated += result.updated || 0;
+        }
+      });
+      
+      logger.info("Calculated totals from results", {
+        totalReadwiseHighlights,
+        totalExistingHighlights,
+        totalNewHighlightsInserted,
+        totalHighlightsUpdated
       });
       
       // Step 3: Update user settings with the sync time
@@ -963,18 +976,18 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       
       logger.info("Highlights sync completed successfully", {
         booksProcessed: bookResult.books.length,
-        totalHighlightsInReadwise,
-        totalHighlightsInSupabase,
-        totalHighlightsInserted,
+        totalReadwiseHighlights,
+        totalExistingHighlights,
+        totalNewHighlightsInserted,
         totalHighlightsUpdated
       });
       
       return { 
         success: true, 
         booksProcessed: bookResult.books.length,
-        totalHighlightsInReadwise,
-        totalHighlightsInSupabase,
-        totalHighlightsInserted,
+        totalReadwiseHighlights,
+        totalExistingHighlights,
+        totalNewHighlightsInserted,
         totalHighlightsUpdated,
         bookResults: syncResults,
         isLastStep: true
