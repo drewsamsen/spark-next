@@ -1726,6 +1726,25 @@ export const airtableImportDataFn = inngest.createFunction(
             createdSparks++;
             logger.info(`Created spark ${newSpark.id} for record ${record.id}`);
             
+            // Create a categorization job for this record
+            const { data: jobData, error: jobError } = await supabase
+              .from('categorization_jobs')
+              .insert({
+                user_id: userId,
+                name: `Airtable import for record ${record.id}`,
+                source: "airtable_import",
+                status: 'approved'
+              })
+              .select()
+              .single();
+              
+            if (jobError || !jobData) {
+              logger.error(`Failed to create job for record ${record.id}:`, jobError);
+              continue;
+            }
+            
+            logger.info(`Created categorization job with ID: ${jobData.id} for record ${record.id}`);
+            
             // Process categories - expect array of strings of length 1
             if (Array.isArray(categories) && categories.length > 0) {
               // Take the first string in the array (as specified)
@@ -1745,7 +1764,8 @@ export const airtableImportDataFn = inngest.createFunction(
                     .from('categories')
                     .insert({
                       name: categoryName,
-                      slug: slug
+                      slug: slug,
+                      created_by_job_id: jobData.id
                     })
                     .select('id')
                     .single();
@@ -1761,17 +1781,46 @@ export const airtableImportDataFn = inngest.createFunction(
                 }
                 
                 if (categoryId) {
-                  // Link category to spark
-                  const { error: linkError } = await supabase
+                  // Create job action for this category
+                  logger.info(`Creating job action for category "${categoryName}" (ID: ${categoryId})`);
+                  const { data: jobAction, error: actionError } = await supabase
+                    .from('categorization_job_actions')
+                    .insert({
+                      job_id: jobData.id,
+                      action_type: 'add_category',
+                      resource_type: 'spark',
+                      resource_id: newSpark.id,
+                      category_id: categoryId
+                    })
+                    .select()
+                    .single();
+                    
+                  if (actionError || !jobAction) {
+                    logger.error(`Failed to create job action for category ${categoryName}:`, actionError);
+                    continue;
+                  }
+                  
+                  // Link category to spark with job_action_id
+                  logger.info(`Linking category "${categoryName}" (ID: ${categoryId}) to spark ${newSpark.id} with action ID ${jobAction.id}`);
+                  const { data: sparkCategory, error: linkError } = await supabase
                     .from('spark_categories')
                     .insert({
                       spark_id: newSpark.id,
                       category_id: categoryId,
-                      created_by: 'airtable_import'
-                    });
+                      created_by: 'job',
+                      job_action_id: jobAction.id
+                    })
+                    .select()
+                    .single();
                     
                   if (linkError) {
                     logger.error(`Error linking category ${categoryId} to spark ${newSpark.id}:`, linkError);
+                    // Log more detail about the error
+                    if (linkError.code) {
+                      logger.error(`SQL error code: ${linkError.code}, Details: ${linkError.details}, Hint: ${linkError.hint}`);
+                    }
+                  } else {
+                    logger.info(`Successfully linked category "${categoryName}" to spark ${newSpark.id}`);
                   }
                 }
               }
@@ -1792,7 +1841,8 @@ export const airtableImportDataFn = inngest.createFunction(
                   const { data: newTag, error: tagError } = await supabase
                     .from('tags')
                     .insert({
-                      name: tagName
+                      name: tagName,
+                      created_by_job_id: jobData.id
                     })
                     .select('id')
                     .single();
@@ -1808,13 +1858,32 @@ export const airtableImportDataFn = inngest.createFunction(
                   logger.info(`Created tag "${tagName}" with ID ${tagId}`);
                 }
                 
-                // Link tag to spark
+                // Create job action for this tag
+                const { data: jobAction, error: actionError } = await supabase
+                  .from('categorization_job_actions')
+                  .insert({
+                    job_id: jobData.id,
+                    action_type: 'add_tag',
+                    resource_type: 'spark',
+                    resource_id: newSpark.id,
+                    tag_id: tagId
+                  })
+                  .select()
+                  .single();
+                  
+                if (actionError || !jobAction) {
+                  logger.error(`Failed to create job action for tag ${tagName}:`, actionError);
+                  continue;
+                }
+                
+                // Link tag to spark with job_action_id
                 const { error: linkError } = await supabase
                   .from('spark_tags')
                   .insert({
                     spark_id: newSpark.id,
                     tag_id: tagId,
-                    created_by: 'airtable_import'
+                    created_by: 'job',
+                    job_action_id: jobAction.id
                   });
                   
                 if (linkError) {

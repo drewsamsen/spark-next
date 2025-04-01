@@ -46,6 +46,7 @@ Inngest / Background Jobs
 - We're using supabase realtime to detect when our functions are making changes to the database
 - Implemente standardized `isLastStep` convention for all Inngest functions to reliably indicate when a multi-step function has truly completed
 - When adding a new Inngest function, always add it in both `inngest.config.ts` AND `src/app/api/inngest/route.ts` functions array, as functions must be registered in both places to be detected properly.
+- All automated tag and category creation/application must be wrapped in a categorization job with job actions that provide a complete audit trail, allowing future review and potential rollback of these automated changes.
 
 IMPORTANT:
 
