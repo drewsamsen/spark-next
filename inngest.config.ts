@@ -3,6 +3,209 @@ import { serve } from "inngest/next";
 import { databaseLoggerMiddleware } from "./src/lib/inngest-db-logger-middleware";
 import { createClient } from "@supabase/supabase-js";
 
+// Rate limit tracking for Readwise API
+const readwiseRateLimit = {
+  lastRequestTime: 0,
+  requestCount: 0,
+  // Default delay is based on endpoint type
+  // Books/Highlights APIs: 20 req/min = 3000ms
+  // Other endpoints: 240 req/min = 250ms
+  defaultDelayMs: {
+    list: 3000, // For book/highlight LIST endpoints: 20 req/min
+    other: 250  // For other endpoints: 240 req/min
+  },
+  // Current delay (will be adjusted based on endpoint and responses)
+  minDelayMs: 250
+};
+
+/**
+ * Makes a throttled request to the Readwise API respecting rate limits
+ * Automatically adjusts delay based on response headers or errors
+ */
+async function throttledReadwiseRequest(
+  url: string, 
+  apiKey: string, 
+  logger: { info: (message: string, context?: any) => void; error: (message: string, context?: any) => void; }
+): Promise<any> {
+  // Determine endpoint type to apply proper rate limit
+  const isListEndpoint = url.includes('/api/v2/books') || url.includes('/api/v2/highlights');
+  const endpointType = isListEndpoint ? 'list' : 'other';
+  
+  // Set appropriate delay for this endpoint type if not already set
+  if (readwiseRateLimit.minDelayMs < readwiseRateLimit.defaultDelayMs[endpointType]) {
+    readwiseRateLimit.minDelayMs = readwiseRateLimit.defaultDelayMs[endpointType];
+    logger.info(`Using ${endpointType} endpoint rate limit: ${readwiseRateLimit.minDelayMs}ms delay`);
+  }
+  
+  // Calculate time since last request
+  const now = Date.now();
+  const timeSinceLastRequest = now - readwiseRateLimit.lastRequestTime;
+  
+  // If we need to wait to respect minimum delay
+  if (timeSinceLastRequest < readwiseRateLimit.minDelayMs) {
+    const waitTime = readwiseRateLimit.minDelayMs - timeSinceLastRequest;
+    logger.info(`Throttling Readwise API request, waiting ${waitTime}ms`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  
+  // Update tracking variables before request
+  readwiseRateLimit.lastRequestTime = Date.now();
+  readwiseRateLimit.requestCount++;
+  
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Token ${apiKey}`,
+        "Content-Type": "application/json"
+      }
+    });
+    
+    // Check for rate limit headers and adjust our delay if needed
+    const rateLimitRemaining = response.headers.get('X-RateLimit-Remaining');
+    const rateLimitReset = response.headers.get('X-RateLimit-Reset');
+    
+    if (rateLimitRemaining && parseInt(rateLimitRemaining) < 5) {
+      // If we're close to hitting the limit, increase the delay
+      readwiseRateLimit.minDelayMs = Math.min(5000, readwiseRateLimit.minDelayMs * 2);
+      logger.info(`Rate limit getting low (${rateLimitRemaining} remaining), increasing delay to ${readwiseRateLimit.minDelayMs}ms`);
+    }
+    
+    if (!response.ok) {
+      // If we get a rate limit error (429), respect the Retry-After header
+      if (response.status === 429) {
+        // Check for Retry-After header as recommended by Readwise API docs
+        const retryAfter = response.headers.get('Retry-After');
+        let waitSeconds = 10; // Default wait if no header
+        
+        if (retryAfter) {
+          waitSeconds = parseInt(retryAfter);
+          logger.info(`Received Retry-After header: ${waitSeconds} seconds`);
+        }
+        
+        // Convert to milliseconds and add buffer
+        const waitTime = (waitSeconds * 1000) + 500;
+        
+        // Update our delay for future requests
+        readwiseRateLimit.minDelayMs = Math.max(readwiseRateLimit.minDelayMs, 
+                                               Math.min(5000, readwiseRateLimit.defaultDelayMs[endpointType] * 2));
+        
+        logger.error(`Hit Readwise rate limit, waiting ${waitTime}ms before retry`);
+        
+        // Wait the specified time before retrying
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        
+        // Try again with recursion
+        return throttledReadwiseRequest(url, apiKey, logger);
+      }
+      
+      const errorText = await response.text();
+      throw new Error(`Readwise API error (${response.status}): ${errorText}`);
+    }
+    
+    // If we've made 20+ successful requests and haven't hit limits, we can cautiously reduce delay
+    // but never go below the default for this endpoint type
+    if (readwiseRateLimit.requestCount > 20 && readwiseRateLimit.minDelayMs > readwiseRateLimit.defaultDelayMs[endpointType]) {
+      readwiseRateLimit.minDelayMs = Math.max(
+        readwiseRateLimit.defaultDelayMs[endpointType], 
+        readwiseRateLimit.minDelayMs * 0.8
+      );
+      readwiseRateLimit.requestCount = 0;
+      logger.info(`Adjusting Readwise API delay to ${readwiseRateLimit.minDelayMs}ms`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    // For network errors, increase delay as a precaution
+    if (!(error instanceof Error && error.message.includes('Readwise API error'))) {
+      readwiseRateLimit.minDelayMs = Math.min(5000, readwiseRateLimit.minDelayMs * 2);
+      logger.error(`Network error with Readwise API, increasing delay to ${readwiseRateLimit.minDelayMs}ms`);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Makes a throttled auth request to the Readwise API respecting rate limits
+ */
+async function throttledReadwiseAuthRequest(
+  apiKey: string, 
+  logger: { info: (message: string, context?: any) => void; error: (message: string, context?: any) => void; }
+): Promise<{ success: boolean, error?: string }> {
+  // Auth endpoint uses the standard rate limit
+  if (readwiseRateLimit.minDelayMs < readwiseRateLimit.defaultDelayMs.other) {
+    readwiseRateLimit.minDelayMs = readwiseRateLimit.defaultDelayMs.other;
+  }
+  
+  // Calculate time since last request
+  const now = Date.now();
+  const timeSinceLastRequest = now - readwiseRateLimit.lastRequestTime;
+  
+  // If we need to wait to respect minimum delay
+  if (timeSinceLastRequest < readwiseRateLimit.minDelayMs) {
+    const waitTime = readwiseRateLimit.minDelayMs - timeSinceLastRequest;
+    logger.info(`Throttling Readwise API request, waiting ${waitTime}ms`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  
+  // Update tracking variables before request
+  readwiseRateLimit.lastRequestTime = Date.now();
+  readwiseRateLimit.requestCount++;
+  
+  try {
+    const response = await fetch('https://readwise.io/api/v2/auth/', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Token ${apiKey}`
+      }
+    });
+    
+    // If we get a rate limit error (429), respect the Retry-After header
+    if (response.status === 429) {
+      // Check for Retry-After header as recommended by Readwise API docs
+      const retryAfter = response.headers.get('Retry-After');
+      let waitSeconds = 10; // Default wait if no header
+      
+      if (retryAfter) {
+        waitSeconds = parseInt(retryAfter);
+        logger.info(`Received Retry-After header: ${waitSeconds} seconds`);
+      }
+      
+      // Convert to milliseconds and add buffer
+      const waitTime = (waitSeconds * 1000) + 500;
+      
+      // Update our delay for future requests
+      readwiseRateLimit.minDelayMs = Math.max(readwiseRateLimit.minDelayMs, 
+                                           Math.min(5000, readwiseRateLimit.defaultDelayMs.other * 2));
+                                           
+      logger.error(`Hit Readwise rate limit, waiting ${waitTime}ms before retry`);
+      
+      // Wait the specified time before retrying
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      
+      // Try again with recursion
+      return throttledReadwiseAuthRequest(apiKey, logger);
+    }
+    
+    if (response.status === 204) {
+      return { success: true };
+    } else {
+      const errorData = await response.json()
+        .catch(() => ({ detail: "Invalid API key" }));
+      return { success: false, error: errorData.detail || "Invalid API key" };
+    }
+  } catch (error) {
+    // For network errors, increase delay as a precaution
+    readwiseRateLimit.minDelayMs = Math.min(5000, readwiseRateLimit.minDelayMs * 2);
+    logger.error(`Network error with Readwise API, increasing delay to ${readwiseRateLimit.minDelayMs}ms`);
+    
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Connection failed"
+    };
+  }
+}
+
 /**
  * IMPORTANT: Function Completion Convention
  * 
@@ -105,40 +308,28 @@ export const readwiseCountBooksFn = inngest.createFunction(
         while (nextUrl) {
           logger.info(`Fetching page ${page} from ${nextUrl}`);
           
-          // Add a small delay to respect rate limits (20 requests per minute)
-          if (page > 1) {
-            await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second delay
-          }
-          
-          const response = await fetch(nextUrl, {
-            method: "GET",
-            headers: {
-              "Authorization": `Token ${apiKey}`,
-              "Content-Type": "application/json"
+          try {
+            // Use throttled request function instead of direct fetch
+            const data = await throttledReadwiseRequest(nextUrl, apiKey, logger);
+            
+            // Count books on this page
+            const booksOnPage = data.results ? data.results.length : 0;
+            totalBooks += booksOnPage;
+            
+            logger.info(`Page ${page}: Found ${booksOnPage} books. Total so far: ${totalBooks}`);
+            
+            // Check if there's another page
+            nextUrl = data.next || null;
+            page++;
+            
+            // Safety check to prevent infinite loops
+            if (page > 100) {
+              logger.warn("Reached 100 pages - stopping to prevent potential infinite loop");
+              break;
             }
-          });
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Readwise API error (${response.status}): ${errorText}`);
-          }
-          
-          const data = await response.json();
-          
-          // Count books on this page
-          const booksOnPage = data.results ? data.results.length : 0;
-          totalBooks += booksOnPage;
-          
-          logger.info(`Page ${page}: Found ${booksOnPage} books. Total so far: ${totalBooks}`);
-          
-          // Check if there's another page
-          nextUrl = data.next || null;
-          page++;
-          
-          // Safety check to prevent infinite loops
-          if (page > 100) {
-            logger.warn("Reached 100 pages - stopping to prevent potential infinite loop");
-            break;
+          } catch (error) {
+            logger.error(`Error processing Readwise API page ${page}:`, error);
+            throw error;
           }
         }
         
@@ -192,38 +383,16 @@ export const readwiseConnectionTestFn = inngest.createFunction(
       const connectionResult = await step.run("test-readwise-connection", async () => {
         logger.info(`Testing Readwise connection for user ${userId}`);
         
-        try {
-          // Try to connect to Readwise API
-          const response = await fetch('https://readwise.io/api/v2/auth/', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Token ${apiKey}`
-            }
-          });
-          
-          if (response.status === 204) {
-            logger.info(`Connection successful for user ${userId}`);
-            return { success: true };
-          } else {
-            const errorData = await response.json()
-              .catch(() => ({ detail: "Invalid API key" }));
-            
-            logger.warn(`Connection failed: ${errorData.detail || 'Invalid API key'}`);
-            
-            return { 
-              success: false, 
-              error: errorData.detail || "Invalid API key",
-              isLastStep: true
-            };
-          }
-        } catch (error) {
-          logger.error(`Connection error for user ${userId}:`, error);
-          return { 
-            success: false, 
-            error: error instanceof Error ? error.message : "Connection failed",
-            isLastStep: true
-          };
+        // Use throttled auth request
+        const result = await throttledReadwiseAuthRequest(apiKey, logger);
+        
+        if (result.success) {
+          logger.info(`Connection successful for user ${userId}`);
+        } else {
+          logger.warn(`Connection failed: ${result.error || 'Unknown error'}`);
         }
+        
+        return result;
       });
       
       // Update user settings to mark connection as valid/invalid
@@ -389,27 +558,9 @@ export const readwiseSyncBooksFn = inngest.createFunction(
         while (nextUrl) {
           logger.info(`Fetching page ${page} from ${nextUrl}`);
           
-          // Add a small delay to respect rate limits (20 requests per minute)
-          if (page > 1) {
-            await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second delay
-          }
-          
           try {
-            const response = await fetch(nextUrl, {
-              method: "GET",
-              headers: {
-                "Authorization": `Token ${apiKey}`,
-                "Content-Type": "application/json"
-              }
-            });
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              logger.error(`Readwise API error (${response.status}): ${errorText}`);
-              throw new Error(`Readwise API error (${response.status}): ${errorText}`);
-            }
-            
-            const data = await response.json();
+            // Use throttled request function instead of direct fetch
+            const data = await throttledReadwiseRequest(nextUrl, apiKey, logger);
             const books = data.results || [];
             
             // Add the books from this page to the total count
@@ -657,31 +808,70 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     try {
-      // Step 1: Fetch books with highlight counts to process (limit to 3 for now)
+      // Step 1: Fetch books with highlight counts and determine which ones need syncing
       const bookResult = await step.run("fetch-books-to-sync", async () => {
         logger.info("Step 1: Fetching books to sync highlights for");
         
-        const { data, error } = await supabase
+        // First get all books
+        const { data: books, error } = await supabase
           .from('books')
           .select('id, rw_id, rw_title, rw_num_highlights')
           .eq('user_id', userId)
-          .order('rw_title', { ascending: true })
-          .limit(10); // Limit to 3 books as requested
+          .order('rw_title', { ascending: true });
           
         if (error) {
           logger.error("Error fetching books:", error);
           throw error;
         }
         
-        logger.info(`Found ${data?.length || 0} books to check for highlights`);
-        return { books: data || [], success: true };
+        logger.info(`Found ${books?.length || 0} books to check for highlights`);
+        
+        // For each book, check how many highlights we already have
+        const booksToSync = [];
+        
+        for (const book of books || []) {
+          // Skip books without rw_num_highlights
+          if (!book.rw_num_highlights) {
+            logger.info(`Book ${book.rw_title} has no Readwise highlight count, skipping`);
+            continue;
+          }
+          
+          // Count existing highlights for this book
+          const { count, error: countError } = await supabase
+            .from('highlights')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('book_id', book.id);
+            
+          if (countError) {
+            logger.error(`Error counting highlights for book ${book.id}:`, countError);
+            continue;
+          }
+          
+          const existingCount = count || 0;
+          
+          // Compare counts to determine if syncing is needed
+          if (existingCount < book.rw_num_highlights) {
+            logger.info(`Book "${book.rw_title}" needs syncing: has ${existingCount}/${book.rw_num_highlights} highlights`);
+            booksToSync.push({
+              ...book,
+              existingHighlightsCount: existingCount
+            });
+          } else {
+            logger.info(`Book "${book.rw_title}" already has all highlights (${existingCount}/${book.rw_num_highlights}), skipping`);
+          }
+        }
+        
+        logger.info(`Identified ${booksToSync.length} books that need highlight syncing`);
+        return { books: booksToSync, success: true };
       });
       
       if (!bookResult.success || bookResult.books.length === 0) {
-        logger.error("No books found to sync highlights for");
+        logger.info("No books found that need highlight syncing");
         return { 
-          success: false, 
-          error: "No books found",
+          success: true, 
+          message: "No books need highlights synced",
+          booksProcessed: 0,
           isLastStep: true
         };
       }
@@ -732,22 +922,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
             });
           });
           
-          // If we already have all the highlights (according to the book's highlight count), we can skip this book
-          if (existingHighlightsCount >= (book.rw_num_highlights || 0)) {
-            logger.info(`Book ${book.rw_title} already has all ${book.rw_num_highlights} highlights. Skipping.`);
-            results.push({
-              bookId: book.id,
-              rwBookId: book.rw_id,
-              title: book.rw_title,
-              success: true,
-              existing: existingHighlightsCount,
-              expected: book.rw_num_highlights,
-              inserted: 0,
-              updated: 0
-            });
-            continue; // Skip to the next book
-          }
-          
+          // We already checked that this book needs syncing in the previous step, so proceed directly
           // Step 2b: Get highlights from Readwise API
           logger.info(`Fetching highlights from Readwise API for book ${book.rw_title} (Readwise ID: ${book.rw_id})`);
           
@@ -761,27 +936,9 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           while (nextUrl) {
             logger.info(`Fetching highlights page ${page} from ${nextUrl}`);
             
-            // Add a small delay to respect rate limits
-            if (page > 1) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-            
             try {
-              const response = await fetch(nextUrl, {
-                method: "GET",
-                headers: {
-                  "Authorization": `Token ${apiKey}`,
-                  "Content-Type": "application/json"
-                }
-              });
-              
-              if (!response.ok) {
-                const errorText = await response.text();
-                logger.error(`Readwise API error (${response.status}): ${errorText}`);
-                throw new Error(`Readwise API error (${response.status}): ${errorText}`);
-              }
-              
-              const data = await response.json();
+              // Use throttled request function instead of direct fetch
+              const data = await throttledReadwiseRequest(nextUrl, apiKey, logger);
               const highlights = data.results || [];
               
               // Add the highlights from this page to the total count
