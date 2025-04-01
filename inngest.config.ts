@@ -1645,6 +1645,25 @@ export const airtableImportDataFn = inngest.createFunction(
             .replace(/\s+/g, '-')      // Replace spaces with hyphens
             .replace(/-+/g, '-');      // Replace multiple hyphens with single hyphen
         };
+
+        // Create a single categorization job for the entire import
+        const { data: jobData, error: jobError } = await supabase
+          .from('categorization_jobs')
+          .insert({
+            user_id: userId,
+            name: `Airtable import - ${new Date().toISOString()}`,
+            source: "airtable_import",
+            status: 'approved'
+          })
+          .select()
+          .single();
+          
+        if (jobError || !jobData) {
+          logger.error(`Failed to create categorization job:`, jobError);
+          throw new Error(`Failed to create categorization job: ${jobError?.message || 'Unknown error'}`);
+        }
+        
+        logger.info(`Created categorization job with ID: ${jobData.id} for the entire import`);
         
         // Process each record from Airtable
         for (const record of airtableData) {
@@ -1725,25 +1744,6 @@ export const airtableImportDataFn = inngest.createFunction(
             
             createdSparks++;
             logger.info(`Created spark ${newSpark.id} for record ${record.id}`);
-            
-            // Create a categorization job for this record
-            const { data: jobData, error: jobError } = await supabase
-              .from('categorization_jobs')
-              .insert({
-                user_id: userId,
-                name: `Airtable import for record ${record.id}`,
-                source: "airtable_import",
-                status: 'approved'
-              })
-              .select()
-              .single();
-              
-            if (jobError || !jobData) {
-              logger.error(`Failed to create job for record ${record.id}:`, jobError);
-              continue;
-            }
-            
-            logger.info(`Created categorization job with ID: ${jobData.id} for record ${record.id}`);
             
             // Process categories - expect array of strings of length 1
             if (Array.isArray(categories) && categories.length > 0) {
