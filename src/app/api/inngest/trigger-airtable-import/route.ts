@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { inngest } from "../../../../../inngest.config";
+import { inngest } from "@/inngest";
 import { createServerClient } from "@/lib/supabase";
 
 export async function POST(request: NextRequest) {

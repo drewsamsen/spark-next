@@ -1,4 +1,4 @@
-import { inngest } from "../../inngest.config";
+import { inngest } from "@/inngest";
 
 export const userRegistered = inngest.createFunction(
   { name: "User Registered", id: "user/registered" },
@@ -7,3 +7,5 @@ export const userRegistered = inngest.createFunction(
     // Handle the event
   },
 );
+
+export { inngest };

@@ -51,41 +51,74 @@ Visit `http://localhost:8288` to access the Inngest Dev UI.
 
 ```
 └── src/
-    ├── inngest.config.ts    # Main Inngest configuration
-    ├── lib/
-    │   └── inngest.ts       # Utility functions for Inngest
+    ├── inngest/               # Modular Inngest configuration
+    │   ├── client.ts          # Inngest client configuration
+    │   ├── index.ts           # Main exports
+    │   ├── types.ts           # Common types and interfaces
+    │   ├── functions/         # Function definitions by domain
+    │   │   ├── readwise/      # Readwise-related functions
+    │   │   ├── airtable/      # Airtable-related functions
+    │   │   └── tags/          # Tag-related functions
+    │   └── utils/             # Utility functions
+    │       ├── readwise-api.ts # API-specific utilities
+    │       └── function-conventions.ts # Common function patterns
     └── app/
         └── api/
             ├── inngest/
-            │   ├── route.ts               # API route handler for Inngest
-            │   └── trigger-readwise/     # Endpoint to trigger specific events
+            │   ├── route.ts                # API route handler for Inngest
+            │   └── trigger-readwise/       # Endpoint to trigger specific events
             │       └── route.ts
             └── readwise/
-                └── route.ts              # Handles updates from Inngest jobs
+                └── route.ts                # Handles updates from Inngest jobs
 ```
 
 ## Creating Functions
 
-Functions are defined in `inngest.config.ts`. Example:
+Functions are now defined in domain-specific files under the `src/inngest/functions/` directory. Example:
 
 ```typescript
-// Event-triggered function
-export const readwiseFetchBooksFn = inngest.createFunction(
-  { id: "readwise-fetch-books" },
-  { event: "readwise/fetch-books" },
-  async ({ event, step }) => {
-    // Implementation
-  }
-);
+// In src/inngest/functions/domain/my-function.ts
+import { inngest } from "../../client";
+import { markAsLastStep } from "../../utils/function-conventions";
 
-// Scheduled function (cron)
-export const readwiseDailySyncFn = inngest.createFunction(
-  { id: "readwise-daily-sync" },
-  { cron: "0 3 * * *" }, // Runs at 3:00 AM UTC daily
-  async ({ step }) => {
-    // Implementation
+// Event-triggered function
+export const domainActionFn = inngest.createFunction(
+  { id: "domain-action" },
+  { event: "domain/action" },
+  async ({ event, step, logger }) => {
+    const { userId } = event.data;
+    
+    logger.info("Starting domain action", { userId });
+    
+    // Implementation...
+    
+    return markAsLastStep({
+      success: true
+    });
   }
 );
+```
+
+Then export it from the domain's index.ts:
+```typescript
+// In src/inngest/functions/domain/index.ts
+export { domainActionFn } from './my-function';
+```
+
+And register it in the route handler:
+```typescript
+// In src/app/api/inngest/route.ts
+import { 
+  inngest,
+  domainActionFn
+} from "@/inngest";
+
+export const { GET, POST, PUT } = serve({
+  client: inngest,
+  functions: [
+    domainActionFn
+  ],
+});
 ```
 
 ## Triggering Events
@@ -143,20 +176,15 @@ To test scheduled tasks:
 
 ## Event Types
 
-Our typed events provide better type safety. See `AppEvents` in `inngest.config.ts`:
+Our typed events provide better type safety. See `AppEvents` in `src/inngest/types.ts`:
 
 ```typescript
 export type AppEvents = {
-  "readwise/fetch-books": {
+  "domain/action": {
     data: {
       userId: string;
-      apiKey: string;
+      // other parameters...
     };
-  };
-  "readwise/daily-sync": {
-    data: {
-      timestamp: string;
-    }
   };
   // Other events...
 };
@@ -197,4 +225,63 @@ For production:
 
 - [Inngest Documentation](https://www.inngest.com/docs)
 - [Next.js App Router + Inngest](https://www.inngest.com/docs/sdk/serve-functions/nextjs-app)
-- [Inngest Discord](https://discord.gg/inngest) 
+- [Inngest Discord](https://discord.gg/inngest)
+
+# Inngest Configuration
+
+Inngest is configured in a modular way within the `/src/inngest` directory:
+
+```
+src/inngest/
+├── client.ts              # Inngest client configuration
+├── index.ts               # Main exports
+├── types.ts               # Common types
+├── functions/             # Function definitions organized by domain
+│   ├── readwise/          # Readwise-related functions
+│   ├── airtable/          # Airtable-related functions
+│   └── tags/              # Tag-related functions
+└── utils/                 # Utility functions
+    ├── readwise-api.ts    # Readwise API helpers
+    └── function-conventions.ts  # Common patterns for functions
+```
+
+## Adding a New Function
+
+When creating a new function:
+
+1. Create a new file in the appropriate domain directory under `src/inngest/functions/`
+2. Export the function from the domain's index.ts file
+3. Register the function in `src/app/api/inngest/route.ts`
+4. Add the appropriate event type to `src/inngest/types.ts`
+
+Functions are defined in domain-specific files. Example:
+
+```typescript
+import { inngest } from "../../client";
+import { markAsLastStep } from "../../utils/function-conventions";
+
+export const myNewFunction = inngest.createFunction(
+  { id: "my-new-function" },
+  { event: "domain/event-name" },
+  async ({ event, step, logger }) => {
+    const { userId } = event.data;
+    
+    logger.info("Starting my new function", { userId });
+    
+    // Function implementation here...
+    
+    return markAsLastStep({ 
+      success: true 
+    });
+  }
+);
+```
+
+## Function Conventions
+
+All Inngest functions MUST follow these conventions:
+
+1. Use the `markAsLastStep` utility to add `isLastStep: true` in the final return value
+2. Use the `markAsError` utility for error responses
+3. Follow consistent naming patterns: `domainActionFn` (e.g., `readwiseCountBooksFn`)
+4. Use consistent step naming for ease of debugging 

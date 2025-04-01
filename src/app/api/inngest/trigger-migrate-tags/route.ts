@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { inngest } from "../../../../../inngest.config";
+import { inngest } from "@/inngest";
 import { createServerClient } from "@/lib/supabase";
 
 export async function POST(request: NextRequest) {
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       data: { userId }
     });
     
-    return NextResponse.json({ success: true });``
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error triggering highlight tag migration:', error);
     return NextResponse.json({ 

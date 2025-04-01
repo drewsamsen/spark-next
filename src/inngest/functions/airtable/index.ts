@@ -1,0 +1,1 @@
+export { airtableImportDataFn } from './import-data'; 
