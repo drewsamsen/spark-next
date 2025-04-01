@@ -4,7 +4,8 @@ import { inngest,
   readwiseConnectionTestFn,
   readwiseSyncBooksFn,
   readwiseSyncHighlightsFn,
-  migrateHighlightTagsFn
+  migrateHighlightTagsFn,
+  airtableImportDataFn
 } from "@/../inngest.config";
 
 // Export the API routes for Inngest communication
@@ -15,7 +16,8 @@ export const { GET, POST, PUT } = serve({
     readwiseConnectionTestFn,
     readwiseSyncBooksFn,
     readwiseSyncHighlightsFn,
-    migrateHighlightTagsFn
+    migrateHighlightTagsFn,
+    airtableImportDataFn
   ],
 });
 

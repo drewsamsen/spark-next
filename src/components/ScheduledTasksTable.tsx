@@ -55,6 +55,15 @@ export default function ScheduledTasksTable() {
       triggerEndpoint: "/api/inngest/trigger-migrate-tags",
       requiresApiKey: false
     },
+    {
+      id: "airtable-import",
+      name: "Import from Airtable",
+      description: "Import data from an Airtable table and create sparks with associated categories and tags",
+      isSchedulable: false,
+      triggerEndpoint: "/api/inngest/trigger-airtable-import",
+      requiresApiKey: true,
+      apiKeySource: "airtable"
+    },
     // More tasks will be added in the future
   ];
   
@@ -77,7 +86,7 @@ export default function ScheduledTasksTable() {
       const userId = userData.user.id;
       
       // For tasks requiring an API key, fetch it from user settings
-      let apiKey;
+      let apiKey, baseId, tableId;
       if (task.requiresApiKey && task.apiKeySource) {
         const settingsResponse = await fetch(`/api/user-settings?integration=${task.apiKeySource}`, {
           method: 'GET',
@@ -92,7 +101,19 @@ export default function ScheduledTasksTable() {
         }
         
         const settings = await settingsResponse.json();
-        apiKey = settings.integrations?.[task.apiKeySource]?.apiKey;
+        // When requesting a specific integration, the API returns just that integration's settings directly, 
+        // not the full settings object with integrations nesting
+        apiKey = settings.apiKey;
+        
+        // For Airtable, we also need baseId and tableId
+        if (task.apiKeySource === 'airtable') {
+          baseId = settings.baseId;
+          tableId = settings.tableId;
+          
+          if (!baseId || !tableId) {
+            throw new Error(`Missing Airtable Base ID or Table ID. Please configure these in your settings.`);
+          }
+        }
         
         if (!apiKey) {
           throw new Error(`No Access Token found for ${task.apiKeySource}. Please add it in your settings.`);
@@ -108,7 +129,9 @@ export default function ScheduledTasksTable() {
         },
         body: JSON.stringify({
           userId,
-          ...(apiKey && { apiKey })
+          ...(apiKey && { apiKey }),
+          ...(baseId && { baseId }),
+          ...(tableId && { tableId })
         })
       });
       

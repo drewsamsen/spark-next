@@ -18,6 +18,18 @@ const ReadwiseIntegration = dynamic(() => import('@/components/integrations/Read
   ),
 });
 
+// Import the AirtableIntegration component
+const AirtableIntegration = dynamic(() => import('@/components/integrations/AirtableIntegration'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4">
+      <div className="animate-pulse h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+      <div className="animate-pulse h-10 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+      <div className="animate-pulse h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+    </div>
+  ),
+});
+
 // Import ScheduledTasksTable with dynamic loading
 const ScheduledTasksTable = dynamic(() => import('@/components/ScheduledTasksTable'), {
   ssr: false,
@@ -76,12 +88,7 @@ export default function SettingsPage() {
       {activeTab === "integrations" && (
         <div>
           <ReadwiseIntegration />
-          
-          {/* Reserved space for future integrations */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6 opacity-50">
-            <h2 className="text-xl font-semibold mb-4">More Integrations</h2>
-            <p className="text-gray-500">Additional integration options will be available soon.</p>
-          </div>
+          <AirtableIntegration />
         </div>
       )}
       

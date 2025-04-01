@@ -257,6 +257,14 @@ export type AppEvents = {
       userId: string;
     }
   };
+  "airtable/import-data": {
+    data: {
+      userId: string;
+      apiKey: string;
+      baseId: string;
+      tableId: string;
+    }
+  };
 };
 
 // Initialize Inngest with typed events
@@ -1488,6 +1496,381 @@ export const migrateHighlightTagsFn = inngest.createFunction(
   }
 );
 
+// Function to import data from Airtable into Supabase
+export const airtableImportDataFn = inngest.createFunction(
+  { id: "airtable-import-data" },
+  { event: "airtable/import-data" },
+  async ({ event, step, logger }) => {
+    const { userId, apiKey, baseId, tableId } = event.data;
+    
+    logger.info("Starting Airtable data import", { userId, baseId, tableId });
+    
+    if (!userId || !apiKey || !baseId || !tableId) {
+      logger.error("Missing required parameters");
+      return { 
+        success: false, 
+        error: "Missing required parameters",
+        totalRows: 0,
+        processedRows: 0,
+        createdSparks: 0,
+        createdCategories: 0,
+        createdTags: 0,
+        isLastStep: true
+      };
+    }
+
+    // Initialize stats counters
+    let totalRows = 0;
+    let processedRows = 0;
+    let createdSparks = 0;
+    let createdCategories = 0;
+    let createdTags = 0;
+    
+    // Initialize Supabase client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      logger.error("Missing Supabase configuration");
+      return { 
+        success: false, 
+        error: "Server configuration error",
+        totalRows: 0,
+        processedRows: 0,
+        createdSparks: 0,
+        createdCategories: 0,
+        createdTags: 0,
+        isLastStep: true
+      };
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    try {
+      // Step 1: Fetch data from Airtable
+      const airtableData = await step.run("fetch-airtable-data", async () => {
+        logger.info("Fetching data from Airtable", { baseId, tableId });
+        
+        // Define API endpoint for Airtable table
+        const airtableUrl = `https://api.airtable.com/v0/${baseId}/${tableId}`;
+        
+        let records: Array<{id: string, fields: Record<string, any>}> = [];
+        let offset: string | null = null;
+        
+        do {
+          const requestUrl = offset 
+            ? `${airtableUrl}?offset=${offset}` 
+            : airtableUrl;
+            
+          const response = await fetch(requestUrl, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json"
+            }
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Airtable API error (${response.status}): ${errorText}`);
+          }
+          
+          const data: { records: Array<{id: string, fields: Record<string, any>}>; offset?: string } = await response.json();
+          records = [...records, ...data.records];
+          offset = data.offset || null;
+          
+          logger.info(`Fetched ${data.records.length} records from Airtable (total: ${records.length})`);
+        } while (offset);
+        
+        totalRows = records.length;
+        logger.info(`Completed fetching all records from Airtable (total: ${totalRows})`);
+        
+        return records;
+      });
+      
+      // Step 2: Retrieve existing categories and tags to avoid duplicates
+      const existingData = await step.run("fetch-existing-data", async () => {
+        logger.info("Fetching existing categories and tags from Supabase");
+        
+        // Get all categories
+        const { data: categories, error: categoriesError } = await supabase
+          .from('categories')
+          .select('id, name, slug');
+          
+        if (categoriesError) {
+          logger.error("Error fetching categories:", categoriesError);
+          throw categoriesError;
+        }
+        
+        // Get all tags
+        const { data: tags, error: tagsError } = await supabase
+          .from('tags')
+          .select('id, name');
+          
+        if (tagsError) {
+          logger.error("Error fetching tags:", tagsError);
+          throw tagsError;
+        }
+        
+        // Create maps for easier lookup - using Record instead of Map for serialization
+        const categoryMap: Record<string, {id: string, name: string, slug: string}> = {};
+        if (categories) {
+          categories.forEach(category => {
+            categoryMap[category.name.toLowerCase()] = category;
+          });
+        }
+        
+        const tagMap: Record<string, {id: string, name: string}> = {};
+        if (tags) {
+          tags.forEach(tag => {
+            tagMap[tag.name.toLowerCase()] = tag;
+          });
+        }
+        
+        logger.info(`Found ${categories?.length || 0} existing categories and ${tags?.length || 0} existing tags`);
+        
+        return { categoryMap, tagMap };
+      });
+      
+      const { categoryMap, tagMap } = existingData;
+      
+      // Step 3: Process Airtable data
+      const processResult = await step.run("process-airtable-data", async () => {
+        logger.info(`Processing ${airtableData.length} rows from Airtable`);
+        
+        // Function to create a slug from a name
+        const createSlug = (name: string): string => {
+          return name.toLowerCase()
+            .replace(/[^\w\s-]/g, '')  // Remove special characters
+            .replace(/\s+/g, '-')      // Replace spaces with hyphens
+            .replace(/-+/g, '-');      // Replace multiple hyphens with single hyphen
+        };
+        
+        // Process each record from Airtable
+        for (const record of airtableData) {
+          try {
+            const fields = record.fields;
+            processedRows++;
+
+            // Log the raw fields for debugging
+            logger.info(`Record ${record.id} fields:`, fields);
+
+            // Extract data from Airtable fields based on the specific field mappings
+            const body = fields.content || '';
+            const categories = fields["Name (from Categories)"] || [];
+            const tags = fields["Name (from Tags)"] || [];
+            const uid = fields.uid;
+            const originallyCreated = fields.originallyCreated;
+            const todoId = fields.toDoId;
+            
+            // Skip if body is empty
+            if (!body) {
+              logger.warn(`Skipping record ${record.id} due to empty body`);
+              continue;
+            }
+            
+            // Use the uid field from Airtable for md5_uid if available, otherwise generate one
+            let md5_uid;
+            if (uid) {
+              md5_uid = uid;
+              logger.info(`Using provided uid for record ${record.id}: ${md5_uid}`);
+            }
+            
+            // Check if spark already exists
+            const { data: existingSpark } = await supabase
+              .from('sparks')
+              .select('id')
+              .eq('md5_uid', md5_uid)
+              .eq('user_id', userId)
+              .maybeSingle();
+              
+            if (existingSpark) {
+              logger.info(`Spark already exists for record ${record.id}, skipping`);
+              continue;
+            }
+            
+            // Create new spark with additional fields if available
+            const sparkData: {
+              user_id: string;
+              body: string;
+              md5_uid: string;
+              todo_created_at?: string;
+              todo_id?: string;
+            } = {
+              user_id: userId,
+              body: body,
+              md5_uid: md5_uid
+            };
+            
+            // Add todo_created_at if originallyCreated is available
+            if (originallyCreated) {
+              sparkData.todo_created_at = originallyCreated;
+            }
+            
+            // Add todo_id if todoId is available
+            if (todoId) {
+              sparkData.todo_id = todoId;
+            }
+            
+            const { data: newSpark, error: sparkError } = await supabase
+              .from('sparks')
+              .insert(sparkData)
+              .select('id')
+              .single();
+              
+            if (sparkError) {
+              logger.error(`Error creating spark for record ${record.id}:`, sparkError);
+              continue;
+            }
+            
+            createdSparks++;
+            logger.info(`Created spark ${newSpark.id} for record ${record.id}`);
+            
+            // Process categories - expect array of strings of length 1
+            if (Array.isArray(categories) && categories.length > 0) {
+              // Take the first string in the array (as specified)
+              const categoryName = categories[0];
+              
+              if (categoryName) {
+                const categoryLower = categoryName.toLowerCase();
+                let categoryId;
+                
+                // Check if category exists, otherwise create it
+                if (categoryLower in categoryMap) {
+                  categoryId = categoryMap[categoryLower].id;
+                } else {
+                  const slug = createSlug(categoryName);
+                  
+                  const { data: newCategory, error: categoryError } = await supabase
+                    .from('categories')
+                    .insert({
+                      name: categoryName,
+                      slug: slug
+                    })
+                    .select('id')
+                    .single();
+                    
+                  if (categoryError) {
+                    logger.error(`Error creating category ${categoryName}:`, categoryError);
+                  } else {
+                    categoryId = newCategory.id;
+                    categoryMap[categoryLower] = { id: categoryId, name: categoryName, slug };
+                    createdCategories++;
+                    logger.info(`Created category "${categoryName}" with ID ${categoryId}`);
+                  }
+                }
+                
+                if (categoryId) {
+                  // Link category to spark
+                  const { error: linkError } = await supabase
+                    .from('spark_categories')
+                    .insert({
+                      spark_id: newSpark.id,
+                      category_id: categoryId,
+                      created_by: 'airtable_import'
+                    });
+                    
+                  if (linkError) {
+                    logger.error(`Error linking category ${categoryId} to spark ${newSpark.id}:`, linkError);
+                  }
+                }
+              }
+            }
+            
+            // Process tags - array of strings
+            if (Array.isArray(tags) && tags.length > 0) {
+              for (const tagName of tags) {
+                if (!tagName) continue;
+                
+                const tagLower = tagName.toLowerCase();
+                let tagId;
+                
+                // Check if tag exists, otherwise create it
+                if (tagLower in tagMap) {
+                  tagId = tagMap[tagLower].id;
+                } else {
+                  const { data: newTag, error: tagError } = await supabase
+                    .from('tags')
+                    .insert({
+                      name: tagName
+                    })
+                    .select('id')
+                    .single();
+                    
+                  if (tagError) {
+                    logger.error(`Error creating tag ${tagName}:`, tagError);
+                    continue;
+                  }
+                  
+                  tagId = newTag.id;
+                  tagMap[tagLower] = { id: tagId, name: tagName };
+                  createdTags++;
+                  logger.info(`Created tag "${tagName}" with ID ${tagId}`);
+                }
+                
+                // Link tag to spark
+                const { error: linkError } = await supabase
+                  .from('spark_tags')
+                  .insert({
+                    spark_id: newSpark.id,
+                    tag_id: tagId,
+                    created_by: 'airtable_import'
+                  });
+                  
+                if (linkError) {
+                  logger.error(`Error linking tag ${tagId} to spark ${newSpark.id}:`, linkError);
+                }
+              }
+            }
+            
+            // Log progress every 10 records
+            if (processedRows % 10 === 0) {
+              logger.info(`Processed ${processedRows}/${totalRows} rows. Created ${createdSparks} sparks, ${createdCategories} categories, ${createdTags} tags`);
+            }
+          } catch (recordError) {
+            logger.error(`Error processing record ${record.id}:`, recordError);
+          }
+        }
+        
+        logger.info(`Completed processing. Processed ${processedRows}/${totalRows} rows`);
+        logger.info(`Created ${createdSparks} sparks, ${createdCategories} categories, ${createdTags} tags`);
+        
+        return {
+          processedRows,
+          createdSparks,
+          createdCategories,
+          createdTags,
+          success: true
+        };
+      });
+      
+      logger.info("Airtable import completed successfully");
+      
+      return {
+        success: true,
+        totalRows,
+        processedRows: processResult.processedRows,
+        createdSparks: processResult.createdSparks,
+        createdCategories: processResult.createdCategories,
+        createdTags: processResult.createdTags,
+        isLastStep: true
+      };
+    } catch (error) {
+      logger.error("Error in Airtable import function:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        totalRows,
+        processedRows,
+        createdSparks,
+        createdCategories,
+        createdTags,
+        isLastStep: true
+      };
+    }
+  }
+);
+
 // Export the serve function for use in API routes
 export const serveInngest = serve({
   client: inngest,
@@ -1496,6 +1879,7 @@ export const serveInngest = serve({
     readwiseConnectionTestFn,
     readwiseSyncBooksFn,
     readwiseSyncHighlightsFn,
-    migrateHighlightTagsFn
+    migrateHighlightTagsFn,
+    airtableImportDataFn
   ],
 });

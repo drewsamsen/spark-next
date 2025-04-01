@@ -53,6 +53,11 @@ export async function GET(request: NextRequest) {
     );
   }
   
+  // Check if a specific integration is requested
+  const url = new URL(request.url);
+  const integration = url.searchParams.get('integration');
+  console.log('API: Requested integration:', integration);
+  
   const userId = user.id;
   const supabase = createServerClient();
   
@@ -68,6 +73,20 @@ export async function GET(request: NextRequest) {
       // PGRST116 is the Postgres error code for "no rows returned" in single mode
       if (error.code === 'PGRST116') {
         console.log('API: No settings found for user, returning defaults');
+        
+        // If requesting a specific integration, only return that part
+        if (integration) {
+          // Type-safe access to integrations
+          const integrationSettings = integration === 'readwise' 
+            ? DEFAULT_USER_SETTINGS.integrations?.readwise 
+            : integration === 'airtable'
+              ? DEFAULT_USER_SETTINGS.integrations?.airtable
+              : {};
+          
+          console.log(`API: Returning default ${integration} settings:`, integrationSettings);  
+          return NextResponse.json(integrationSettings || {});
+        }
+        
         return NextResponse.json(DEFAULT_USER_SETTINGS);
       }
       
@@ -79,7 +98,21 @@ export async function GET(request: NextRequest) {
     }
     
     console.log('API: Successfully fetched user settings');
-    // Return the user settings, or defaults if none found
+    
+    // If requesting a specific integration, only return that part
+    if (integration && data?.settings?.integrations) {
+      // Type-safe access to integrations
+      const integrationSettings = integration === 'readwise' 
+        ? data.settings.integrations.readwise 
+        : integration === 'airtable'
+          ? data.settings.integrations.airtable
+          : undefined;
+      
+      console.log(`API: Returning ${integration} settings:`, integrationSettings);
+      return NextResponse.json(integrationSettings || {});
+    }
+    
+    // Return all user settings, or defaults if none found
     return NextResponse.json(data?.settings || DEFAULT_USER_SETTINGS);
   } catch (error) {
     console.error('API: Error fetching user settings:', error);
@@ -185,6 +218,7 @@ export async function PATCH(request: NextRequest) {
   try {
     // Get the request body
     const body = await request.json();
+    console.log('API: PATCH request body:', body);
     
     if (!body || typeof body !== 'object') {
       console.log('API: Invalid request body');
@@ -203,11 +237,21 @@ export async function PATCH(request: NextRequest) {
     }
     
     // First get the current settings
-    const { data: currentData } = await supabase
+    const { data: currentData, error: fetchError } = await supabase
       .from('user_settings')
       .select('settings')
       .eq('id', userId)
       .single();
+      
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('API: Error fetching current settings:', fetchError);
+      return NextResponse.json(
+        { error: 'Failed to fetch current settings' },
+        { status: 500 }
+      );
+    }
+    
+    console.log('API: Current settings:', currentData?.settings || 'None (using defaults)');
     
     // Deep merge current settings with the new settings
     const mergeDeep = (target: any, source: any) => {
@@ -238,6 +282,8 @@ export async function PATCH(request: NextRequest) {
       currentData?.settings || DEFAULT_USER_SETTINGS,
       body
     );
+    
+    console.log('API: Merged settings:', updatedSettings);
     
     // Update the settings in the database
     const { error } = await supabase

@@ -132,6 +132,14 @@ export interface UserSettings {
       apiKey?: string;
       lastSyncTime?: string;
       bookCount?: number;
+      isConnected?: boolean;
+    },
+    airtable?: {
+      apiKey?: string; // This is actually a Personal Access Token (API keys deprecated Feb 2024)
+      baseId?: string;
+      tableId?: string;
+      isConnected?: boolean;
+      lastImported?: string;
     }
   };
   // Additional settings can be added here in the future
@@ -150,7 +158,15 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
     readwise: {
       apiKey: '',
       lastSyncTime: '',
-      bookCount: 0
+      bookCount: 0,
+      isConnected: false
+    },
+    airtable: {
+      apiKey: '',
+      baseId: '',
+      tableId: '',
+      isConnected: false,
+      lastImported: ''
     }
   }
 };

@@ -33,6 +33,7 @@ export default function ReadwiseIntegration() {
     if (!token) return;
     
     try {
+      console.log('Fetching Readwise settings...');
       const response = await fetch('/api/user-settings?integration=readwise', {
         method: 'GET',
         headers: {
@@ -43,6 +44,7 @@ export default function ReadwiseIntegration() {
       
       // If the response is 404, it means the user doesn't have settings yet
       if (response.status === 404) {
+        console.log('No settings found (404)');
         return;
       }
       
@@ -51,12 +53,20 @@ export default function ReadwiseIntegration() {
       }
       
       const data = await response.json();
-      if (data && data.integrations && data.integrations.readwise) {
-        const readwiseSettings = data.integrations.readwise;
-        setApiKey(readwiseSettings.apiKey || '');
-        setIsConnected(readwiseSettings.isConnected || false);
+      console.log('Readwise settings received:', data);
+      
+      // When requesting a specific integration, the API returns just that integration's settings
+      // Not the full user settings object with nested integrations
+      if (data) {
+        setApiKey(data.apiKey || '');
+        setIsConnected(data.isConnected || false);
+        console.log('Readwise settings applied:', { 
+          apiKey: !!data.apiKey, 
+          isConnected: !!data.isConnected 
+        });
       }
     } catch (error) {
+      console.error('Error fetching Readwise settings:', error);
       // Only show toast for network or server errors, not for expected missing settings
       if (error instanceof Error && !error.message.includes('Failed to fetch settings')) {
         toast.error(`Error loading settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -72,6 +82,8 @@ export default function ReadwiseIntegration() {
 
     setIsSaving(true);
     try {
+      console.log('Saving Readwise API key', { hasKey: !!apiKey });
+      
       const response = await fetch('/api/user-settings', {
         method: 'PATCH',
         headers: {
@@ -92,8 +104,14 @@ export default function ReadwiseIntegration() {
         throw new Error(`Failed to save API key: ${response.statusText}`);
       }
 
+      const result = await response.json();
+      console.log('Save response:', result);
       toast.success('API key saved successfully');
+      
+      // Fetch the settings again to verify they were saved correctly
+      await fetchUserSettings();
     } catch (error) {
+      console.error('Error saving Readwise API key:', error);
       toast.error(`Error saving API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSaving(false);
