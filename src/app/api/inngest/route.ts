@@ -3,7 +3,8 @@ import { inngest,
   readwiseCountBooksFn,
   readwiseConnectionTestFn,
   readwiseSyncBooksFn,
-  readwiseSyncHighlightsFn
+  readwiseSyncHighlightsFn,
+  migrateHighlightTagsFn
 } from "@/../inngest.config";
 
 // Export the API routes for Inngest communication
@@ -13,7 +14,8 @@ export const { GET, POST, PUT } = serve({
     readwiseCountBooksFn,
     readwiseConnectionTestFn,
     readwiseSyncBooksFn,
-    readwiseSyncHighlightsFn
+    readwiseSyncHighlightsFn,
+    migrateHighlightTagsFn
   ],
 });
 

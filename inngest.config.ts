@@ -1315,8 +1315,11 @@ export const migrateHighlightTagsFn = inngest.createFunction(
           };
           
           // Add a create_tag action for each tag in rw_tags
-          for (const tagName of highlight.rw_tags) {
-            if (typeof tagName === 'string' && tagName.trim()) {
+          for (const tag of highlight.rw_tags) {
+            // Handle tag being either a string or an object with a name property
+            const tagName = typeof tag === 'string' ? tag : tag.name;
+            
+            if (tagName && tagName.trim()) {
               actions.push({
                 actionType: 'create_tag',
                 tagName: tagName.trim(),
