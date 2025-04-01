@@ -252,6 +252,11 @@ export type AppEvents = {
       apiKey: string;
     }
   };
+  "tags/migrate-highlight-tags": {
+    data: {
+      userId: string;
+    }
+  };
 };
 
 // Initialize Inngest with typed events
@@ -1160,6 +1165,326 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
   }
 );
 
+// Function to migrate rw_tags from highlights table to proper tags
+export const migrateHighlightTagsFn = inngest.createFunction(
+  { id: "migrate-highlight-tags" },
+  { event: "tags/migrate-highlight-tags" },
+  async ({ event, step, logger }) => {
+    const { userId } = event.data;
+    
+    logger.info("Starting highlight tags migration", { userId });
+    
+    if (!userId) {
+      logger.error("No user ID provided");
+      return { 
+        success: false, 
+        error: "No user ID provided",
+        migrated: 0,
+        isLastStep: true
+      };
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      logger.error("Missing Supabase configuration");
+      return { 
+        success: false, 
+        error: "Server configuration error",
+        migrated: 0,
+        isLastStep: true
+      };
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    try {
+      // First, check for existing migrations to avoid duplication
+      const { data: existingJobs, error: jobError } = await step.run("check-existing-jobs", async () => {
+        logger.info("Checking for existing migration jobs");
+        
+        const { data, error } = await supabase
+          .from('categorization_jobs')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('name', "Migrate highlight rw_tags to proper tags")
+          .eq('source', "system")
+          .eq('status', 'approved');
+          
+        if (error) {
+          logger.error("Error checking existing jobs:", error);
+          throw error;
+        }
+        
+        return { data, error };
+      });
+      
+      if (jobError) {
+        throw jobError;
+      }
+      
+      // If we already have an approved migration job, only process highlights added since then
+      let additionalQuery = '';
+      if (existingJobs && existingJobs.length > 0) {
+        logger.info(`Found ${existingJobs.length} existing approved migration jobs`);
+        
+        // We'll still run the migration but focus on highlights that:
+        // 1. Were added after the most recent migration, or
+        // 2. Have no tags in the highlight_tags junction table
+        additionalQuery = `
+          AND (
+            h.id NOT IN (
+              SELECT highlight_id FROM highlight_tags
+            )
+          )
+        `;
+        
+        logger.info("Will only process highlights without any tags");
+      }
+      
+      // Fetch all highlights with rw_tags that need processing
+      const { data: highlights, error: fetchError } = await step.run("fetch-highlights-with-tags", async () => {
+        logger.info("Fetching highlights with rw_tags that need processing");
+        
+        // Using standard Supabase queries instead of raw SQL
+        let query = supabase
+          .from('highlights')
+          .select('id, rw_tags')
+          .eq('user_id', userId)
+          .not('rw_tags', 'is', null)
+          .neq('rw_tags', '[]');
+        
+        // If we have existing approved jobs, only process highlights without tags
+        if (existingJobs && existingJobs.length > 0) {
+          // Get all highlights that already have tags
+          const { data: highlightsWithTags } = await supabase
+            .from('highlight_tags')
+            .select('highlight_id');
+          
+          if (highlightsWithTags && highlightsWithTags.length > 0) {
+            // Extract the IDs of highlights that already have tags
+            const highlightIdsWithTags = highlightsWithTags.map(h => h.highlight_id);
+            
+            // Only process highlights that don't have tags yet
+            if (highlightIdsWithTags.length > 0) {
+              query = query.not('id', 'in', highlightIdsWithTags);
+              logger.info(`Excluding ${highlightIdsWithTags.length} highlights that already have tags`);
+            }
+          }
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          logger.error("Error fetching highlights:", error);
+          throw error;
+        }
+        
+        logger.info(`Found ${data?.length || 0} highlights with rw_tags that need processing`);
+        return { data, error };
+      });
+      
+      if (fetchError) {
+        throw fetchError;
+      }
+      
+      // Create a categorization job to migrate the tags
+      const migrateResult = await step.run("create-migration-job", async () => {
+        if (!highlights || highlights.length === 0) {
+          logger.info("No highlights with tags found that need migration, skipping");
+          return { migrated: 0, success: true, jobId: null };
+        }
+        
+        logger.info(`Creating categorization job for ${highlights.length} highlights`);
+        
+        // Prepare actions for the job
+        const actions: any[] = [];
+        
+        for (const highlight of highlights) {
+          if (!highlight.rw_tags || !Array.isArray(highlight.rw_tags) || highlight.rw_tags.length === 0) {
+            continue;
+          }
+          
+          // Create resource object for the highlight
+          const resource = {
+            id: highlight.id,
+            type: 'highlight' as const,
+            userId
+          };
+          
+          // Add a create_tag action for each tag in rw_tags
+          for (const tagName of highlight.rw_tags) {
+            if (typeof tagName === 'string' && tagName.trim()) {
+              actions.push({
+                actionType: 'create_tag',
+                tagName: tagName.trim(),
+                resource
+              });
+            }
+          }
+        }
+        
+        if (actions.length === 0) {
+          logger.info("No valid tags found for migration");
+          return { migrated: 0, success: true, jobId: null };
+        }
+        
+        logger.info(`Prepared ${actions.length} tag actions for migration`);
+        
+        // Create the categorization job directly with Supabase instead of using the API
+        try {
+          // Start a transaction by creating the job first
+          const { data: jobData, error: jobError } = await supabase
+            .from('categorization_jobs')
+            .insert({
+              user_id: userId,
+              name: "Migrate highlight rw_tags to proper tags",
+              source: "system",
+              status: 'pending'
+            })
+            .select()
+            .single();
+            
+          if (jobError || !jobData) {
+            throw new Error(`Failed to create job: ${jobError?.message || 'Unknown error'}`);
+          }
+          
+          logger.info(`Created categorization job with ID: ${jobData.id}`);
+          
+          // Process all create_tag actions
+          let createdTags = [];
+          let tagMappings = new Map(); // Store mapping between tag names and IDs
+          
+          // First pass: create all unique tags
+          const uniqueTagNames = new Set();
+          actions.forEach(action => {
+            if (action.actionType === 'create_tag' && action.tagName) {
+              uniqueTagNames.add(action.tagName);
+            }
+          });
+          
+          logger.info(`Processing ${uniqueTagNames.size} unique tag names`);
+          
+          // Check if tags already exist
+          for (const tagName of uniqueTagNames) {
+            const { data: existingTag } = await supabase
+              .from('tags')
+              .select('id, name')
+              .eq('name', tagName)
+              .single();
+              
+            if (existingTag) {
+              logger.info(`Tag '${tagName}' already exists with ID: ${existingTag.id}`);
+              tagMappings.set(tagName, existingTag.id);
+            } else {
+              // Create the new tag
+              const { data: newTag, error: createError } = await supabase
+                .from('tags')
+                .insert({
+                  name: tagName,
+                  created_by_job_id: jobData.id
+                })
+                .select()
+                .single();
+                
+              if (createError || !newTag) {
+                logger.error(`Failed to create tag '${tagName}': ${createError?.message || 'Unknown error'}`);
+                continue;
+              }
+              
+              logger.info(`Created new tag '${tagName}' with ID: ${newTag.id}`);
+              tagMappings.set(tagName, newTag.id);
+              createdTags.push(newTag);
+            }
+          }
+          
+          // Second pass: create action records and apply tag associations
+          let appliedActions = 0;
+          
+          for (const action of actions) {
+            if (action.actionType === 'create_tag' && action.tagName && action.resource) {
+              const tagId = tagMappings.get(action.tagName);
+              
+              if (!tagId) {
+                logger.error(`No tag ID found for '${action.tagName}', skipping action`);
+                continue;
+              }
+              
+              // Create the job action record
+              const { data: jobAction, error: actionError } = await supabase
+                .from('categorization_job_actions')
+                .insert({
+                  job_id: jobData.id,
+                  action_type: 'add_tag',  // Use add_tag since we've already created/found the tag
+                  resource_type: action.resource.type,
+                  resource_id: action.resource.id,
+                  tag_id: tagId
+                })
+                .select()
+                .single();
+                
+              if (actionError || !jobAction) {
+                logger.error(`Failed to create job action: ${actionError?.message || 'Unknown error'}`);
+                continue;
+              }
+              
+              // Apply the tag to the highlight
+              const { error: applyError } = await supabase
+                .from('highlight_tags')
+                .upsert({
+                  highlight_id: action.resource.id,
+                  tag_id: tagId,
+                  job_action_id: jobAction.id,
+                  created_by: 'job'
+                });
+                
+              if (applyError) {
+                logger.error(`Failed to apply tag to highlight: ${applyError.message}`);
+                continue;
+              }
+              
+              appliedActions++;
+            }
+          }
+          
+          logger.info(`Successfully applied ${appliedActions} of ${actions.length} tag actions`);
+          
+          return { 
+            migrated: appliedActions,
+            jobId: jobData.id, 
+            success: true 
+          };
+        } catch (error) {
+          logger.error("Error creating categorization job:", error);
+          throw error;
+        }
+      });
+      
+      logger.info("Migration completed successfully", { 
+        migrated: migrateResult.migrated,
+        jobId: migrateResult.jobId || null
+      });
+      
+      return {
+        success: true,
+        migrated: migrateResult.migrated,
+        jobId: migrateResult.jobId || null,
+        isLastStep: true
+      };
+    } catch (error) {
+      logger.error("Error in migration function:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        migrated: 0,
+        isLastStep: true
+      };
+    }
+  }
+);
+
 // Export the serve function for use in API routes
 export const serveInngest = serve({
   client: inngest,
@@ -1167,6 +1492,7 @@ export const serveInngest = serve({
     readwiseCountBooksFn,
     readwiseConnectionTestFn,
     readwiseSyncBooksFn,
-    readwiseSyncHighlightsFn
+    readwiseSyncHighlightsFn,
+    migrateHighlightTagsFn
   ],
 });

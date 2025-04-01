@@ -47,6 +47,14 @@ export default function ScheduledTasksTable() {
       requiresApiKey: true,
       apiKeySource: "readwise"
     },
+    {
+      id: "migrate-highlight-tags",
+      name: "Migrate Highlight Tags",
+      description: "Convert legacy rw_tags from highlights to proper tags using the categorization system",
+      isSchedulable: false,
+      triggerEndpoint: "/api/inngest/trigger-migrate-tags",
+      requiresApiKey: false
+    },
     // More tasks will be added in the future
   ];
   
