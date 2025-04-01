@@ -31,6 +31,9 @@ const nextConfig: NextConfig = {
         "os": false,
         "events": false
       };
+      
+      // Fix for HMR chunk loading errors - forces a single runtime chunk
+      config.optimization.runtimeChunk = 'single';
     }
     return config;
   },
