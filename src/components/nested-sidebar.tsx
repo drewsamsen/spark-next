@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useEffect, ChangeEvent, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SidebarItem } from "@/lib/mock-api/types";
+import { SidebarItem } from "@/lib/types";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
 
 // Sort types
@@ -327,6 +327,30 @@ export default function NestedSidebar({
             </div>
           )}
           
+          {title === "Sparks" && (
+            <div className="grid gap-1 px-2 max-w-full">
+              {/* Column Headers */}
+              <div className="flex items-center px-3 py-2 text-xs text-muted-foreground font-medium">
+                <div className="flex flex-1 justify-between items-center min-w-0">
+                  <button 
+                    onClick={() => handleSort('name')}
+                    className="flex items-center uppercase tracking-wider hover:text-foreground transition-colors"
+                  >
+                    Text
+                  </button>
+                  <div className="flex items-center gap-2 ml-2 whitespace-nowrap">
+                    <button 
+                      onClick={() => handleSort('date')}
+                      className="flex items-center uppercase tracking-wider hover:text-foreground transition-colors"
+                    >
+                      Date
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="grid gap-1 px-2 max-w-full">
             {isLoading ? (
               // Skeleton loading UI
@@ -356,9 +380,11 @@ export default function NestedSidebar({
                 >
                   <div className="flex flex-1 justify-between items-center min-w-0">
                     <span className="truncate overflow-hidden">{item.name}</span>
-                    {item.highlightsCount !== undefined && (
+                    {(item.highlightsCount !== undefined || item.date) && (
                       <div className="flex items-center gap-2 ml-2 text-xs text-muted-foreground whitespace-nowrap">
-                        <span className="font-medium">{item.highlightsCount}</span>
+                        {item.highlightsCount !== undefined && (
+                          <span className="font-medium">{item.highlightsCount}</span>
+                        )}
                         {item.date && <span className="opacity-70 inline-block w-12 text-right">{item.date}</span>}
                       </div>
                     )}

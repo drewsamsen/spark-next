@@ -1,8 +1,7 @@
 "use client";
 
 import { getSupabaseBrowserClient } from '@/lib/supabase';
-import { Database } from './types';
-import { SidebarItem } from './mock-api/types';
+import { Database, SidebarItem } from './types';
 
 /**
  * Formats a date in "MMM 'YY" format (e.g., "Aug '23")

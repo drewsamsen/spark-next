@@ -7,9 +7,9 @@ import RightSidebar from "@/components/right-sidebar";
 import NestedSidebar from "@/components/nested-sidebar";
 import { Book, Sparkles } from "lucide-react";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
-import { mockApi } from "@/lib/mock-api";
 import { booksService } from "@/lib/books-service";
-import { SidebarItem } from "@/lib/mock-api/types";
+import { sparksService } from "@/lib/sparks-service";
+import { SidebarItem } from "@/lib/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -147,7 +147,8 @@ export default function DashboardLayout({
       const loadSparks = async () => {
         setLoadingSparks(true);
         try {
-          const data = await mockApi.getSparks();
+          // Use the real sparks service instead of mock API
+          const data = await sparksService.getSparks();
           setSparks(data);
         } catch (error) {
           console.error("Failed to load sparks:", error);

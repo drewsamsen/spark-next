@@ -106,6 +106,38 @@ export type Database = {
           updated_at?: string;
         };
       };
+      sparks: {
+        Row: {
+          id: string;
+          user_id: string;
+          body: string;
+          todo_created_at: string | null;
+          todo_id: string | null;
+          md5_uid: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          body: string;
+          todo_created_at?: string | null;
+          todo_id?: string | null;
+          md5_uid?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          body?: string;
+          todo_created_at?: string | null;
+          todo_id?: string | null;
+          md5_uid?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Functions: {
       get_tables_in_schema: {
@@ -170,3 +202,13 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
     }
   }
 };
+
+// Sidebar item interface for nested sidebars (Books, Sparks, etc.)
+export interface SidebarItem {
+  id: string;
+  rwId?: number;       // Optional - used for books to store the Readwise ID
+  name: string;
+  color?: string;      // Optional - used for Sparks
+  date?: string;       // Optional - Format: "MMM 'YY" (e.g., "Mar '23")
+  highlightsCount?: number; // Optional - Number of highlights
+}
