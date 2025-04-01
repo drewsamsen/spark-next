@@ -41,13 +41,22 @@ export default function BookHighlights({ highlights }: BookHighlightsProps) {
     return String(tag);
   };
   
-  // Extract all unique tags from highlights
+  // Extract all unique tags from highlights (both Readwise and Spark tags)
   const allTags = highlights.reduce((acc: Set<string>, highlight) => {
+    // Add Readwise tags
     if (highlight.tags && highlight.tags.length > 0) {
       highlight.tags.forEach(tag => {
         acc.add(renderTag(tag));
       });
     }
+    
+    // Add Spark tags
+    if (highlight.sparkTags && highlight.sparkTags.length > 0) {
+      highlight.sparkTags.forEach(tag => {
+        acc.add(tag.name);
+      });
+    }
+    
     return acc;
   }, new Set<string>());
   
@@ -80,7 +89,8 @@ export default function BookHighlights({ highlights }: BookHighlightsProps) {
         (highlight.note && highlight.note.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesTag = !filterTag || 
-        (highlight.tags && highlight.tags.some(tag => renderTag(tag) === filterTag));
+        (highlight.tags && highlight.tags.some(tag => renderTag(tag) === filterTag)) ||
+        (highlight.sparkTags && highlight.sparkTags.some(tag => tag.name === filterTag));
       
       return matchesSearch && matchesTag;
     });
@@ -98,12 +108,22 @@ export default function BookHighlights({ highlights }: BookHighlightsProps) {
   
   // Count number of highlights for each tag
   const tagCounts = highlights.reduce((acc: Map<string, number>, highlight) => {
+    // Count Readwise tags
     if (highlight.tags && highlight.tags.length > 0) {
       highlight.tags.forEach(tag => {
         const tagName = renderTag(tag);
         acc.set(tagName, (acc.get(tagName) || 0) + 1);
       });
     }
+    
+    // Count Spark tags
+    if (highlight.sparkTags && highlight.sparkTags.length > 0) {
+      highlight.sparkTags.forEach(tag => {
+        const tagName = tag.name;
+        acc.set(tagName, (acc.get(tagName) || 0) + 1);
+      });
+    }
+    
     return acc;
   }, new Map<string, number>());
 
@@ -276,7 +296,10 @@ export default function BookHighlights({ highlights }: BookHighlightsProps) {
                 {/* Tags */}
                 {highlight.tags && highlight.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <TagIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="flex items-center gap-1">
+                      <TagIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Readwise tags:</span>
+                    </div>
                     {highlight.tags.map((tag, index) => (
                       <Badge 
                         key={index} 
@@ -285,6 +308,26 @@ export default function BookHighlights({ highlights }: BookHighlightsProps) {
                         onClick={() => setFilterTag(filterTag === renderTag(tag) ? null : renderTag(tag))}
                       >
                         {renderTag(tag)}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Spark Tags */}
+                {highlight.sparkTags && highlight.sparkTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <div className="flex items-center gap-1">
+                      <TagIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Spark tags:</span>
+                    </div>
+                    {highlight.sparkTags.map((tag, index) => (
+                      <Badge 
+                        key={index} 
+                        variant="outline"
+                        className={`text-xs cursor-pointer hover:bg-muted bg-primary/5 ${filterTag === tag.name ? 'bg-primary/10 border-primary' : ''}`}
+                        onClick={() => setFilterTag(filterTag === tag.name ? null : tag.name)}
+                      >
+                        {tag.name}
                       </Badge>
                     ))}
                   </div>

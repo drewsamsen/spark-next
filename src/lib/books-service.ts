@@ -37,6 +37,12 @@ export interface BookDetails {
 // Tag interface for handling different tag formats
 export type Tag = string | { id: string; name: string } | Record<string, any>;
 
+// Spark tag interface
+interface SparkTag {
+  id: string;
+  name: string;
+}
+
 // Highlight interface
 export interface Highlight {
   id: string;
@@ -48,6 +54,7 @@ export interface Highlight {
   url: string | null;
   color: string | null;
   tags: Tag[] | null;
+  sparkTags: SparkTag[] | null;
 }
 
 /**
@@ -178,9 +185,9 @@ export const booksService = {
         console.error('Error fetching book highlights:', error);
         return [];
       }
-      
-      // Convert database rows to Highlight format
-      return data.map(highlight => ({
+
+      // Create highlight objects with Readwise tags
+      const highlights = data.map(highlight => ({
         id: highlight.id,
         text: highlight.rw_text || '',
         note: highlight.rw_note,
@@ -189,8 +196,62 @@ export const booksService = {
         highlightedAt: highlight.rw_highlighted_at,
         url: highlight.rw_url,
         color: highlight.rw_color,
-        tags: highlight.rw_tags
+        tags: highlight.rw_tags,
+        sparkTags: [] as SparkTag[]
       }));
+
+      // Fetch Spark tags for these highlights
+      const highlightIds = highlights.map(h => h.id);
+      
+      try {
+        // First get the highlight_tags relations
+        const { data: highlightTagsData } = await supabase
+          .from('highlight_tags')
+          .select('highlight_id, tag_id')
+          .in('highlight_id', highlightIds);
+          
+        if (highlightTagsData && highlightTagsData.length > 0) {
+          // Get all tag IDs
+          const tagIds = highlightTagsData.map(relation => relation.tag_id);
+          
+          // Fetch the actual tags
+          const { data: tagsData } = await supabase
+            .from('tags')
+            .select('id, name')
+            .in('id', tagIds);
+            
+          if (tagsData && tagsData.length > 0) {
+            // Create a map of tag ID to tag object for fast lookups
+            const tagsMap = new Map<string, SparkTag>();
+            tagsData.forEach(tag => {
+              tagsMap.set(tag.id, { id: tag.id, name: tag.name });
+            });
+            
+            // Group relations by highlight_id
+            const tagsByHighlight = highlightTagsData.reduce((acc, relation) => {
+              if (!acc[relation.highlight_id]) {
+                acc[relation.highlight_id] = [];
+              }
+              
+              const tag = tagsMap.get(relation.tag_id);
+              if (tag) {
+                acc[relation.highlight_id].push(tag);
+              }
+              
+              return acc;
+            }, {} as Record<string, SparkTag[]>);
+            
+            // Add tags to highlights
+            highlights.forEach(highlight => {
+              highlight.sparkTags = tagsByHighlight[highlight.id] || [];
+            });
+          }
+        }
+      } catch (tagsError) {
+        console.error('Error fetching highlight tags:', tagsError);
+      }
+      
+      return highlights;
     } catch (error) {
       console.error('Error in getBookHighlights:', error);
       return [];
