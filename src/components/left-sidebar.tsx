@@ -14,7 +14,8 @@ import {
   Sparkles,
   Inbox,
   Zap,
-  FileInput
+  FileInput,
+  TagsIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -159,6 +160,12 @@ export default function LeftSidebar({
       name: "Synthesize",
       icon: <Zap className="h-5 w-5" />,
       tooltip: "Synthesize"
+    },
+    {
+      name: "Context Jobs",
+      icon: <TagsIcon className="h-5 w-5" />,
+      tooltip: "Context Jobs",
+      href: "/dashboard/context-jobs"
     },
   ];
 
