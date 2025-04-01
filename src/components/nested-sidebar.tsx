@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SidebarItem } from "@/lib/types";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
 import SparkPreviewPanel from "./spark-preview-panel";
+import { EnhancedSparkItem } from "@/lib/sparks-service";
 
 // Sort types
 type SortField = 'name' | 'highlightsCount' | 'date';
@@ -23,7 +24,7 @@ interface NestedSidebarProps {
   isOpen: boolean;
   title: string;
   icon: React.ReactNode;
-  items: SidebarItem[];
+  items: SidebarItem[] | EnhancedSparkItem[];
   activeItemId: string | null;
   setActiveItemId: (id: string, rwId?: number) => void;
   onClose: () => void;
@@ -267,8 +268,9 @@ export default function NestedSidebar({
   };
 
   const [hoverTimer, setHoverTimer] = useState<NodeJS.Timeout | null>(null);
+  const [hoveredSparkDetails, setHoveredSparkDetails] = useState<any>(null);
 
-  const handleSparkMouseEnter = (e: React.MouseEvent, sparkId: string) => {
+  const handleSparkMouseEnter = (e: React.MouseEvent, item: SidebarItem | EnhancedSparkItem) => {
     // Only show preview for Sparks
     if (title !== 'Sparks') return;
     
@@ -299,7 +301,14 @@ export default function NestedSidebar({
     if (!isNaN(position.top) && !isNaN(position.right) && 
         isFinite(position.top) && isFinite(position.right)) {
       setHoverPosition(position);
-      setHoveredSparkId(sparkId);
+      setHoveredSparkId(item.id);
+      
+      // If this is an enhanced spark item, pass the details
+      if ('details' in item) {
+        setHoveredSparkDetails(item.details);
+      } else {
+        setHoveredSparkDetails(null);
+      }
     }
   };
 
@@ -317,6 +326,7 @@ export default function NestedSidebar({
   
   const handleClosePanel = () => {
     setHoveredSparkId(null);
+    setHoveredSparkDetails(null);
   };
 
   // Clean up any timers when component unmounts
@@ -445,7 +455,7 @@ export default function NestedSidebar({
                 <button
                   key={item.id}
                   onClick={() => setActiveItemId(item.id, item.rwId)}
-                  onMouseEnter={(e) => handleSparkMouseEnter(e, item.id)}
+                  onMouseEnter={(e) => handleSparkMouseEnter(e, item)}
                   onMouseLeave={handleSparkMouseLeave}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground max-w-full overflow-hidden",
@@ -483,6 +493,7 @@ export default function NestedSidebar({
           sparkId={hoveredSparkId}
           position={hoverPosition}
           onClose={handleClosePanel}
+          sparkDetails={hoveredSparkDetails}
         />
       )}
     </div>

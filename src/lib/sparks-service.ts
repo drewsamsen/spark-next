@@ -36,12 +36,17 @@ export interface SparkTag {
   name: string;
 }
 
+// Extended interface that combines SidebarItem with SparkDetails
+export interface EnhancedSparkItem extends SidebarItem {
+  details: SparkDetails;
+}
+
 // Export the sparks service
 export const sparksService = {
   /**
-   * Get all sparks for the current user
+   * Get all sparks for the current user with complete details including categories and tags
    */
-  async getSparks(): Promise<SidebarItem[]> {
+  async getSparks(): Promise<EnhancedSparkItem[]> {
     try {
       const supabase = getSupabaseBrowserClient();
       
@@ -52,11 +57,22 @@ export const sparksService = {
         console.error('User not authenticated');
         return [];
       }
-      
-      // Fetch sparks from the database
-      const { data, error } = await supabase
+
+      // Fetch sparks with their categories and tags using foreign tables
+      const { data: sparksData, error } = await supabase
         .from('sparks')
-        .select('id, body, todo_created_at, created_at')
+        .select(`
+          id, 
+          body, 
+          todo_created_at, 
+          created_at,
+          categories:spark_categories(
+            category:categories(id, name)
+          ),
+          tags:spark_tags(
+            tag:tags(id, name)
+          )
+        `)
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false });
       
@@ -64,13 +80,53 @@ export const sparksService = {
         console.error('Error fetching sparks:', error);
         return [];
       }
-      
-      // Convert to SidebarItem format
-      return data.map(spark => ({
-        id: spark.id,
-        name: spark.body,
-        date: formatDate(spark.todo_created_at || spark.created_at)
-      }));
+
+      // Transform the nested data into the expected format
+      const enhancedSparks: EnhancedSparkItem[] = sparksData.map(spark => {
+        // Extract categories from the nested structure
+        const categories: SparkCategory[] = [];
+        if (spark.categories && Array.isArray(spark.categories)) {
+          spark.categories.forEach(catRel => {
+            if (catRel.category && typeof catRel.category === 'object' && 
+                'id' in catRel.category && 'name' in catRel.category) {
+              categories.push({
+                id: String(catRel.category.id),
+                name: String(catRel.category.name)
+              });
+            }
+          });
+        }
+
+        // Extract tags from the nested structure  
+        const tags: SparkTag[] = [];
+        if (spark.tags && Array.isArray(spark.tags)) {
+          spark.tags.forEach(tagRel => {
+            if (tagRel.tag && typeof tagRel.tag === 'object' && 
+                'id' in tagRel.tag && 'name' in tagRel.tag) {
+              tags.push({
+                id: String(tagRel.tag.id),
+                name: String(tagRel.tag.name)
+              });
+            }
+          });
+        }
+
+        return {
+          id: spark.id,
+          name: spark.body,
+          date: formatDate(spark.todo_created_at || spark.created_at),
+          details: {
+            id: spark.id,
+            body: spark.body,
+            createdAt: spark.created_at,
+            todoCreatedAt: spark.todo_created_at,
+            categories,
+            tags
+          }
+        };
+      });
+
+      return enhancedSparks;
     } catch (error) {
       console.error('Error in getSparks:', error);
       return [];
@@ -91,11 +147,22 @@ export const sparksService = {
         console.error('User not authenticated');
         return null;
       }
-      
-      // Fetch the spark
+
+      // Fetch the spark with all related data in a single query
       const { data: sparkData, error: sparkError } = await supabase
         .from('sparks')
-        .select('id, body, todo_created_at, created_at, user_id')
+        .select(`
+          id, 
+          body, 
+          todo_created_at, 
+          created_at,
+          categories:spark_categories(
+            category:categories(id, name)
+          ),
+          tags:spark_tags(
+            tag:tags(id, name)
+          )
+        `)
         .eq('id', sparkId)
         .eq('user_id', session.user.id)
         .single();
@@ -105,59 +172,43 @@ export const sparksService = {
         return null;
       }
 
-      // Initialize spark details
+      // Extract categories from the nested structure
+      const categories: SparkCategory[] = [];
+      if (sparkData.categories && Array.isArray(sparkData.categories)) {
+        sparkData.categories.forEach(catRel => {
+          if (catRel.category && typeof catRel.category === 'object' && 
+              'id' in catRel.category && 'name' in catRel.category) {
+            categories.push({
+              id: String(catRel.category.id),
+              name: String(catRel.category.name)
+            });
+          }
+        });
+      }
+
+      // Extract tags from the nested structure
+      const tags: SparkTag[] = [];
+      if (sparkData.tags && Array.isArray(sparkData.tags)) {
+        sparkData.tags.forEach(tagRel => {
+          if (tagRel.tag && typeof tagRel.tag === 'object' && 
+              'id' in tagRel.tag && 'name' in tagRel.tag) {
+            tags.push({
+              id: String(tagRel.tag.id),
+              name: String(tagRel.tag.name)
+            });
+          }
+        });
+      }
+
+      // Construct the spark details
       const sparkDetails: SparkDetails = {
         id: sparkData.id,
         body: sparkData.body,
         createdAt: sparkData.created_at,
         todoCreatedAt: sparkData.todo_created_at,
-        categories: [],
-        tags: []
+        categories,
+        tags
       };
-
-      // Fetch categories
-      const { data: categoryRelations, error: categoryError } = await supabase
-        .from('spark_categories')
-        .select('category_id')
-        .eq('spark_id', sparkId);
-
-      if (!categoryError && categoryRelations && categoryRelations.length > 0) {
-        const categoryIds = categoryRelations.map(rel => rel.category_id);
-        
-        const { data: categories, error: categoriesFetchError } = await supabase
-          .from('categories')
-          .select('id, name')
-          .in('id', categoryIds);
-          
-        if (!categoriesFetchError && categories) {
-          sparkDetails.categories = categories.map(cat => ({
-            id: cat.id,
-            name: cat.name
-          }));
-        }
-      }
-
-      // Fetch tags
-      const { data: tagRelations, error: tagError } = await supabase
-        .from('spark_tags')
-        .select('tag_id')
-        .eq('spark_id', sparkId);
-
-      if (!tagError && tagRelations && tagRelations.length > 0) {
-        const tagIds = tagRelations.map(rel => rel.tag_id);
-        
-        const { data: tags, error: tagsFetchError } = await supabase
-          .from('tags')
-          .select('id, name')
-          .in('id', tagIds);
-          
-        if (!tagsFetchError && tags) {
-          sparkDetails.tags = tags.map(tag => ({
-            id: tag.id,
-            name: tag.name
-          }));
-        }
-      }
 
       return sparkDetails;
     } catch (error) {

@@ -12,14 +12,16 @@ interface SparkPreviewPanelProps {
   sparkId: string | null;
   onClose: () => void;
   position: { top: number; right: number };
+  sparkDetails?: SparkDetails | null;
 }
 
 export default function SparkPreviewPanel({ 
   sparkId, 
   onClose,
-  position
+  position,
+  sparkDetails: initialSparkDetails = null
 }: SparkPreviewPanelProps) {
-  const [sparkDetails, setSparkDetails] = useState<SparkDetails | null>(null);
+  const [sparkDetails, setSparkDetails] = useState<SparkDetails | null>(initialSparkDetails);
   const [loading, setLoading] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [showTagInput, setShowTagInput] = useState(false);
@@ -31,11 +33,19 @@ export default function SparkPreviewPanel({
 
   useEffect(() => {
     if (sparkId) {
-      fetchSparkDetails(sparkId);
+      if (!initialSparkDetails) {
+        fetchSparkDetails(sparkId);
+      }
     } else {
       setSparkDetails(null);
     }
-  }, [sparkId]);
+  }, [sparkId, initialSparkDetails]);
+  
+  useEffect(() => {
+    if (initialSparkDetails) {
+      setSparkDetails(initialSparkDetails);
+    }
+  }, [initialSparkDetails]);
   
   // Adjust position to stay in viewport
   useEffect(() => {
