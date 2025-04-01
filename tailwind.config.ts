@@ -26,6 +26,7 @@ export default {
         shimmer: "shimmer 4s infinite",
         backgroundPositionSpin:
           "background-position-spin 3000ms infinite alternate",
+        "slideIn": "slideIn 0.2s ease-out forwards",
       },
       keyframes: {
         "accordion-down": {
@@ -60,6 +61,10 @@ export default {
           "30%, 60%": {
             "background-position": "calc(100% + var(--shimmer-width)) 0",
           },
+        },
+        slideIn: {
+          from: { transform: "translateX(-100%)", opacity: "0.3" },
+          to: { transform: "translateX(0)", opacity: "1" },
         },
       },
       colors: {

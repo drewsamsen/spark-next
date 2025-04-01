@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SidebarItem } from "@/lib/types";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
+import SparkPreviewPanel from "./spark-preview-panel";
 
 // Sort types
 type SortField = 'name' | 'highlightsCount' | 'date';
@@ -81,6 +82,9 @@ export default function NestedSidebar({
   const [sort, setSort] = useState<SortState>(() => getSavedSort(title));
   const { settings, updateLeftSidebarWidth } = useUISettings();
   const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
+  const [hoveredSparkId, setHoveredSparkId] = useState<string | null>(null);
+  const [hoverPosition, setHoverPosition] = useState({ top: 0, right: 0 });
+  const sidebarRef = useRef<HTMLDivElement>(null);
   
   // Resize functionality
   const [isResizing, setIsResizing] = useState(false);
@@ -262,9 +266,77 @@ export default function NestedSidebar({
     transition: isResizing ? 'none' : 'none'
   };
 
+  const [hoverTimer, setHoverTimer] = useState<NodeJS.Timeout | null>(null);
+
+  const handleSparkMouseEnter = (e: React.MouseEvent, sparkId: string) => {
+    // Only show preview for Sparks
+    if (title !== 'Sparks') return;
+    
+    // Clear any existing timer
+    if (hoverTimer) {
+      clearTimeout(hoverTimer);
+      setHoverTimer(null);
+    }
+    
+    // Store the current target element before it becomes invalid in the timeout
+    const currentTarget = e.currentTarget as HTMLButtonElement;
+    
+    // Get the sidebar element to calculate its right edge
+    const sidebarElement = sidebarRef.current;
+    if (!sidebarElement) return;
+    
+    const sidebarRect = sidebarElement.getBoundingClientRect();
+    const rect = currentTarget.getBoundingClientRect();
+    
+    // Calculate position for panel
+    const position = {
+      top: rect.top,
+      // Position exactly at the right edge of the sidebar
+      right: sidebarRect.right
+    };
+    
+    // Only update if values are valid numbers
+    if (!isNaN(position.top) && !isNaN(position.right) && 
+        isFinite(position.top) && isFinite(position.right)) {
+      setHoverPosition(position);
+      setHoveredSparkId(sparkId);
+    }
+  };
+
+  const handleSparkMouseLeave = () => {
+    // Clear the timer if the mouse leaves before it triggers
+    if (hoverTimer) {
+      clearTimeout(hoverTimer);
+      setHoverTimer(null);
+    }
+    
+    // Brief delay before hiding to allow moving to the panel
+    // We're not using setTimeout anymore as it causes issues with multiple items
+    // Instead we'll let the panel component handle its own visibility
+  };
+  
+  const handleClosePanel = () => {
+    setHoveredSparkId(null);
+  };
+
+  // Clean up any timers when component unmounts
+  useEffect(() => {
+    return () => {
+      if (hoverTimer) {
+        clearTimeout(hoverTimer);
+      }
+    };
+  }, [hoverTimer]);
+
   return (
-    <div className="h-full border-l border-r bg-neutral-50 dark:bg-sidebar animate-fade-in overflow-hidden relative"
-         style={nestedSidebarStyle}>
+    <div 
+      className="h-full border-l border-r bg-neutral-50 dark:bg-sidebar animate-fade-in overflow-hidden relative"
+      style={{
+        ...nestedSidebarStyle,
+        zIndex: 20 // Ensure sidebar has a stacking context with explicit z-index
+      }}
+      ref={sidebarRef}
+    >
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b p-4">
           <div className="flex items-center gap-2">
@@ -373,6 +445,8 @@ export default function NestedSidebar({
                 <button
                   key={item.id}
                   onClick={() => setActiveItemId(item.id, item.rwId)}
+                  onMouseEnter={(e) => handleSparkMouseEnter(e, item.id)}
+                  onMouseLeave={handleSparkMouseLeave}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground max-w-full overflow-hidden",
                     activeItemId === item.id ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground"
@@ -402,6 +476,15 @@ export default function NestedSidebar({
         className="absolute right-0 inset-y-0 w-2 bg-transparent hover:bg-blue-500/20 cursor-ew-resize z-30"
         title="Drag to resize"
       />
+      
+      {/* Spark Preview Panel */}
+      {title === "Sparks" && hoveredSparkId && (
+        <SparkPreviewPanel 
+          sparkId={hoveredSparkId}
+          position={hoverPosition}
+          onClose={handleClosePanel}
+        />
+      )}
     </div>
   );
 } 

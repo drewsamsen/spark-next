@@ -54,3 +54,4 @@ IMPORTANT:
 - Do not run `git add` or `git commit` after making changes. The user will handle git.
 - Do not over-deliver. If you see opportunities for a good next step, pause and make the suggestion to the user. Do not automatically try and do too much.
 - When debugging, do not try multiple fixes at once. Try one thing at a time and ask the user to test if the fix worked before trying something else.
+- Never try to run the development server yourself. Never run `npm run dev`
