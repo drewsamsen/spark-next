@@ -1634,7 +1634,36 @@ export const airtableImportDataFn = inngest.createFunction(
       
       const { categoryMap, tagMap } = existingData;
       
-      // Step 3: Process Airtable data
+      // Step 3: Fetch all existing md5_uids to identify new sparks more efficiently
+      const existingMd5Uids = await step.run("fetch-existing-md5uids", async () => {
+        logger.info("Fetching existing md5_uids from Supabase");
+        
+        const { data: existingUids, error: uidsError } = await supabase
+          .from('sparks')
+          .select('md5_uid')
+          .eq('user_id', userId);
+          
+        if (uidsError) {
+          logger.error("Error fetching existing md5_uids:", uidsError);
+          throw uidsError;
+        }
+        
+        // Create an array of md5_uids
+        const uidsArray: string[] = [];
+        if (existingUids) {
+          existingUids.forEach(item => {
+            if (item.md5_uid) {
+              uidsArray.push(item.md5_uid);
+            }
+          });
+        }
+        
+        logger.info(`Found ${uidsArray.length} existing md5_uids`);
+        
+        return uidsArray;
+      });
+      
+      // Step 4: Process Airtable data in batches
       const processResult = await step.run("process-airtable-data", async () => {
         logger.info(`Processing ${airtableData.length} rows from Airtable`);
         
@@ -1665,19 +1694,44 @@ export const airtableImportDataFn = inngest.createFunction(
         
         logger.info(`Created categorization job with ID: ${jobData.id} for the entire import`);
         
-        // Process each record from Airtable
-        for (const record of airtableData) {
-          try {
+        // Filter records to only process new ones (those not in existingMd5Uids)
+        const newRecords = airtableData.filter(record => {
+          const uid = record.fields.uid;
+          return uid && !existingMd5Uids.includes(uid);
+        });
+        
+        logger.info(`Found ${newRecords.length} new records to process out of ${airtableData.length} total records`);
+        
+        // Process records in batches
+        const BATCH_SIZE = 50; // Adjust batch size as needed
+        const totalBatches = Math.ceil(newRecords.length / BATCH_SIZE);
+        
+        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+          const batchStart = batchIndex * BATCH_SIZE;
+          const batchEnd = Math.min((batchIndex + 1) * BATCH_SIZE, newRecords.length);
+          const currentBatch = newRecords.slice(batchStart, batchEnd);
+          
+          logger.info(`Processing batch ${batchIndex + 1}/${totalBatches} (${currentBatch.length} records)`);
+          
+          // Prepare batch of sparks to insert
+          const sparksToInsert: Array<{
+            user_id: string;
+            body: string;
+            md5_uid: string;
+            todo_created_at?: string;
+            todo_id?: string;
+          }> = [];
+          
+          // Map to track record ID to its position in the sparksToInsert array
+          const recordToIndexMap = new Map<string, number>();
+          
+          // First, prepare all sparks for insertion
+          for (let i = 0; i < currentBatch.length; i++) {
+            const record = currentBatch[i];
             const fields = record.fields;
-            processedRows++;
-
-            // Log the raw fields for debugging
-            logger.info(`Record ${record.id} fields:`, fields);
-
-            // Extract data from Airtable fields based on the specific field mappings
+            
+            // Extract data from Airtable fields
             const body = fields.content || '';
-            const categories = fields["Name (from Categories)"] || [];
-            const tags = fields["Name (from Tags)"] || [];
             const uid = fields.uid;
             const originallyCreated = fields.originallyCreated;
             const todoId = fields.toDoId;
@@ -1688,27 +1742,7 @@ export const airtableImportDataFn = inngest.createFunction(
               continue;
             }
             
-            // Use the uid field from Airtable for md5_uid if available, otherwise generate one
-            let md5_uid;
-            if (uid) {
-              md5_uid = uid;
-              logger.info(`Using provided uid for record ${record.id}: ${md5_uid}`);
-            }
-            
-            // Check if spark already exists
-            const { data: existingSpark } = await supabase
-              .from('sparks')
-              .select('id')
-              .eq('md5_uid', md5_uid)
-              .eq('user_id', userId)
-              .maybeSingle();
-              
-            if (existingSpark) {
-              logger.info(`Spark already exists for record ${record.id}, skipping`);
-              continue;
-            }
-            
-            // Create new spark with additional fields if available
+            // Create new spark data
             const sparkData: {
               user_id: string;
               body: string;
@@ -1718,7 +1752,7 @@ export const airtableImportDataFn = inngest.createFunction(
             } = {
               user_id: userId,
               body: body,
-              md5_uid: md5_uid
+              md5_uid: uid
             };
             
             // Add todo_created_at if originallyCreated is available
@@ -1731,177 +1765,197 @@ export const airtableImportDataFn = inngest.createFunction(
               sparkData.todo_id = todoId;
             }
             
-            const { data: newSpark, error: sparkError } = await supabase
-              .from('sparks')
-              .insert(sparkData)
-              .select('id')
-              .single();
-              
-            if (sparkError) {
-              logger.error(`Error creating spark for record ${record.id}:`, sparkError);
-              continue;
-            }
+            sparksToInsert.push(sparkData);
+            recordToIndexMap.set(record.id, i);
+            processedRows++;
+          }
+          
+          if (sparksToInsert.length === 0) {
+            logger.info(`No valid sparks in batch ${batchIndex + 1}, skipping`);
+            continue;
+          }
+          
+          // Insert all sparks in the batch at once
+          const { data: newSparks, error: sparkError } = await supabase
+            .from('sparks')
+            .insert(sparksToInsert)
+            .select('id, md5_uid');
             
-            createdSparks++;
-            logger.info(`Created spark ${newSpark.id} for record ${record.id}`);
-            
-            // Process categories - expect array of strings of length 1
-            if (Array.isArray(categories) && categories.length > 0) {
-              // Take the first string in the array (as specified)
-              const categoryName = categories[0];
+          if (sparkError) {
+            logger.error(`Error creating sparks batch ${batchIndex + 1}:`, sparkError);
+            continue;
+          }
+          
+          createdSparks += newSparks.length;
+          logger.info(`Created ${newSparks.length} sparks in batch ${batchIndex + 1}`);
+          
+          // Create a map of md5_uid to spark ID for easier lookup
+          const md5UidToSparkId = new Map<string, string>();
+          for (const spark of newSparks) {
+            md5UidToSparkId.set(spark.md5_uid, spark.id);
+          }
+          
+          // Now process categories and tags for each created spark
+          for (const record of currentBatch) {
+            try {
+              const fields = record.fields;
+              const uid = fields.uid;
               
-              if (categoryName) {
-                const categoryLower = categoryName.toLowerCase();
-                let categoryId;
+              // Skip if we couldn't find the created spark
+              if (!uid || !md5UidToSparkId.has(uid)) {
+                continue;
+              }
+              
+              const sparkId = md5UidToSparkId.get(uid)!;
+              const categories = fields["Name (from Categories)"] || [];
+              const tags = fields["Name (from Tags)"] || [];
+              
+              // Process categories - expect array of strings of length 1
+              if (Array.isArray(categories) && categories.length > 0) {
+                // Take the first string in the array (as specified)
+                const categoryName = categories[0];
                 
-                // Check if category exists, otherwise create it
-                if (categoryLower in categoryMap) {
-                  categoryId = categoryMap[categoryLower].id;
-                } else {
-                  const slug = createSlug(categoryName);
+                if (categoryName) {
+                  const categoryLower = categoryName.toLowerCase();
+                  let categoryId;
                   
-                  const { data: newCategory, error: categoryError } = await supabase
-                    .from('categories')
-                    .insert({
-                      name: categoryName,
-                      slug: slug,
-                      created_by_job_id: jobData.id
-                    })
-                    .select('id')
-                    .single();
-                    
-                  if (categoryError) {
-                    logger.error(`Error creating category ${categoryName}:`, categoryError);
+                  // Check if category exists, otherwise create it
+                  if (categoryLower in categoryMap) {
+                    categoryId = categoryMap[categoryLower].id;
                   } else {
-                    categoryId = newCategory.id;
-                    categoryMap[categoryLower] = { id: categoryId, name: categoryName, slug };
-                    createdCategories++;
-                    logger.info(`Created category "${categoryName}" with ID ${categoryId}`);
+                    const slug = createSlug(categoryName);
+                    
+                    const { data: newCategory, error: categoryError } = await supabase
+                      .from('categories')
+                      .insert({
+                        name: categoryName,
+                        slug: slug,
+                        created_by_job_id: jobData.id
+                      })
+                      .select('id')
+                      .single();
+                      
+                    if (categoryError) {
+                      logger.error(`Error creating category ${categoryName}:`, categoryError);
+                    } else {
+                      categoryId = newCategory.id;
+                      categoryMap[categoryLower] = { id: categoryId, name: categoryName, slug };
+                      createdCategories++;
+                      logger.info(`Created category "${categoryName}" with ID ${categoryId}`);
+                    }
+                  }
+                  
+                  if (categoryId) {
+                    // Create job action for this category
+                    const { data: jobAction, error: actionError } = await supabase
+                      .from('categorization_job_actions')
+                      .insert({
+                        job_id: jobData.id,
+                        action_type: 'add_category',
+                        resource_type: 'spark',
+                        resource_id: sparkId,
+                        category_id: categoryId
+                      })
+                      .select()
+                      .single();
+                      
+                    if (actionError || !jobAction) {
+                      logger.error(`Failed to create job action for category ${categoryName}:`, actionError);
+                      continue;
+                    }
+                    
+                    // Link category to spark with job_action_id
+                    const { error: linkError } = await supabase
+                      .from('spark_categories')
+                      .insert({
+                        spark_id: sparkId,
+                        category_id: categoryId,
+                        created_by: 'job',
+                        job_action_id: jobAction.id
+                      });
+                      
+                    if (linkError) {
+                      logger.error(`Error linking category ${categoryId} to spark ${sparkId}:`, linkError);
+                    }
                   }
                 }
-                
-                if (categoryId) {
-                  // Create job action for this category
-                  logger.info(`Creating job action for category "${categoryName}" (ID: ${categoryId})`);
+              }
+              
+              // Process tags - array of strings
+              if (Array.isArray(tags) && tags.length > 0) {
+                for (const tagName of tags) {
+                  if (!tagName) continue;
+                  
+                  const tagLower = tagName.toLowerCase();
+                  let tagId;
+                  
+                  // Check if tag exists, otherwise create it
+                  if (tagLower in tagMap) {
+                    tagId = tagMap[tagLower].id;
+                  } else {
+                    const { data: newTag, error: tagError } = await supabase
+                      .from('tags')
+                      .insert({
+                        name: tagName,
+                        created_by_job_id: jobData.id
+                      })
+                      .select('id')
+                      .single();
+                      
+                    if (tagError) {
+                      logger.error(`Error creating tag ${tagName}:`, tagError);
+                      continue;
+                    }
+                    
+                    tagId = newTag.id;
+                    tagMap[tagLower] = { id: tagId, name: tagName };
+                    createdTags++;
+                    logger.info(`Created tag "${tagName}" with ID ${tagId}`);
+                  }
+                  
+                  // Create job action for this tag
                   const { data: jobAction, error: actionError } = await supabase
                     .from('categorization_job_actions')
                     .insert({
                       job_id: jobData.id,
-                      action_type: 'add_category',
+                      action_type: 'add_tag',
                       resource_type: 'spark',
-                      resource_id: newSpark.id,
-                      category_id: categoryId
+                      resource_id: sparkId,
+                      tag_id: tagId
                     })
                     .select()
                     .single();
                     
                   if (actionError || !jobAction) {
-                    logger.error(`Failed to create job action for category ${categoryName}:`, actionError);
+                    logger.error(`Failed to create job action for tag ${tagName}:`, actionError);
                     continue;
                   }
                   
-                  // Link category to spark with job_action_id
-                  logger.info(`Linking category "${categoryName}" (ID: ${categoryId}) to spark ${newSpark.id} with action ID ${jobAction.id}`);
-                  const { data: sparkCategory, error: linkError } = await supabase
-                    .from('spark_categories')
+                  // Link tag to spark with job_action_id
+                  const { error: linkError } = await supabase
+                    .from('spark_tags')
                     .insert({
-                      spark_id: newSpark.id,
-                      category_id: categoryId,
+                      spark_id: sparkId,
+                      tag_id: tagId,
                       created_by: 'job',
                       job_action_id: jobAction.id
-                    })
-                    .select()
-                    .single();
+                    });
                     
                   if (linkError) {
-                    logger.error(`Error linking category ${categoryId} to spark ${newSpark.id}:`, linkError);
-                    // Log more detail about the error
-                    if (linkError.code) {
-                      logger.error(`SQL error code: ${linkError.code}, Details: ${linkError.details}, Hint: ${linkError.hint}`);
-                    }
-                  } else {
-                    logger.info(`Successfully linked category "${categoryName}" to spark ${newSpark.id}`);
+                    logger.error(`Error linking tag ${tagId} to spark ${sparkId}:`, linkError);
                   }
                 }
               }
+            } catch (recordError) {
+              logger.error(`Error processing record ${record.id}:`, recordError);
             }
-            
-            // Process tags - array of strings
-            if (Array.isArray(tags) && tags.length > 0) {
-              for (const tagName of tags) {
-                if (!tagName) continue;
-                
-                const tagLower = tagName.toLowerCase();
-                let tagId;
-                
-                // Check if tag exists, otherwise create it
-                if (tagLower in tagMap) {
-                  tagId = tagMap[tagLower].id;
-                } else {
-                  const { data: newTag, error: tagError } = await supabase
-                    .from('tags')
-                    .insert({
-                      name: tagName,
-                      created_by_job_id: jobData.id
-                    })
-                    .select('id')
-                    .single();
-                    
-                  if (tagError) {
-                    logger.error(`Error creating tag ${tagName}:`, tagError);
-                    continue;
-                  }
-                  
-                  tagId = newTag.id;
-                  tagMap[tagLower] = { id: tagId, name: tagName };
-                  createdTags++;
-                  logger.info(`Created tag "${tagName}" with ID ${tagId}`);
-                }
-                
-                // Create job action for this tag
-                const { data: jobAction, error: actionError } = await supabase
-                  .from('categorization_job_actions')
-                  .insert({
-                    job_id: jobData.id,
-                    action_type: 'add_tag',
-                    resource_type: 'spark',
-                    resource_id: newSpark.id,
-                    tag_id: tagId
-                  })
-                  .select()
-                  .single();
-                  
-                if (actionError || !jobAction) {
-                  logger.error(`Failed to create job action for tag ${tagName}:`, actionError);
-                  continue;
-                }
-                
-                // Link tag to spark with job_action_id
-                const { error: linkError } = await supabase
-                  .from('spark_tags')
-                  .insert({
-                    spark_id: newSpark.id,
-                    tag_id: tagId,
-                    created_by: 'job',
-                    job_action_id: jobAction.id
-                  });
-                  
-                if (linkError) {
-                  logger.error(`Error linking tag ${tagId} to spark ${newSpark.id}:`, linkError);
-                }
-              }
-            }
-            
-            // Log progress every 10 records
-            if (processedRows % 10 === 0) {
-              logger.info(`Processed ${processedRows}/${totalRows} rows. Created ${createdSparks} sparks, ${createdCategories} categories, ${createdTags} tags`);
-            }
-          } catch (recordError) {
-            logger.error(`Error processing record ${record.id}:`, recordError);
           }
+          
+          // Log progress after each batch
+          logger.info(`Completed batch ${batchIndex + 1}/${totalBatches}. Progress: ${processedRows}/${totalRows} rows. Created ${createdSparks} sparks so far.`);
         }
         
-        logger.info(`Completed processing. Processed ${processedRows}/${totalRows} rows`);
+        logger.info(`Completed processing all batches. Processed ${processedRows}/${totalRows} rows`);
         logger.info(`Created ${createdSparks} sparks, ${createdCategories} categories, ${createdTags} tags`);
         
         return {
