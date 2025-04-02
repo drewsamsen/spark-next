@@ -6,7 +6,6 @@ import ClientProvider from "@/components/ClientProvider";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ThemeAwareToast } from "@/components/theme/ThemeAwareToast";
 import { UISettingsProvider } from '@/contexts/ui-settings-context';
-import { ToastContainer } from "react-toastify";
 import { AuthCheck } from "@/components/auth/AuthCheck";
 import AppShell from './AppShell';
 
@@ -35,7 +34,6 @@ export default function RootLayout({
             <UISettingsProvider>
               <AuthCheck>
                 <AppShell>{children}</AppShell>
-                <ToastContainer position="top-right" theme="colored" />
               </AuthCheck>
             </UISettingsProvider>
             <ThemeAwareToast />
