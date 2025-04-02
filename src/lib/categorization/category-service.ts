@@ -1,31 +1,26 @@
 import { Category, Resource, ResourceType } from "./types";
 import { CategoryService } from "./services";
-import { generateSlug } from "@/lib/utils";
 import { getRepositories } from "@/repositories";
-import { getDbClient } from "@/lib/db";
 
 export class CategoryServiceImpl implements CategoryService {
   /**
    * Get all categories
    */
   async getCategories(): Promise<Category[]> {
-    const db = getDbClient();
+    const repos = getRepositories();
     
-    const { data, error } = await db
-      .from('categories')
-      .select('*')
-      .order('name');
+    try {
+      const categories = await repos.categories.getCategories();
       
-    if (error) {
+      return categories.map(category => ({
+        id: category.id,
+        name: category.name,
+        slug: category.slug
+      }));
+    } catch (error) {
       console.error('Error fetching categories:', error);
       return [];
     }
-    
-    return data.map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      slug: row.slug
-    }));
   }
   
   /**
@@ -36,41 +31,19 @@ export class CategoryServiceImpl implements CategoryService {
       throw new Error('Category name cannot be empty');
     }
     
-    const db = getDbClient();
-    const slug = generateSlug(name);
+    const repos = getRepositories();
     
-    const { data, error } = await db
-      .from('categories')
-      .insert({ name, slug })
-      .select()
-      .single();
+    try {
+      const category = await repos.categories.createCategory({ name });
       
-    if (error) {
-      if (error.code === '23505') { // Unique violation
-        // Check if it exists
-        const { data: existingCategory } = await db
-          .from('categories')
-          .select('*')
-          .eq('slug', slug)
-          .single();
-          
-        if (existingCategory) {
-          return {
-            id: existingCategory.id,
-            name: existingCategory.name,
-            slug: existingCategory.slug
-          };
-        }
-      }
-      
-      throw new Error(`Failed to create category: ${error.message}`);
+      return {
+        id: category.id,
+        name: category.name,
+        slug: category.slug
+      };
+    } catch (error) {
+      throw new Error(`Failed to create category: ${error instanceof Error ? error.message : String(error)}`);
     }
-    
-    return {
-      id: data.id,
-      name: data.name,
-      slug: data.slug
-    };
   }
   
   /**
@@ -78,50 +51,19 @@ export class CategoryServiceImpl implements CategoryService {
    */
   async getCategoriesForResource(resource: Resource): Promise<Category[]> {
     const repos = getRepositories();
-    const db = getDbClient();
-    const junctionTable = repos.categorization.getCategoryJunctionTable(resource.type);
-    const resourceIdColumn = repos.categorization.getResourceIdColumn(resource.type);
     
-    // Add explicit type for the SQL result
-    type JunctionResult = {
-      category_id: string;
-      categories: {
-        id: string;
-        name: string;
-        slug: string;
-      };
-    };
-    
-    const { data, error } = await db
-      .from(junctionTable)
-      .select(`
-        category_id,
-        categories:category_id (
-          id, name, slug
-        )
-      `)
-      .eq(resourceIdColumn, resource.id);
+    try {
+      const categories = await repos.categories.getCategoriesForResource(resource);
       
-    if (error) {
+      return categories.map(category => ({
+        id: category.id,
+        name: category.name,
+        slug: category.slug
+      }));
+    } catch (error) {
       console.error(`Error fetching categories for ${resource.type}:`, error);
       return [];
     }
-    
-    // Transform the data to Category array
-    const categories: Category[] = [];
-    
-    // Safely process each row
-    (data as unknown as JunctionResult[]).forEach(row => {
-      if (row.categories) {
-        categories.push({
-          id: row.categories.id,
-          name: row.categories.name,
-          slug: row.categories.slug
-        });
-      }
-    });
-    
-    return categories;
   }
   
   /**
@@ -129,54 +71,56 @@ export class CategoryServiceImpl implements CategoryService {
    */
   async getResourcesForCategory(categoryId: string, type?: ResourceType): Promise<Resource[]> {
     const repos = getRepositories();
-    const db = getDbClient();
     const results: Resource[] = [];
     
-    // If type is specified, only query that resource type
-    const typesToQuery = type 
-      ? [type] 
-      : ['book', 'highlight', 'spark'] as ResourceType[];
-    
-    for (const resourceType of typesToQuery) {
-      const junctionTable = repos.categorization.getCategoryJunctionTable(resourceType);
-      const resourceIdColumn = repos.categorization.getResourceIdColumn(resourceType);
-      
-      // Format column name for the join
-      const joinColumnName = `resource_data`;
-      
-      // Define the return type from the query
-      type JunctionWithResource = {
-        [key: string]: {
-          id: string;
-          user_id: string;
-        };
-      };
-      
-      const { data, error } = await db
-        .from(junctionTable)
-        .select(`
-          ${resourceIdColumn},
-          ${joinColumnName}:${resourceIdColumn} (
-            id, user_id
-          )
-        `)
-        .eq('category_id', categoryId);
-        
-      if (error) {
-        console.error(`Error fetching ${resourceType} resources for category:`, error);
-        continue;
+    try {
+      // Get the current user ID to add to resources
+      const authRepo = repos.auth;
+      let userId = '';
+      try {
+        const session = await authRepo.getSession();
+        userId = session?.user?.id || '';
+      } catch (e) {
+        // If there's no session, continue with empty userId
+        console.warn('No user session found for getResourcesForCategory');
       }
       
-      // Add resources to results array
-      (data as unknown as JunctionWithResource[]).forEach(row => {
-        const resourceData = row[joinColumnName];
-        if (resourceData) {
-          results.push(repos.categorization.toResource(resourceType, resourceData));
+      if (type) {
+        // If type is specified, only get resources of that type
+        const resourceIds = await repos.categories.getResourcesForCategory(categoryId, type);
+        
+        // Convert resource IDs to Resource objects
+        for (const resourceId of resourceIds) {
+          // For each resource ID, create a Resource object
+          results.push({
+            id: resourceId,
+            type: type,
+            userId: userId
+          });
         }
-      });
+      } else {
+        // If no type specified, get all resource types
+        const typesToQuery = ['book', 'highlight', 'spark'] as ResourceType[];
+        
+        for (const resourceType of typesToQuery) {
+          const resourceIds = await repos.categories.getResourcesForCategory(categoryId, resourceType);
+          
+          // Convert resource IDs to Resource objects
+          for (const resourceId of resourceIds) {
+            results.push({
+              id: resourceId,
+              type: resourceType,
+              userId: userId
+            });
+          }
+        }
+      }
+      
+      return results;
+    } catch (error) {
+      console.error(`Error fetching resources for category:`, error);
+      return [];
     }
-    
-    return results;
   }
   
   /**
@@ -185,25 +129,16 @@ export class CategoryServiceImpl implements CategoryService {
   async addCategoryToResource(resource: Resource, categoryId: string, source: string = 'user'): Promise<void> {
     const repos = getRepositories();
     
-    // Verify the resource exists and belongs to the user
-    const isValid = await repos.categorization.verifyResourceOwnership(resource);
-    if (!isValid) {
-      throw new Error(`Resource not found or you don't have access to it`);
-    }
-    
-    const db = getDbClient();
-    const junctionTable = repos.categorization.getCategoryJunctionTable(resource.type);
-    
-    // Prepare the junction record
-    const junction = repos.categorization.prepareCategoryJunction(resource, categoryId);
-    junction.created_by = source;
-    
-    const { error } = await db
-      .from(junctionTable)
-      .upsert(junction);
+    try {
+      // Verify the resource exists and belongs to the user
+      const isValid = await repos.categorization.verifyResourceOwnership(resource);
+      if (!isValid) {
+        throw new Error(`Resource not found or you don't have access to it`);
+      }
       
-    if (error) {
-      throw new Error(`Failed to add category: ${error.message}`);
+      await repos.categories.addCategoryToResource(resource, categoryId);
+    } catch (error) {
+      throw new Error(`Failed to add category: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -212,18 +147,11 @@ export class CategoryServiceImpl implements CategoryService {
    */
   async removeCategoryFromResource(resource: Resource, categoryId: string): Promise<void> {
     const repos = getRepositories();
-    const db = getDbClient();
-    const junctionTable = repos.categorization.getCategoryJunctionTable(resource.type);
-    const resourceIdColumn = repos.categorization.getResourceIdColumn(resource.type);
     
-    const { error } = await db
-      .from(junctionTable)
-      .delete()
-      .eq(resourceIdColumn, resource.id)
-      .eq('category_id', categoryId);
-      
-    if (error) {
-      throw new Error(`Failed to remove category: ${error.message}`);
+    try {
+      await repos.categories.removeCategoryFromResource(resource, categoryId);
+    } catch (error) {
+      throw new Error(`Failed to remove category: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 } 

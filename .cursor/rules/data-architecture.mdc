@@ -1,5 +1,5 @@
 ---
-description: Guidelines for repository-service-hook pattern and data flow
+description: Guidelines for repository service hook pattern and data flow
 globs:
 alwaysApply: false
 ---
@@ -64,35 +64,204 @@ export class UserService {
 
 ## Hook Layer
 
-```typescript
-// src/hooks/useUser.ts
-import { useState, useEffect } from "react";
-import { UserService } from "@/services/userService";
-import { User } from "@/lib/types";
+### Standard Hook Pattern
 
-export function useUser(userId: string) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+All hooks should follow this pattern for consistency and proper state management:
+
+```typescript
+// src/hooks/useResource.ts
+import { useState, useEffect, useCallback } from "react";
+import { useResourceService } from "./use-services";
+import { useAuthService } from "./use-services";
+import { toast } from "react-toastify";
+
+interface UseResourceReturn {
+  data: any[];
+  isLoading: boolean;
+  error: Error | null;
+  fetchData: () => Promise<any[]>;
+  // Other methods...
+}
+
+export function useResource(): UseResourceReturn {
+  const [data, setData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   
-  const userService = new UserService();
+  const resourceService = useResourceService();
+  const authService = useAuthService();
   
+  // Load data on mount
   useEffect(() => {
-    async function loadUser() {
+    let isMounted = true;
+    
+    const loadData = async () => {
       try {
-        setLoading(true);
-        const userData = await userService.getUserProfile(userId);
-        setUser(userData);
+        setIsLoading(true);
+        
+        // Check authentication first
+        const isAuthenticated = await authService.isAuthenticated();
+        if (!isAuthenticated) {
+          if (isMounted) {
+            setData([]);
+            setIsLoading(false);
+          }
+          return;
+        }
+        
+        // Fetch data
+        const result = await resourceService.getData();
+        
+        if (isMounted) {
+          setData(result);
+          setError(null);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err : new Error(String(err)));
+        console.error('Error loading data:', err);
+        if (isMounted) {
+          setError(err instanceof Error ? err : new Error('Failed to load data'));
+          setData([]);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
+    };
+    
+    loadData();
+    
+    // Subscribe to auth state changes
+    const subscription = authService.onAuthStateChange(() => {
+      loadData();
+    });
+    
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [resourceService, authService]);
+
+  // Add methods for CRUD operations with similar patterns
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const result = await resourceService.getData();
+      setData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch data'));
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [resourceService]);
+  
+  return {
+    data,
+    isLoading,
+    error,
+    fetchData,
+    // Other methods...
+  };
+}
+```
+
+## Hook Usage Best Practices
+
+### 1. Always Handle Loading States
+
+```typescript
+function MyComponent() {
+  const { data, isLoading, error } = useResource();
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      {/* Render data here */}
+    </div>
+  );
+}
+```
+
+### 2. Destructure Only What You Need
+
+```typescript
+// Good practice
+function ResourceDisplay() {
+  const { getData, updateData } = useResourceService();
+  // Now use only these methods
+}
+
+// Avoid this
+function ResourceDisplay() {
+  const resourceService = useResourceService();
+  // Using the entire service is less explicit
+}
+```
+
+### 3. Use Authentication Checks
+
+Always check authentication status before accessing protected resources:
+
+```typescript
+useEffect(() => {
+  async function fetchData() {
+    const isAuthenticated = await authService.isAuthenticated();
+    if (!isAuthenticated) {
+      // Handle unauthenticated state
+      return;
     }
     
-    loadUser();
-  }, [userId]);
+    // Continue with authenticated operations
+  }
   
-  return { user, loading, error };
-}
+  fetchData();
+}, [authService]);
+```
+
+### 4. Implement Optimistic Updates
+
+Update UI state immediately for better user experience, then sync with backend:
+
+```typescript
+const updateItem = useCallback(async (id, newData) => {
+  // 1. Update local state optimistically
+  setItems(prev => prev.map(item => 
+    item.id === id ? { ...item, ...newData } : item
+  ));
+  
+  try {
+    // 2. Persist to backend
+    await itemService.updateItem(id, newData);
+    toast.success('Item updated successfully');
+  } catch (err) {
+    // 3. Revert on failure
+    setItems(prev => prev.map(item => 
+      item.id === id ? originalItem : item
+    ));
+    toast.error('Failed to update item');
+  }
+}, [itemService]);
+```
+
+### 5. Provide Error Handling
+
+Always implement proper error handling with user feedback:
+
+```typescript
+const createItem = useCallback(async (data) => {
+  try {
+    const newItem = await itemService.createItem(data);
+    setItems(prev => [...prev, newItem]);
+    toast.success('Item created successfully');
+    return newItem;
+  } catch (err) {
+    console.error('Error creating item:', err);
+    toast.error('Failed to create item');
+    return null;
+  }
+}, [itemService]);
 ``` 

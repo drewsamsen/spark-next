@@ -20,4 +20,14 @@ export { useFunctionLogsService } from './use-function-logs-service';
 
 export { useUserSettings } from './use-user-settings-service';
 
-export { useAuthSession } from './use-auth-session'; 
+export { useAuthSession } from './use-auth-session';
+
+// Export new categorization hooks
+export { 
+  useCategories, 
+  useTags, 
+  useCategorizationJobs 
+} from './use-categorization';
+
+// Export enhanced resource hooks
+export { useSparks } from './use-sparks'; 
