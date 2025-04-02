@@ -3,67 +3,44 @@
 import { Calendar, Users, FileText, Settings, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useContentService } from "@/hooks/use-content-service";
+import { QuickAccessItem, ActivityItem, DocumentItem } from "@/services/content.service";
 
 export default function MainContent() {
-  // Example data for grid cards
-  const items = [
-    {
-      icon: <Calendar className="h-6 w-6" />,
-      title: "Calendar",
-      description: "View and manage your schedule",
-      color: "bg-spark-primary/20 dark:bg-spark-dark-primary/30 text-spark-primary dark:text-spark-dark-primary"
-    },
-    {
-      icon: <Users className="h-6 w-6" />,
-      title: "Contacts",
-      description: "Manage your network connections",
-      color: "bg-spark-brand/20 dark:bg-spark-dark-brand/30 text-spark-brand dark:text-spark-dark-brand"
-    },
-    {
-      icon: <FileText className="h-6 w-6" />,
-      title: "Documents",
-      description: "View and edit your documents",
-      color: "bg-spark-secondary/20 dark:bg-spark-dark-secondary/30 text-spark-secondary dark:text-spark-dark-secondary"
-    },
-    {
-      icon: <Settings className="h-6 w-6" />,
-      title: "Settings",
-      description: "Customize your experience",
-      color: "bg-spark-neutral/20 dark:bg-spark-dark-neutral/30 text-spark-neutral dark:text-spark-dark-neutral"
+  const { quickAccessItems, activityItems, documentItems, isLoading } = useContentService();
+  
+  // Map icons to the quick access items
+  const itemsWithIcons = quickAccessItems.map(item => {
+    let icon;
+    switch (item.title) {
+      case "Calendar":
+        icon = <Calendar className="h-6 w-6" />;
+        break;
+      case "Contacts":
+        icon = <Users className="h-6 w-6" />;
+        break;
+      case "Documents":
+        icon = <FileText className="h-6 w-6" />;
+        break;
+      case "Settings":
+        icon = <Settings className="h-6 w-6" />;
+        break;
+      default:
+        icon = <FileText className="h-6 w-6" />;
     }
-  ];
+    return { ...item, icon };
+  });
 
-  // Example data for list items
-  const listItems = [
-    {
-      title: "Create a new project",
-      description: "Set up a new project workspace with customizable templates",
-      date: "Today",
-      status: "In Progress",
-      statusColor: "bg-spark-primary dark:bg-spark-dark-primary"
-    },
-    {
-      title: "Review analytics dashboard",
-      description: "Analyze monthly performance metrics and create report",
-      date: "Yesterday",
-      status: "Completed",
-      statusColor: "bg-green-500"
-    },
-    {
-      title: "Update documentation",
-      description: "Revise and update user guides for recent feature changes",
-      date: "3 days ago",
-      status: "Pending",
-      statusColor: "bg-spark-brand dark:bg-spark-dark-brand"
-    },
-    {
-      title: "Plan marketing campaign",
-      description: "Develop strategy for Q4 product launch",
-      date: "1 week ago",
-      status: "In Review",
-      statusColor: "bg-spark-secondary dark:bg-spark-dark-secondary"
-    }
-  ];
+  // If still loading data, show a simple loading state
+  if (isLoading) {
+    return (
+      <div className="flex-1 overflow-y-auto p-6 bg-background">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <p className="text-muted-foreground">Loading dashboard content...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-6 bg-background">
@@ -96,7 +73,7 @@ export default function MainContent() {
         <div>
           <h2 className="font-semibold text-lg mb-4">Quick Access</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {items.map((item, index) => (
+            {itemsWithIcons.map((item, index) => (
               <div 
                 key={index}
                 className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow dark-card"
@@ -121,7 +98,7 @@ export default function MainContent() {
         <div>
           <h2 className="font-semibold text-lg mb-4">Recent Activities</h2>
           <div className="border border-sidebar rounded-lg divide-y divide-sidebar overflow-hidden dark-card">
-            {listItems.map((item, index) => (
+            {activityItems.map((item, index) => (
               <div 
                 key={index}
                 className="p-4 bg-background hover:bg-spark-neutral/10 dark:hover:bg-spark-dark-neutral/20 transition-colors"
@@ -147,27 +124,18 @@ export default function MainContent() {
             <Button variant="branded" size="sm">View All</Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="border border-sidebar rounded-lg p-4 hover:border-spark-primary dark:hover:border-spark-dark-primary transition-colors group dark-card">
-              <div className="h-40 rounded border border-sidebar flex items-center justify-center bg-spark-primary/10 dark:bg-spark-dark-primary/20 group-hover:bg-spark-primary/20 dark:group-hover:bg-spark-dark-primary/30 transition-colors mb-2">
-                <FileText className="h-10 w-10 text-spark-primary/70 dark:text-spark-dark-primary/80" />
+            {documentItems.map((item, index) => (
+              <div 
+                key={index} 
+                className="border border-sidebar rounded-lg p-4 hover:border-spark-primary dark:hover:border-spark-dark-primary transition-colors group dark-card"
+              >
+                <div className={cn("h-40 rounded border border-sidebar flex items-center justify-center transition-colors mb-2", item.color)}>
+                  <FileText className={cn("h-10 w-10", item.iconColor)} />
+                </div>
+                <h3 className="font-medium truncate">{item.title}</h3>
+                <p className="text-xs text-muted-foreground">{item.updatedAt}</p>
               </div>
-              <h3 className="font-medium truncate">Project Proposal.pdf</h3>
-              <p className="text-xs text-muted-foreground">Updated 2 hours ago</p>
-            </div>
-            <div className="border border-sidebar rounded-lg p-4 hover:border-spark-brand dark:hover:border-spark-dark-brand transition-colors group dark-card">
-              <div className="h-40 rounded border border-sidebar flex items-center justify-center bg-spark-brand/10 dark:bg-spark-dark-brand/20 group-hover:bg-spark-brand/20 dark:group-hover:bg-spark-dark-brand/30 transition-colors mb-2">
-                <FileText className="h-10 w-10 text-spark-brand/70 dark:text-spark-dark-brand/80" />
-              </div>
-              <h3 className="font-medium truncate">Meeting Notes.docx</h3>
-              <p className="text-xs text-muted-foreground">Updated yesterday</p>
-            </div>
-            <div className="border border-sidebar rounded-lg p-4 hover:border-spark-secondary dark:hover:border-spark-dark-secondary transition-colors group dark-card">
-              <div className="h-40 rounded border border-sidebar flex items-center justify-center bg-spark-secondary/10 dark:bg-spark-dark-secondary/20 group-hover:bg-spark-secondary/20 dark:group-hover:bg-spark-dark-secondary/30 transition-colors mb-2">
-                <FileText className="h-10 w-10 text-spark-secondary/70 dark:text-spark-dark-secondary/80" />
-              </div>
-              <h3 className="font-medium truncate">Research Data.xlsx</h3>
-              <p className="text-xs text-muted-foreground">Updated 3 days ago</p>
-            </div>
+            ))}
           </div>
         </div>
       </div>

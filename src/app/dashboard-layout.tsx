@@ -7,11 +7,11 @@ import RightSidebar from "@/components/right-sidebar";
 import NestedSidebar from "@/components/nested-sidebar";
 import { Book, Sparkles } from "lucide-react";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
-import { booksService } from "@/lib/books-service";
-import { sparksService } from "@/lib/sparks-service";
 import { SidebarItem } from "@/lib/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRouter, usePathname } from "next/navigation";
+import { useBooksService, useSparksService } from "@/hooks";
+import { EnhancedSparkItem } from "@/services";
 
 /**
  * Load a boolean value from localStorage with fallback
@@ -53,6 +53,10 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   
+  // Get services from hooks
+  const booksService = useBooksService();
+  const sparksService = useSparksService();
+  
   // Track if component has mounted to prevent hydration mismatch
   const [hasMounted, setHasMounted] = useState(false);
   
@@ -71,7 +75,7 @@ export default function DashboardLayout({
   
   // Data states
   const [books, setBooks] = useState<SidebarItem[]>([]);
-  const [sparks, setSparks] = useState<SidebarItem[]>([]);
+  const [sparks, setSparks] = useState<EnhancedSparkItem[]>([]);
   
   // Loading states
   const [loadingBooks, setLoadingBooks] = useState(false);
@@ -133,7 +137,7 @@ export default function DashboardLayout({
       const loadBooks = async () => {
         setLoadingBooks(true);
         try {
-          // Use the real books service instead of mock API
+          // Use the books service through our hook
           const data = await booksService.getBooks();
           setBooks(data);
         } catch (error) {
@@ -147,7 +151,7 @@ export default function DashboardLayout({
       const loadSparks = async () => {
         setLoadingSparks(true);
         try {
-          // Use the real sparks service instead of mock API
+          // Use the sparks service through our hook
           const data = await sparksService.getSparks();
           setSparks(data);
         } catch (error) {
@@ -166,7 +170,7 @@ export default function DashboardLayout({
         loadSparks();
       }
     }
-  }, [hasMounted, booksSidebarOpen, sparksSidebarOpen]);
+  }, [hasMounted, booksSidebarOpen, sparksSidebarOpen, booksService, sparksService]);
 
   // Toggle left sidebar visibility
   const toggleLeftSidebar = () => {

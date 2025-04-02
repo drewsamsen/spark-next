@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import { Play, Clock, Loader2 } from "lucide-react";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { useAuthService, useIntegrationsService } from "@/hooks";
 
 // Define task types
 interface ScheduledTask {
@@ -17,6 +17,8 @@ interface ScheduledTask {
 
 export default function ScheduledTasksTable() {
   const [isRunning, setIsRunning] = useState<Record<string, boolean>>({});
+  const authService = useAuthService();
+  const integrationsService = useIntegrationsService();
   
   // Define available tasks
   const availableTasks: ScheduledTask[] = [
@@ -72,51 +74,40 @@ export default function ScheduledTasksTable() {
     try {
       setIsRunning(prev => ({ ...prev, [task.id]: true }));
       
-      // Get current user and session
-      const supabase = getSupabaseBrowserClient();
-      const { data: sessionData } = await supabase.auth.getSession();
-      const { data: userData } = await supabase.auth.getUser();
+      // Get current user and session using auth service
+      const session = await authService.getSession();
       
-      if (!sessionData.session || !userData.user) {
+      if (!session || !session.user) {
         toast.error("You must be logged in to run tasks");
         return;
       }
       
-      const token = sessionData.session.access_token;
-      const userId = userData.user.id;
+      const token = session.token;
+      const userId = session.user.id;
       
-      // For tasks requiring an API key, fetch it from user settings
+      // For tasks requiring an API key, fetch it from integrations service
       let apiKey, baseId, tableId;
       if (task.requiresApiKey && task.apiKeySource) {
-        const settingsResponse = await fetch(`/api/user-settings?integration=${task.apiKeySource}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+        try {
+          if (task.apiKeySource === 'readwise') {
+            const settings = await integrationsService.getReadwiseSettings();
+            apiKey = settings?.accessToken;
+          } else if (task.apiKeySource === 'airtable') {
+            const settings = await integrationsService.getAirtableSettings();
+            apiKey = settings?.apiKey;
+            baseId = settings?.baseId;
+            tableId = settings?.tableId;
+            
+            if (!baseId || !tableId) {
+              throw new Error(`Missing Airtable Base ID or Table ID. Please configure these in your settings.`);
+            }
           }
-        });
-        
-        if (!settingsResponse.ok) {
-          throw new Error(`Failed to get API key: ${settingsResponse.statusText}`);
-        }
-        
-        const settings = await settingsResponse.json();
-        // When requesting a specific integration, the API returns just that integration's settings directly, 
-        // not the full settings object with integrations nesting
-        apiKey = settings.apiKey;
-        
-        // For Airtable, we also need baseId and tableId
-        if (task.apiKeySource === 'airtable') {
-          baseId = settings.baseId;
-          tableId = settings.tableId;
           
-          if (!baseId || !tableId) {
-            throw new Error(`Missing Airtable Base ID or Table ID. Please configure these in your settings.`);
+          if (!apiKey) {
+            throw new Error(`No Access Token found for ${task.apiKeySource}. Please add it in your settings.`);
           }
-        }
-        
-        if (!apiKey) {
-          throw new Error(`No Access Token found for ${task.apiKeySource}. Please add it in your settings.`);
+        } catch (error) {
+          throw new Error(`Failed to get API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
       

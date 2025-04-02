@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Search, RefreshCw, CheckCircle, XCircle, Clock, Filter, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
-import { useFunctionLogs, FunctionLog } from "@/hooks/use-function-logs";
+import { useFunctionLogsService } from "@/hooks";
+import { FunctionLogModel } from "@/repositories/function-logs.repository";
 
 interface FunctionLogsTableProps {
   className?: string;
@@ -23,15 +24,18 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   
-  // Use the function logs hook with filters
+  // Use the function logs service hook with filters
   const {
     logs,
     isLoading,
     error,
     totalLogs,
     fetchLogs,
-    realtimeConnected
-  } = useFunctionLogs(
+    realtimeConnected,
+    formatDate,
+    formatDuration,
+    filters
+  } = useFunctionLogsService(
     {
       limit,
       offset,
@@ -40,32 +44,50 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
       status: statusFilter as 'started' | 'completed' | 'failed' | undefined,
       function_name: searchTerm.trim() || undefined
     },
-    token
+    !!token // Only enable if token is available
   );
   
   // Handle search
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setOffset(0); // Reset to first page
-    fetchLogs();
+    fetchLogs({
+      limit,
+      offset: 0,
+      order_by: sortField,
+      order_direction: sortDirection,
+      status: statusFilter as 'started' | 'completed' | 'failed' | undefined,
+      function_name: searchTerm.trim() || undefined
+    });
   };
   
   // Handle sort
   const handleSort = (field: string) => {
     if (field === sortField) {
       // Toggle direction if clicking the same field
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      const newDirection = sortDirection === "asc" ? "desc" : "asc";
+      setSortDirection(newDirection);
+      fetchLogs({
+        limit,
+        offset,
+        order_by: field,
+        order_direction: newDirection,
+        status: statusFilter as 'started' | 'completed' | 'failed' | undefined,
+        function_name: searchTerm.trim() || undefined
+      });
     } else {
       // Default to desc for new field
       setSortField(field);
       setSortDirection("desc");
+      fetchLogs({
+        limit,
+        offset,
+        order_by: field,
+        order_direction: "desc",
+        status: statusFilter as 'started' | 'completed' | 'failed' | undefined,
+        function_name: searchTerm.trim() || undefined
+      });
     }
-  };
-  
-  // Format date for display
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "—";
-    return new Date(dateString).toLocaleString();
   };
   
   // Status badge component
@@ -172,7 +194,18 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
           <div className="relative w-40">
             <select 
               value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setOffset(0); // Reset to first page
+                fetchLogs({
+                  limit,
+                  offset: 0,
+                  order_by: sortField,
+                  order_direction: sortDirection,
+                  status: e.target.value as 'started' | 'completed' | 'failed' | undefined,
+                  function_name: searchTerm.trim() || undefined
+                });
+              }}
               className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
             >
               <option value="">All statuses</option>
@@ -281,7 +314,7 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
                 </tr>
               ))
             ) : logs.length === 0 ? (
-              // Empty state - updated colspan
+              // Empty state
               <tr>
                 <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                   <div className="flex flex-col items-center">
@@ -292,7 +325,7 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
               </tr>
             ) : (
               // Table rows with expandable content
-              logs.map((log) => (
+              logs.map((log: FunctionLogModel) => (
                 <>
                   <tr 
                     key={log.id} 
@@ -322,7 +355,7 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
                       {formatDate(log.started_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {log.duration_ms ? `${(log.duration_ms / 1000).toFixed(2)}s` : "—"}
+                      {formatDuration(log.duration_ms)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {log.status === "failed" && log.error_message ? (
@@ -358,105 +391,63 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
       </div>
       
       {/* Pagination */}
-      {pageCount > 1 && (
-        <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <button
-              onClick={() => setOffset(Math.max(0, offset - limit))}
-              disabled={offset === 0}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setOffset(offset + limit)}
-              disabled={currentPage >= pageCount}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-            >
-              Next
-            </button>
+      <div className="bg-white dark:bg-gray-900 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
+        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Showing <span className="font-medium">{Math.min(offset + 1, totalLogs)}</span> to{" "}
+              <span className="font-medium">{Math.min(offset + logs.length, totalLogs)}</span> of{" "}
+              <span className="font-medium">{totalLogs}</span> results
+            </p>
           </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                Showing <span className="font-medium">{logs.length ? offset + 1 : 0}</span> to{" "}
-                <span className="font-medium">{offset + logs.length}</span> of{" "}
-                <span className="font-medium">{totalLogs}</span> results
-              </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button
-                  onClick={() => setOffset(0)}
-                  disabled={offset === 0}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-                >
-                  <span className="sr-only">First</span>
-                  ««
-                </button>
-                <button
-                  onClick={() => setOffset(Math.max(0, offset - limit))}
-                  disabled={offset === 0}
-                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-                >
-                  <span className="sr-only">Previous</span>
-                  «
-                </button>
-                
-                {/* Page buttons */}
-                {Array.from({ length: Math.min(5, pageCount) }, (_, i) => {
-                  // For simplicity, show max 5 pages with current in middle when possible
-                  let pageNum = 1;
-                  if (pageCount <= 5) {
-                    // If total pages <= 5, show all pages
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    // If near start, show first 5 pages
-                    pageNum = i + 1;
-                  } else if (currentPage >= pageCount - 2) {
-                    // If near end, show last 5 pages
-                    pageNum = pageCount - 4 + i;
-                  } else {
-                    // Otherwise current page in middle
-                    pageNum = currentPage - 2 + i;
+          <div>
+            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+              <button
+                onClick={() => {
+                  const newOffset = Math.max(0, offset - limit);
+                  setOffset(newOffset);
+                  fetchLogs({
+                    ...filters,
+                    offset: newOffset
+                  });
+                }}
+                disabled={offset === 0}
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+              >
+                <span className="sr-only">Previous</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+              
+              {/* Current page indicator */}
+              <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Page {currentPage} of {pageCount}
+              </span>
+              
+              <button
+                onClick={() => {
+                  if (offset + limit < totalLogs) {
+                    const newOffset = offset + limit;
+                    setOffset(newOffset);
+                    fetchLogs({
+                      ...filters,
+                      offset: newOffset
+                    });
                   }
-                  
-                  return (
-                    <button
-                      key={`page-${pageNum}`}
-                      onClick={() => setOffset((pageNum - 1) * limit)}
-                      className={`relative inline-flex items-center px-4 py-2 border ${
-                        currentPage === pageNum
-                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-200"
-                          : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
-                      } text-sm font-medium`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                
-                <button
-                  onClick={() => setOffset(offset + limit)}
-                  disabled={currentPage >= pageCount}
-                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-                >
-                  <span className="sr-only">Next</span>
-                  »
-                </button>
-                <button
-                  onClick={() => setOffset((pageCount - 1) * limit)}
-                  disabled={currentPage >= pageCount}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-                >
-                  <span className="sr-only">Last</span>
-                  »»
-                </button>
-              </nav>
-            </div>
+                }}
+                disabled={offset + limit >= totalLogs}
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+              >
+                <span className="sr-only">Next</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </nav>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 } 

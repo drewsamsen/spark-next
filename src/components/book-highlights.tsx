@@ -1,6 +1,6 @@
 'use client';
 
-import { Highlight, Tag } from '@/lib/books-service';
+import { Tag } from '@/lib/books-service';
 import { useState } from 'react';
 import { Search, Tag as TagIcon, CalendarDays, BookOpen, Quote } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -13,14 +13,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useHighlightsService } from '@/hooks';
+import { HighlightDomain } from '@/repositories/highlights.repository';
 
 interface BookHighlightsProps {
-  highlights: Highlight[];
+  highlights: HighlightDomain[];
 }
 
 export default function BookHighlights({ highlights }: BookHighlightsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTag, setFilterTag] = useState<string | null>(null);
+  
+  const highlightsService = useHighlightsService();
   
   // Function to render tag content depending on its type
   const renderTag = (tag: Tag) => {
@@ -44,15 +48,15 @@ export default function BookHighlights({ highlights }: BookHighlightsProps) {
   // Extract all unique tags from highlights (both Readwise and Spark tags)
   const allTags = highlights.reduce((acc: Set<string>, highlight) => {
     // Add Readwise tags
-    if (highlight.tags && highlight.tags.length > 0) {
-      highlight.tags.forEach(tag => {
+    if (highlight.rwTags && highlight.rwTags.length > 0) {
+      highlight.rwTags.forEach(tag => {
         acc.add(renderTag(tag));
       });
     }
     
     // Add Spark tags
-    if (highlight.sparkTags && highlight.sparkTags.length > 0) {
-      highlight.sparkTags.forEach(tag => {
+    if (highlight.tags && highlight.tags.length > 0) {
+      highlight.tags.forEach(tag => {
         acc.add(tag.name);
       });
     }
@@ -89,8 +93,8 @@ export default function BookHighlights({ highlights }: BookHighlightsProps) {
         (highlight.note && highlight.note.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesTag = !filterTag || 
-        (highlight.tags && highlight.tags.some(tag => renderTag(tag) === filterTag)) ||
-        (highlight.sparkTags && highlight.sparkTags.some(tag => tag.name === filterTag));
+        (highlight.rwTags && highlight.rwTags.some(tag => renderTag(tag) === filterTag)) ||
+        (highlight.tags && highlight.tags.some(tag => tag.name === filterTag));
       
       return matchesSearch && matchesTag;
     });
@@ -109,16 +113,16 @@ export default function BookHighlights({ highlights }: BookHighlightsProps) {
   // Count number of highlights for each tag
   const tagCounts = highlights.reduce((acc: Map<string, number>, highlight) => {
     // Count Readwise tags
-    if (highlight.tags && highlight.tags.length > 0) {
-      highlight.tags.forEach(tag => {
+    if (highlight.rwTags && highlight.rwTags.length > 0) {
+      highlight.rwTags.forEach(tag => {
         const tagName = renderTag(tag);
         acc.set(tagName, (acc.get(tagName) || 0) + 1);
       });
     }
     
     // Count Spark tags
-    if (highlight.sparkTags && highlight.sparkTags.length > 0) {
-      highlight.sparkTags.forEach(tag => {
+    if (highlight.tags && highlight.tags.length > 0) {
+      highlight.tags.forEach(tag => {
         const tagName = tag.name;
         acc.set(tagName, (acc.get(tagName) || 0) + 1);
       });
@@ -293,14 +297,14 @@ export default function BookHighlights({ highlights }: BookHighlightsProps) {
                   )}
                 </div>
                 
-                {/* Tags */}
-                {highlight.tags && highlight.tags.length > 0 && (
+                {/* Readwise Tags */}
+                {highlight.rwTags && highlight.rwTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     <div className="flex items-center gap-1">
                       <TagIcon className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">Readwise tags:</span>
                     </div>
-                    {highlight.tags.map((tag, index) => (
+                    {highlight.rwTags.map((tag, index) => (
                       <Badge 
                         key={index} 
                         variant="outline" 
@@ -314,13 +318,13 @@ export default function BookHighlights({ highlights }: BookHighlightsProps) {
                 )}
                 
                 {/* Spark Tags */}
-                {highlight.sparkTags && highlight.sparkTags.length > 0 && (
+                {highlight.tags && highlight.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     <div className="flex items-center gap-1">
                       <TagIcon className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">Spark tags:</span>
                     </div>
-                    {highlight.sparkTags.map((tag, index) => (
+                    {highlight.tags.map((tag, index) => (
                       <Badge 
                         key={index} 
                         variant="outline"

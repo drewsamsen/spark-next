@@ -4,21 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { toast } from "react-toastify";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { useAuthService } from "@/hooks";
 
 export function LogoutButton() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const supabase = getSupabaseBrowserClient();
+  const authService = useAuthService();
 
   const handleLogout = async () => {
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.auth.signOut();
+      const success = await authService.signOut();
       
-      if (error) {
-        throw new Error(error.message);
+      if (!success) {
+        throw new Error("Failed to sign out");
       }
       
       toast.success("Logged out successfully");

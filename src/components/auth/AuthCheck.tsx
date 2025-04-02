@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { useAuthService } from "@/hooks";
 
 interface AuthCheckProps {
   children: React.ReactNode;
@@ -14,7 +14,7 @@ export function AuthCheck({ children, redirectTo = "/login" }: AuthCheckProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = getSupabaseBrowserClient();
+  const authService = useAuthService();
   
   // Skip auth check on login page
   const isLoginPage = pathname === '/login';
@@ -28,11 +28,7 @@ export function AuthCheck({ children, redirectTo = "/login" }: AuthCheckProps) {
     
     const checkAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Session retrieval error:", error);
-        }
+        const session = await authService.getSession();
         
         if (!session) {
           // No session, redirect to login
@@ -40,19 +36,6 @@ export function AuthCheck({ children, redirectTo = "/login" }: AuthCheckProps) {
           return;
         }
         
-        // Verify the token is not expired
-        if (session.expires_at) {
-          const tokenExpiryTime = new Date(session.expires_at * 1000);
-          const now = new Date();
-          
-          if (tokenExpiryTime < now) {
-            console.error("Session token expired, redirecting to login");
-            supabase.auth.signOut();
-            router.push(redirectTo);
-            return;
-          }
-        }
-
         setIsAuthenticated(true);
       } catch (error) {
         console.error("Auth check error:", error);
@@ -64,24 +47,25 @@ export function AuthCheck({ children, redirectTo = "/login" }: AuthCheckProps) {
 
     checkAuth();
     
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'SIGNED_OUT') {
+    // Set up interval to check for session changes
+    const interval = setInterval(async () => {
+      try {
+        const session = await authService.getSession();
+        if (!session && isAuthenticated) {
           setIsAuthenticated(false);
           router.push(redirectTo);
-        } else if (event === 'SIGNED_IN' && session) {
-          setIsAuthenticated(true);
-        } else if (event === 'TOKEN_REFRESHED' && session) {
+        } else if (session && !isAuthenticated) {
           setIsAuthenticated(true);
         }
+      } catch (error) {
+        console.error("Error in periodic auth check:", error);
       }
-    );
+    }, 30000); // Check every 30 seconds
 
     return () => {
-      subscription.unsubscribe();
+      clearInterval(interval);
     };
-  }, [redirectTo, router, supabase, isLoginPage]);
+  }, [redirectTo, router, authService, isLoginPage, isAuthenticated]);
 
   if (isLoading) {
     return (

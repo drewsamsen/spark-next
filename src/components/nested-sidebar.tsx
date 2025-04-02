@@ -9,16 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SidebarItem } from "@/lib/types";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
 import SparkPreviewPanel from "./spark-preview-panel";
-import { EnhancedSparkItem } from "@/lib/sparks-service";
-
-// Sort types
-type SortField = 'name' | 'highlightsCount' | 'date';
-type SortDirection = 'asc' | 'desc';
-
-interface SortState {
-  field: SortField;
-  direction: SortDirection;
-}
+import { EnhancedSparkItem } from "@/services/sparks.service";
+import { SortField, SortState } from "@/services/sidebar.service";
+import { services } from "@/services";
 
 interface NestedSidebarProps {
   isOpen: boolean;
@@ -31,44 +24,6 @@ interface NestedSidebarProps {
   isLoading?: boolean;
 }
 
-/**
- * Create a consistent localStorage key
- */
-function getStorageKey(title: string, type: string): string {
-  return `${title.toLowerCase()}-${type}`;
-}
-
-/**
- * Load sort preferences from localStorage or return default
- */
-function getSavedSort(title: string): SortState {
-  try {
-    const savedSort = localStorage.getItem(`${title.toLowerCase()}-sort`);
-    if (savedSort) {
-      return JSON.parse(savedSort);
-    }
-  } catch (error) {
-    console.error('Error loading sort settings from localStorage:', error);
-  }
-  // Default sort by name ascending
-  return { field: 'name', direction: 'asc' };
-}
-
-/**
- * Load saved search term from localStorage
- */
-function getSavedSearch(title: string): string {
-  try {
-    const savedSearch = localStorage.getItem(`${title.toLowerCase()}-search`);
-    if (savedSearch) {
-      return savedSearch;
-    }
-  } catch (error) {
-    console.error('Error loading search settings from localStorage:', error);
-  }
-  return "";
-}
-
 export default function NestedSidebar({ 
   isOpen, 
   title,
@@ -79,8 +34,12 @@ export default function NestedSidebar({
   onClose,
   isLoading = false
 }: NestedSidebarProps) {
-  const [searchTerm, setSearchTerm] = useState(() => getSavedSearch(title));
-  const [sort, setSort] = useState<SortState>(() => getSavedSort(title));
+  const uiService = services.sidebar;
+  
+  // Initialize search and sort from UI service (which uses localStorage)
+  const [searchTerm, setSearchTerm] = useState(() => uiService.getSavedSearch(title));
+  const [sort, setSort] = useState(() => uiService.getSavedSort(title));
+  
   const { settings, updateLeftSidebarWidth } = useUISettings();
   const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
   const [hoveredSparkId, setHoveredSparkId] = useState<string | null>(null);
@@ -92,15 +51,15 @@ export default function NestedSidebar({
   const resizeHandleRef = useRef<HTMLDivElement>(null);
   const [sidebarWidth, setSidebarWidth] = useState(settings.leftSidebar.width - iconWidth);
   
-  // Save search term to localStorage
+  // Save search term to localStorage via UI service
   useEffect(() => {
-    localStorage.setItem(`${title.toLowerCase()}-search`, searchTerm);
-  }, [searchTerm, title]);
+    uiService.saveSearch(title, searchTerm);
+  }, [searchTerm, title, uiService]);
   
-  // Save sort preferences to localStorage
+  // Save sort preferences to localStorage via UI service
   useEffect(() => {
-    localStorage.setItem(`${title.toLowerCase()}-sort`, JSON.stringify(sort));
-  }, [sort, title]);
+    uiService.saveSort(title, sort);
+  }, [sort, title, uiService]);
   
   // Update width when settings change (but not during resize)
   useEffect(() => {
@@ -113,7 +72,7 @@ export default function NestedSidebar({
   useEffect(() => {
     if (items.length > 0) {
       // This will trigger the existing sort logic to run with current settings
-      setSort(current => ({...current}));
+      setSort((current: SortState) => ({...current}));
     }
   }, [items]);
 
@@ -121,7 +80,6 @@ export default function NestedSidebar({
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    // Search term is automatically saved to localStorage via the useEffect hook
   };
 
   // Handle resize
@@ -190,73 +148,16 @@ export default function NestedSidebar({
     };
   }, [isResizing, iconWidth, updateLeftSidebarWidth]);
 
+  // Use UI service to handle sorting
   const handleSort = (field: SortField) => {
-    setSort(prev => ({
-      field,
-      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
-    }));
-    // Sort settings are automatically saved to localStorage via the useEffect hook
+    setSort(uiService.toggleSort(sort, field));
   };
 
-  // Helper function to parse date strings in various formats
-  const parseDate = (dateStr: string | null | undefined): Date | null => {
-    if (!dateStr) return null;
-    
-    try {
-      // Try to parse the date with various formats
-      // For "Aug '23" format, convert to a date object (August 2023)
-      if (dateStr.includes("'")) {
-        const parts = dateStr.split(" '");
-        const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(parts[0]);
-        const year = 2000 + parseInt(parts[1], 10);
-        if (month >= 0 && !isNaN(year)) {
-          return new Date(year, month, 1);
-        }
-      }
-      
-      // For "MM/YY" format
-      if (dateStr.includes("/")) {
-        const [month, year] = dateStr.split("/").map(Number);
-        const fullYear = 2000 + year; // Assuming 20xx for all years
-        return new Date(fullYear, month - 1, 1);
-      }
-      
-      // Fallback to trying to parse the string directly
-      return new Date(dateStr);
-    } catch (e) {
-      console.error("Error parsing date:", dateStr, e);
-      return null;
-    }
-  };
-
-  // Filter and sort items
-  const filteredAndSortedItems = items
-    .filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => {
-      if (sort.field === 'name') {
-        return sort.direction === 'asc' 
-          ? a.name.localeCompare(b.name)
-          : b.name.localeCompare(a.name);
-      } else if (sort.field === 'highlightsCount') {
-        const countA = a.highlightsCount || 0;
-        const countB = b.highlightsCount || 0;
-        return sort.direction === 'asc' ? countA - countB : countB - countA;
-      } else if (sort.field === 'date') {
-        // Parse dates properly for sorting
-        const dateA = parseDate(a.date);
-        const dateB = parseDate(b.date);
-        
-        if (!dateA && !dateB) return 0;
-        if (!dateA) return sort.direction === 'asc' ? -1 : 1;
-        if (!dateB) return sort.direction === 'asc' ? 1 : -1;
-        
-        // Compare the actual Date objects
-        return sort.direction === 'asc' 
-          ? dateA.getTime() - dateB.getTime() 
-          : dateB.getTime() - dateA.getTime();
-      }
-      return 0;
-    });
+  // Filter and sort items using UI service
+  const filteredAndSortedItems = uiService.sortItems(
+    uiService.filterItems(items, searchTerm),
+    sort
+  );
 
   // If the sidebar isn't open, don't render anything
   if (!isOpen) return null;
@@ -318,10 +219,6 @@ export default function NestedSidebar({
       clearTimeout(hoverTimer);
       setHoverTimer(null);
     }
-    
-    // Brief delay before hiding to allow moving to the panel
-    // We're not using setTimeout anymore as it causes issues with multiple items
-    // Instead we'll let the panel component handle its own visibility
   };
   
   const handleClosePanel = () => {

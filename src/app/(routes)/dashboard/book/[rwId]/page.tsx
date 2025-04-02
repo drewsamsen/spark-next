@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { booksService, BookDetails, Highlight } from '@/lib/books-service';
+import { useBooksService } from '@/hooks';
+import { BookDomain } from '@/repositories/books.repository'; 
+import { HighlightDomain } from '@/repositories/highlights.repository';
 import BookHighlights from '@/components/book-highlights';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ExternalLink, Calendar, Book, Hash } from 'lucide-react';
@@ -11,8 +13,9 @@ import Image from 'next/image';
 export default function BookDetailsPage() {
   const params = useParams();
   const rwId = parseInt(params.rwId as string, 10); // Parse the rwId from the URL
-  const [book, setBook] = useState<BookDetails | null>(null);
-  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const { getBookByReadwiseId, getBookHighlights } = useBooksService();
+  const [book, setBook] = useState<BookDomain | null>(null);
+  const [highlights, setHighlights] = useState<HighlightDomain[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -20,12 +23,12 @@ export default function BookDetailsPage() {
       setIsLoading(true);
       try {
         // Fetch book details by Readwise ID
-        const bookDetails = await booksService.getBookByReadwiseId(rwId);
+        const bookDetails = await getBookByReadwiseId(rwId);
         setBook(bookDetails);
 
         // Fetch book highlights if the book was found
         if (bookDetails) {
-          const bookHighlights = await booksService.getBookHighlights(bookDetails.id);
+          const bookHighlights = await getBookHighlights(bookDetails.id);
           setHighlights(bookHighlights);
         }
       } catch (error) {
@@ -38,7 +41,7 @@ export default function BookDetailsPage() {
     if (rwId && !isNaN(rwId)) {
       loadBookData();
     }
-  }, [rwId]);
+  }, [rwId, getBookByReadwiseId, getBookHighlights]);
 
   if (isLoading) {
     return (

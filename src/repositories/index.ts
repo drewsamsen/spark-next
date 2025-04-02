@@ -4,6 +4,15 @@ import { BooksRepository } from './books.repository';
 import { HighlightsRepository } from './highlights.repository';
 import { CategoriesRepository } from './categories.repository';
 import { TagsRepository } from './tags.repository';
+import { AuthRepository } from './auth.repository';
+import { IntegrationsRepository } from './integrations.repository';
+import { FunctionLogsRepository } from './function-logs.repository';
+import type { SparkDomain } from './sparks.repository'; 
+import type { BookDomain } from './books.repository';
+import type { HighlightDomain } from './highlights.repository';
+import type { CategoryDomain } from './categories.repository';
+import type { TagDomain } from './tags.repository';
+import type { FunctionLogModel } from './function-logs.repository';
 
 /**
  * Registry of repositories
@@ -16,6 +25,9 @@ class RepositoriesRegistry {
   private highlightsRepo: HighlightsRepository | null = null;
   private categoriesRepo: CategoriesRepository | null = null;
   private tagsRepo: TagsRepository | null = null;
+  private authRepo: AuthRepository | null = null;
+  private integrationsRepo: IntegrationsRepository | null = null;
+  private functionLogsRepo: FunctionLogsRepository | null = null;
   
   constructor(serverSide: boolean = false) {
     this.client = getDbClient(serverSide);
@@ -72,6 +84,36 @@ class RepositoriesRegistry {
   }
   
   /**
+   * Get the Auth repository
+   */
+  get auth(): AuthRepository {
+    if (!this.authRepo) {
+      this.authRepo = new AuthRepository(this.client);
+    }
+    return this.authRepo;
+  }
+  
+  /**
+   * Get the Integrations repository
+   */
+  get integrations(): IntegrationsRepository {
+    if (!this.integrationsRepo) {
+      this.integrationsRepo = new IntegrationsRepository(this.client);
+    }
+    return this.integrationsRepo;
+  }
+  
+  /**
+   * Get the Function Logs repository
+   */
+  get functionLogs(): FunctionLogsRepository {
+    if (!this.functionLogsRepo) {
+      this.functionLogsRepo = new FunctionLogsRepository(this.client);
+    }
+    return this.functionLogsRepo;
+  }
+  
+  /**
    * Reset all repositories (useful for testing)
    */
   reset(): void {
@@ -80,6 +122,9 @@ class RepositoriesRegistry {
     this.highlightsRepo = null;
     this.categoriesRepo = null;
     this.tagsRepo = null;
+    this.authRepo = null;
+    this.integrationsRepo = null;
+    this.functionLogsRepo = null;
   }
 }
 
@@ -109,17 +154,21 @@ export type {
   BooksRepository, 
   HighlightsRepository, 
   CategoriesRepository, 
-  TagsRepository 
+  TagsRepository,
+  AuthRepository,
+  IntegrationsRepository,
+  FunctionLogsRepository
 };
 
 // Re-export repository domain models for convenience
-export type { 
+export { 
   SparkDomain, 
   BookDomain, 
   HighlightDomain, 
   CategoryDomain, 
-  TagDomain 
-} from './types';
+  TagDomain,
+  FunctionLogModel
+};
 
 // Export the registry type
 export type { RepositoriesRegistry }; 

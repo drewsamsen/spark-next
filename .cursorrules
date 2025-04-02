@@ -29,6 +29,12 @@ Next.js Structure
 - Use App Router in `app/`. Server components by default, `"use client"` for client logic.
 - `.env` for secrets.
 
+Architecture
+- Repository layer handling direct database access
+- Service layer implementing business logic
+- React hooks providing easy access to the service layer
+- Components consuming the hooks
+
 TypeScript & Syntax
 
 - Strict mode. Avoid `any`.

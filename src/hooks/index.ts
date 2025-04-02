@@ -8,5 +8,10 @@ export {
   useBooksService,
   useHighlightsService,
   useCategorization,
-  useResourceHelper
-} from './use-services'; 
+  useResourceHelper,
+  useAuthService,
+  useIntegrationsService,
+  useSidebarService
+} from './use-services';
+
+export { useFunctionLogsService } from './use-function-logs-service'; 

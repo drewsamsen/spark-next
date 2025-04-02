@@ -4,8 +4,6 @@
 - Performed build check on Next.js app with tRPC and Tailwind configuration
 - Successfully ran production build with Prisma generation and Next.js compilation
 - Fixed dynamic route warning by adding force-dynamic config to root page
-- Added Storybook with Button component and stories, updated .cursorrules with Storybook guidelines
-- Captured screenshot of Button component stories in Storybook
 - Added localStorage persistence for right sidebar width to maintain user's preferred width across sessions.
 - Fixed issue with right sidebar width persistence by improving the save mechanism and directly interacting with localStorage.
 - Removed unused WebSocket configuration from tRPC client to eliminate browser console errors.

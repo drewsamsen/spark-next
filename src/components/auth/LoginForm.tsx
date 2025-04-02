@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { getSupabaseBrowserClient, resetSupabaseBrowserClient } from "@/lib/supabase";
+import { useAuthService } from "@/hooks";
 import { RefreshCw, Info } from "lucide-react";
 
 export function LoginForm() {
@@ -15,7 +15,7 @@ export function LoginForm() {
   const [envInfo, setEnvInfo] = useState<string | null>(null);
 
   const router = useRouter();
-  const supabase = getSupabaseBrowserClient();
+  const authService = useAuthService();
 
   // Check environment on mount
   useEffect(() => {
@@ -39,26 +39,14 @@ export function LoginForm() {
     setErrorMessage(null);
 
     try {
-      // Clear any existing browser sessions first to prevent conflicts
-      await supabase.auth.signOut();
+      // Don't sign out first - that's likely causing session issues
       
       // Attempt to sign in
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const authResult = await authService.signInWithPassword(email, password);
       
-      if (error) {
-        console.error("Auth error:", error.message, error.status);
-        
-        if (error.status === 400) {
-          setErrorMessage("Invalid email or password. Please try again.");
-        } else if (error.status === 429) {
-          setErrorMessage("Too many attempts. Please try again later.");
-        } else {
-          setErrorMessage(error.message);
-        }
-        throw new Error(error.message);
+      if (!authResult) {
+        setErrorMessage("Authentication failed. Please check your credentials and try again.");
+        throw new Error("Authentication failed");
       }
       
       // Login successful
@@ -81,12 +69,8 @@ export function LoginForm() {
   const handleResetAuthState = async () => {
     setIsResetting(true);
     try {
-      // Use the new reset function
-      await resetSupabaseBrowserClient();
-      
-      // Get a fresh client instance
-      const freshClient = getSupabaseBrowserClient();
-      
+      // Use the service to reset client
+      await authService.resetClient();
       toast.success("Auth state reset successfully. Try logging in again.");
       setErrorMessage(null);
     } catch (error) {

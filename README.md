@@ -38,7 +38,6 @@ This template includes [Next.js 14](https://nextjs.org/) with the App Router, [S
 
 ### 🛠️ Development Tools
 
-- [**Storybook**](https://storybook.js.org/) - Component development environment
 - [**Geist Font**](https://vercel.com/font) - Typography by Vercel
 
 ### 🤖 AI & Background Jobs
@@ -131,7 +130,6 @@ This project includes a special development mode that connects to your productio
   - `lib/` - Utilities and configurations
     - `api/` - tRPC routers
     - `utils/` - Shared utilities
-  - `stories/` - Storybook files
 - `supabase/` - Supabase migrations and configurations
   - `migrations/` - Database migrations
 - `scripts/` - Setup and utility scripts

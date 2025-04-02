@@ -9,8 +9,6 @@
     "start": "next start",
     "lint": "next lint",
     "vercel-build": "next build",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
     "setup": "node scripts/setup.js",
     "setup-and-dev": "npm run setup && npm run dev",
     "test-db": "node scripts/test-connection.js",
@@ -60,21 +58,10 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@chromatic-com/storybook": "^3.2.4",
-    "@storybook/addon-essentials": "^8.5.3",
-    "@storybook/addon-interactions": "^8.5.3",
-    "@storybook/addon-links": "^8.5.3",
-    "@storybook/addon-onboarding": "^8.5.3",
-    "@storybook/addon-styling-webpack": "^1.0.1",
-    "@storybook/blocks": "^8.5.3",
-    "@storybook/nextjs": "^8.5.3",
-    "@storybook/react": "^8.5.3",
-    "@storybook/test": "^8.5.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "postcss": "^8",
-    "storybook": "^8.5.3",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

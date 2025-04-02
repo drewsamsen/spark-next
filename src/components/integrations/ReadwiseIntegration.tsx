@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { useIntegrationsService } from "@/hooks";
 import { CheckCircle, XCircle } from "lucide-react";
 
 export default function ReadwiseIntegration() {
@@ -10,106 +10,54 @@ export default function ReadwiseIntegration() {
   const [isConnected, setIsConnected] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkSession = async () => {
-      const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        setToken(data.session.access_token);
-      }
-    };
-    
-    checkSession();
-  }, []);
+  
+  const integrationsService = useIntegrationsService();
 
   useEffect(() => {
     // On component mount, fetch the user's settings
     fetchUserSettings();
-  }, [token]);
+  }, []);
 
   const fetchUserSettings = async () => {
-    if (!token) return;
-    
     try {
       console.log('Fetching Readwise settings...');
-      const response = await fetch('/api/user-settings?integration=readwise', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const settings = await integrationsService.getReadwiseSettings();
       
-      // If the response is 404, it means the user doesn't have settings yet
-      if (response.status === 404) {
-        console.log('No settings found (404)');
-        return;
-      }
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch settings: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Readwise settings received:', data);
-      
-      // When requesting a specific integration, the API returns just that integration's settings
-      // Not the full user settings object with nested integrations
-      if (data) {
-        setApiKey(data.apiKey || '');
-        setIsConnected(data.isConnected || false);
+      // Apply settings if available
+      if (settings) {
+        setApiKey(settings.accessToken || '');
+        
+        // Check if the connection is valid
+        const isConfigValid = !!settings.accessToken;
+        setIsConnected(isConfigValid && await integrationsService.isReadwiseConfigured());
+        
         console.log('Readwise settings applied:', { 
-          apiKey: !!data.apiKey, 
-          isConnected: !!data.isConnected 
+          apiKey: !!settings.accessToken,
+          isConnected: isConfigValid
         });
       }
     } catch (error) {
       console.error('Error fetching Readwise settings:', error);
-      // Only show toast for network or server errors, not for expected missing settings
-      if (error instanceof Error && !error.message.includes('Failed to fetch settings')) {
-        toast.error(`Error loading settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+      toast.error(`Error loading settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
   const saveApiKey = async () => {
-    if (!token) {
-      toast.error("You must be logged in to save settings");
-      return;
-    }
-
     setIsSaving(true);
     try {
       console.log('Saving Readwise API key', { hasKey: !!apiKey });
       
-      const response = await fetch('/api/user-settings', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          integrations: {
-            readwise: {
-              apiKey,
-              isConnected: false // Reset connection status when changing the key
-            }
-          }
-        })
+      const success = await integrationsService.updateReadwiseSettings({
+        accessToken: apiKey
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to save API key: ${response.statusText}`);
+      if (success) {
+        toast.success('API key saved successfully');
+        // Fetch the settings again to verify they were saved correctly
+        await fetchUserSettings();
+      } else {
+        throw new Error('Failed to save API key');
       }
-
-      const result = await response.json();
-      console.log('Save response:', result);
-      toast.success('API key saved successfully');
-      
-      // Fetch the settings again to verify they were saved correctly
-      await fetchUserSettings();
     } catch (error) {
       console.error('Error saving Readwise API key:', error);
       toast.error(`Error saving API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -119,11 +67,6 @@ export default function ReadwiseIntegration() {
   };
 
   const testConnection = async () => {
-    if (!token) {
-      toast.error("You must be logged in to test connection");
-      return;
-    }
-    
     if (!apiKey) {
       toast.error('Please enter an Access Token first');
       return;
@@ -141,26 +84,7 @@ export default function ReadwiseIntegration() {
       
       if (response.status === 204) {
         toast.success('Connection successful! Your Readwise Access Token is valid.');
-        
-        // Update the connection status in settings
-        const updateResponse = await fetch('/api/user-settings', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            integrations: {
-              readwise: {
-                isConnected: true
-              }
-            }
-          })
-        });
-        
-        if (updateResponse.ok) {
-          setIsConnected(true);
-        }
+        setIsConnected(true);
       } else {
         const errorData = await response.json().catch(() => ({ detail: "Invalid Access Token" }));
         toast.error(`Connection failed: ${errorData.detail || 'Invalid Access Token'}`);

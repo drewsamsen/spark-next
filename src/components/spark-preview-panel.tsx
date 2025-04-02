@@ -1,18 +1,18 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { SparkDetails, sparksService } from "@/lib/sparks-service";
 import { X, Tag, Plus, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { toast } from "react-toastify";
+import { SparkDomain } from "@/repositories/sparks.repository";
+import { useSparksService, useCategorization, useResourceHelper } from "@/hooks";
 
 interface SparkPreviewPanelProps {
   sparkId: string | null;
   onClose: () => void;
   position: { top: number; right: number };
-  sparkDetails?: SparkDetails | null;
+  sparkDetails?: SparkDomain | null;
 }
 
 export default function SparkPreviewPanel({ 
@@ -21,7 +21,7 @@ export default function SparkPreviewPanel({
   position,
   sparkDetails: initialSparkDetails = null
 }: SparkPreviewPanelProps) {
-  const [sparkDetails, setSparkDetails] = useState<SparkDetails | null>(initialSparkDetails);
+  const [sparkDetails, setSparkDetails] = useState<SparkDomain | null>(initialSparkDetails);
   const [loading, setLoading] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [showTagInput, setShowTagInput] = useState(false);
@@ -30,6 +30,11 @@ export default function SparkPreviewPanel({
   const panelRef = useRef<HTMLDivElement>(null);
   const panelWidth = 350; // Same as w-[350px]
   const panelMaxHeight = 450; // Same as max-h-[450px]
+  
+  // Get services using hooks
+  const { getSparkDetails } = useSparksService();
+  const { tags: tagService } = useCategorization();
+  const { createSparkResource } = useResourceHelper();
 
   useEffect(() => {
     if (sparkId) {
@@ -69,7 +74,7 @@ export default function SparkPreviewPanel({
   const fetchSparkDetails = async (id: string) => {
     setLoading(true);
     try {
-      const details = await sparksService.getSparkDetails(id);
+      const details = await getSparkDetails(id);
       setSparkDetails(details);
     } catch (error) {
       console.error("Error fetching spark details:", error);
@@ -95,49 +100,16 @@ export default function SparkPreviewPanel({
     if (!sparkId || !newTag.trim() || !sparkDetails) return;
     
     try {
-      const supabase = getSupabaseBrowserClient();
+      // Create a resource object for the spark
+      const sparkResource = createSparkResource(sparkId);
       
-      // First check if the tag exists
-      const { data: existingTags } = await supabase
-        .from('tags')
-        .select('id, name')
-        .ilike('name', newTag.trim())
-        .limit(1);
-
-      let tagId: string;
+      // Create or reuse an existing tag
+      const newTagObj = await tagService.createTag(newTag.trim());
       
-      if (existingTags && existingTags.length > 0) {
-        // Use existing tag
-        tagId = existingTags[0].id;
-      } else {
-        // Create new tag
-        const { data: newTagData, error: createError } = await supabase
-          .from('tags')
-          .insert({ name: newTag.trim() })
-          .select('id')
-          .single();
-          
-        if (createError || !newTagData) {
-          throw new Error("Failed to create tag");
-        }
-        
-        tagId = newTagData.id;
-      }
+      // Associate the tag with the spark
+      await tagService.addTagToResource(sparkResource, newTagObj.id);
       
-      // Create relationship between spark and tag
-      const { error: relationError } = await supabase
-        .from('spark_tags')
-        .insert({
-          spark_id: sparkId,
-          tag_id: tagId,
-          created_by: 'user'
-        });
-        
-      if (relationError) {
-        throw new Error("Failed to add tag to spark");
-      }
-      
-      // Update local state
+      // Update local state to include the new tag
       setSparkDetails(prev => {
         if (!prev) return null;
         
@@ -150,7 +122,7 @@ export default function SparkPreviewPanel({
         
         return {
           ...prev,
-          tags: [...prev.tags, { id: tagId, name: newTag.trim() }]
+          tags: [...prev.tags, { id: newTagObj.id, name: newTagObj.name }]
         };
       });
       
@@ -167,18 +139,11 @@ export default function SparkPreviewPanel({
     if (!sparkId || !sparkDetails) return;
     
     try {
-      const supabase = getSupabaseBrowserClient();
+      // Create a resource object for the spark
+      const sparkResource = createSparkResource(sparkId);
       
-      // Remove the relationship
-      const { error } = await supabase
-        .from('spark_tags')
-        .delete()
-        .eq('spark_id', sparkId)
-        .eq('tag_id', tagId);
-        
-      if (error) {
-        throw new Error("Failed to remove tag");
-      }
+      // Remove the association between tag and spark
+      await tagService.removeTagFromResource(sparkResource, tagId);
       
       // Update local state
       setSparkDetails(prev => {
@@ -196,7 +161,7 @@ export default function SparkPreviewPanel({
     }
   };
 
-  // Format date
+  // Format date using service
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "";
     const date = new Date(dateString);

@@ -38,6 +38,34 @@ export function useCategorization() {
 }
 
 /**
+ * Hook to access the auth service in React components
+ */
+export function useAuthService() {
+  return services.auth;
+}
+
+/**
+ * Hook to access the integrations service in React components
+ */
+export function useIntegrationsService() {
+  return services.integrations;
+}
+
+/**
+ * Hook to access the sidebar service in React components
+ */
+export function useSidebarService() {
+  return services.sidebar;
+}
+
+/**
+ * Hook to access the function logs service in React components
+ */
+export function useFunctionLogsService() {
+  return services.functionLogs;
+}
+
+/**
  * Helper hook for working with resources in the categorization system
  * This provides convenience methods to create resource objects
  */

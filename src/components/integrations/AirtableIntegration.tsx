@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { useIntegrationsService } from "@/hooks";
 import { CheckCircle, XCircle } from "lucide-react";
 
 export default function AirtableIntegration() {
@@ -12,117 +12,64 @@ export default function AirtableIntegration() {
   const [isConnected, setIsConnected] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkSession = async () => {
-      const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        setToken(data.session.access_token);
-      }
-    };
-    
-    checkSession();
-  }, []);
+  
+  const integrationsService = useIntegrationsService();
 
   useEffect(() => {
     // On component mount, fetch the user's settings
     fetchUserSettings();
-  }, [token]);
+  }, []);
 
   const fetchUserSettings = async () => {
-    if (!token) return;
-    
     try {
       console.log('Fetching Airtable settings...');
-      const response = await fetch('/api/user-settings?integration=airtable', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const settings = await integrationsService.getAirtableSettings();
       
-      // If the response is 404, it means the user doesn't have settings yet
-      if (response.status === 404) {
-        console.log('No settings found (404)');
-        return;
-      }
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch settings: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Airtable settings received:', data);
-      
-      // When requesting a specific integration, the API returns just that integration's settings
-      // Not the full user settings object with nested integrations
-      if (data) {
-        setApiKey(data.apiKey || '');
-        setBaseId(data.baseId || '');
-        setTableId(data.tableId || '');
-        setIsConnected(data.isConnected || false);
+      // Apply settings if available
+      if (settings) {
+        setApiKey(settings.apiKey || '');
+        setBaseId(settings.baseId || '');
+        setTableId(settings.tableId || '');
+        
+        // Check if the connection is valid
+        const isConfigValid = !!(settings.apiKey && settings.baseId && settings.tableId);
+        setIsConnected(isConfigValid && await integrationsService.isAirtableConfigured());
+        
         console.log('Airtable settings applied:', { 
-          apiKey: !!data.apiKey, 
-          baseId: !!data.baseId,
-          tableId: !!data.tableId,
-          isConnected: !!data.isConnected
+          apiKey: !!settings.apiKey, 
+          baseId: !!settings.baseId,
+          tableId: !!settings.tableId,
+          isConnected: isConfigValid
         });
       }
     } catch (error) {
       console.error('Error fetching Airtable settings:', error);
-      // Only show toast for network or server errors, not for expected missing settings
-      if (error instanceof Error && !error.message.includes('Failed to fetch settings')) {
-        toast.error(`Error loading settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+      toast.error(`Error loading settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
   const saveSettings = async () => {
-    if (!token) {
-      toast.error("You must be logged in to save settings");
-      return;
-    }
-
     setIsSaving(true);
     try {
       console.log('Saving Airtable settings:', {
         apiKey: !!apiKey,
         baseId,
         tableId,
-        isConnected: false
       });
       
-      const response = await fetch('/api/user-settings', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          integrations: {
-            airtable: {
-              apiKey,
-              baseId,
-              tableId,
-              isConnected: false // Reset connection status when changing the settings
-            }
-          }
-        })
+      const success = await integrationsService.updateAirtableSettings({
+        apiKey,
+        baseId,
+        tableId
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to save settings: ${response.statusText}`);
+      if (success) {
+        toast.success('Airtable settings saved successfully');
+        // Fetch the settings again to verify they were saved correctly
+        await fetchUserSettings();
+      } else {
+        throw new Error('Failed to save settings');
       }
-
-      const result = await response.json();
-      console.log('Save response:', result);
-      toast.success('Airtable settings saved successfully');
-      
-      // Fetch the settings again to verify they were saved correctly
-      await fetchUserSettings();
     } catch (error) {
       console.error('Error saving Airtable settings:', error);
       toast.error(`Error saving settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -132,11 +79,6 @@ export default function AirtableIntegration() {
   };
 
   const testConnection = async () => {
-    if (!token) {
-      toast.error("You must be logged in to test connection");
-      return;
-    }
-    
     if (!apiKey) {
       toast.error('Please enter a Personal Access Token first');
       return;
@@ -166,26 +108,7 @@ export default function AirtableIntegration() {
       
       if (response.ok) {
         toast.success('Connection successful! Your Airtable settings are valid.');
-        
-        // Update the connection status in settings
-        const updateResponse = await fetch('/api/user-settings', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            integrations: {
-              airtable: {
-                isConnected: true
-              }
-            }
-          })
-        });
-        
-        if (updateResponse.ok) {
-          setIsConnected(true);
-        }
+        setIsConnected(true);
       } else {
         const errorData = await response.json().catch(() => ({ error: { message: "Invalid Airtable settings" }}));
         toast.error(`Connection failed: ${errorData.error?.message || 'Invalid Airtable settings'}`);

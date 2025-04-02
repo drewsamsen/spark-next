@@ -12,12 +12,53 @@ export const createBrowserClient = () => {
     throw new Error('Missing Supabase environment variables');
   }
 
+  console.log(`Creating Supabase browser client with URL: ${supabaseUrl}`);
+  
+  // Check if localStorage is available
+  let hasLocalStorage = false;
+  try {
+    hasLocalStorage = typeof window !== 'undefined' && window.localStorage !== undefined;
+    // Test localStorage
+    if (hasLocalStorage) {
+      localStorage.setItem('supabase_test', 'test');
+      localStorage.removeItem('supabase_test');
+      console.log('localStorage is available for auth persistence');
+    }
+  } catch (e) {
+    console.error('localStorage is not available:', e);
+  }
+  
   return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       storageKey: 'supabase.auth.token',
-      detectSessionInUrl: true
+      detectSessionInUrl: true,
+      // Add a longer expiry for cookies to help with persistence
+      storage: hasLocalStorage ? {
+        getItem: (key) => {
+          try {
+            return window.localStorage.getItem(key);
+          } catch (error) {
+            console.error('Error getting localStorage item:', key, error);
+            return null;
+          }
+        },
+        setItem: (key, value) => {
+          try {
+            window.localStorage.setItem(key, value);
+          } catch (error) {
+            console.error('Error setting localStorage item:', key, error);
+          }
+        },
+        removeItem: (key) => {
+          try {
+            window.localStorage.removeItem(key);
+          } catch (error) {
+            console.error('Error removing localStorage item:', key, error);
+          }
+        },
+      } : undefined
     }
   });
 };
@@ -59,8 +100,7 @@ export const getSupabaseBrowserClient = () => {
     browserClient = createBrowserClient();
     lastSupabaseUrl = currentUrl;
     
-    // Don't automatically sign out on client creation - this clears legitimate sessions
-    // when moving between pages or on refresh
+    console.log('Supabase browser client initialized');
   }
   
   return browserClient;

@@ -5,22 +5,22 @@ import { cn } from "@/lib/utils";
 import {
   Book,
   Home,
-  Upload,
-  FileText,
   Settings,
-  Calendar,
-  MessagesSquare,
-  PlusCircle,
   Sparkles,
-  Inbox,
-  Zap,
-  FileInput,
   TagsIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import Link from "next/link";
-import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
+import { useSidebarService, SIDEBAR_SETTINGS } from "@/hooks/use-sidebar-service";
+
+interface NavItem {
+  name: string;
+  icon: React.ReactNode;
+  tooltip: string;
+  href?: string;
+  hasSubmenu?: boolean;
+}
 
 interface LeftSidebarProps {
   isOpen: boolean;
@@ -32,15 +32,6 @@ interface LeftSidebarProps {
   currentPath?: string;
 }
 
-// Nav item interface
-interface NavItem {
-  name: string;
-  icon: React.ReactNode;
-  tooltip: string;
-  hasSubmenu?: boolean;
-  href?: string;
-}
-
 export default function LeftSidebar({
   isOpen,
   setIsOpen,
@@ -50,20 +41,24 @@ export default function LeftSidebar({
   navigateTo,
   currentPath
 }: LeftSidebarProps) {
-  const { settings, updateLeftSidebarWidth } = useUISettings();
-  const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
+  const { 
+    leftSidebarWidth, 
+    updateLeftSidebarWidth,
+    isLoading
+  } = useSidebarService();
+  const iconWidth = SIDEBAR_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
 
   // Resize functionality
   const [isResizing, setIsResizing] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(settings.leftSidebar.width);
+  const [sidebarWidth, setSidebarWidth] = useState(leftSidebarWidth);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
 
   // Update local state when settings change (but not during resize)
   useEffect(() => {
     if (!isResizing) {
-      setSidebarWidth(settings.leftSidebar.width);
+      setSidebarWidth(leftSidebarWidth);
     }
-  }, [settings.leftSidebar.width, isResizing]);
+  }, [leftSidebarWidth, isResizing]);
 
   // Handle resize
   useEffect(() => {
@@ -81,8 +76,8 @@ export default function LeftSidebar({
       const newWidth = e.clientX;
       
       // Apply constraints
-      if (newWidth >= UI_SETTINGS.LEFT_SIDEBAR.MIN_WIDTH && 
-          newWidth <= UI_SETTINGS.LEFT_SIDEBAR.MAX_WIDTH) {
+      if (newWidth >= SIDEBAR_SETTINGS.LEFT_SIDEBAR.MIN_WIDTH && 
+          newWidth <= SIDEBAR_SETTINGS.LEFT_SIDEBAR.MAX_WIDTH) {
         setSidebarWidth(newWidth);
       }
     };
@@ -93,12 +88,12 @@ export default function LeftSidebar({
         const finalWidth = e.clientX;
         // Apply constraints to ensure valid width
         const validWidth = Math.max(
-          UI_SETTINGS.LEFT_SIDEBAR.MIN_WIDTH,
-          Math.min(finalWidth, UI_SETTINGS.LEFT_SIDEBAR.MAX_WIDTH)
+          SIDEBAR_SETTINGS.LEFT_SIDEBAR.MIN_WIDTH,
+          Math.min(finalWidth, SIDEBAR_SETTINGS.LEFT_SIDEBAR.MAX_WIDTH)
         );
         // First update local state
         setSidebarWidth(validWidth);
-        // Then save to user settings
+        // Then save using the service
         updateLeftSidebarWidth(validWidth);
       }
       setIsResizing(false);
@@ -134,32 +129,16 @@ export default function LeftSidebar({
       href: "/dashboard"
     },
     {
-      name: "Upload",
-      icon: <Upload className="h-5 w-5" />,
-      tooltip: "Upload",
-      href: "/upload"
-    },
-    {
       name: "Books",
       icon: <Book className="h-5 w-5" />,
       tooltip: "Books",
       hasSubmenu: true
     },
     {
-      name: "Documents",
-      icon: <FileText className="h-5 w-5" />,
-      tooltip: "Documents"
-    },
-    {
       name: "Sparks",
       icon: <Sparkles className="h-5 w-5" />,
       tooltip: "Sparks",
       hasSubmenu: true
-    },
-    {
-      name: "Synthesize",
-      icon: <Zap className="h-5 w-5" />,
-      tooltip: "Synthesize"
     },
     {
       name: "Context Jobs",
@@ -184,23 +163,15 @@ export default function LeftSidebar({
     }
   };
 
-  // Update the Import link to use client navigation
-  const handleImportClick = (e: React.MouseEvent) => {
-    if (navigateTo) {
-      e.preventDefault();
-      navigateTo("/import", e);
-    }
-    // else will use default navigation
-  };
-
-  if (!isOpen) return null;
+  // Don't render if sidebar is closed or if settings are still loading
+  if (!isOpen || isLoading) return null;
 
   // Calculate styles for different states
   const mainSidebarStyle = isProjectsSidebarOpen
     ? { width: `${iconWidth}px`, transition: 'none' }
     : { 
         width: `${sidebarWidth}px`, 
-        transition: 'none' 
+        transition: isResizing ? 'none' : 'width 300ms ease-in-out' 
       };
 
   return (
@@ -279,45 +250,15 @@ export default function LeftSidebar({
                 <span>Settings</span>
               </a>
             )}
-
-            {/* Import option */}
-            {isProjectsSidebarOpen ? (
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <a
-                    href="/import"
-                    onClick={handleImportClick}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
-                    aria-label="Import"
-                  >
-                    <FileInput className="h-5 w-5" />
-                  </a>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={-10} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
-                  Import
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <a
-                href="/import"
-                onClick={handleImportClick}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
-              >
-                <FileInput className="h-5 w-5" />
-                <span>Import</span>
-              </a>
-            )}
           </div>
         </div>
       </div>
       
-      {/* Resize handle - only show when nested sidebar is closed */}
+      {/* Resize handle visible when not in projects mode */}
       {!isProjectsSidebarOpen && (
         <div
           ref={resizeHandleRef}
-          className="absolute right-0 inset-y-0 w-2 bg-transparent hover:bg-spark-primary/20 dark:hover:bg-spark-dark-primary/20 cursor-ew-resize z-30"
-          title="Drag to resize"
-          style={{ transition: isResizing ? 'none' : 'opacity 200ms ease-in-out' }}
+          className="absolute top-0 right-0 h-full w-1 cursor-ew-resize opacity-0 hover:opacity-100 hover:bg-spark-primary/50 dark:hover:bg-spark-dark-primary/50 transition-opacity"
         />
       )}
     </div>

@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
+import { useSidebarService, SIDEBAR_SETTINGS } from "@/hooks/use-sidebar-service";
 
 interface RightSidebarProps {
   isOpen: boolean;
@@ -11,19 +11,23 @@ interface RightSidebarProps {
 }
 
 export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
-  const { settings, updateRightSidebarWidth } = useUISettings();
+  const { 
+    rightSidebarWidth, 
+    updateRightSidebarWidth,
+    isLoading
+  } = useSidebarService();
   
   // Resize functionality
   const [isResizing, setIsResizing] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(settings.rightSidebar.width);
+  const [sidebarWidth, setSidebarWidth] = useState(rightSidebarWidth);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
 
   // Update local state when settings change (but not during resize)
   useEffect(() => {
     if (!isResizing) {
-      setSidebarWidth(settings.rightSidebar.width);
+      setSidebarWidth(rightSidebarWidth);
     }
-  }, [settings.rightSidebar.width, isResizing]);
+  }, [rightSidebarWidth, isResizing]);
 
   // Handle resize
   useEffect(() => {
@@ -41,8 +45,8 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
       const newWidth = window.innerWidth - e.clientX;
       
       // Apply constraints
-      if (newWidth >= UI_SETTINGS.RIGHT_SIDEBAR.MIN_WIDTH && 
-          newWidth <= UI_SETTINGS.RIGHT_SIDEBAR.MAX_WIDTH) {
+      if (newWidth >= SIDEBAR_SETTINGS.RIGHT_SIDEBAR.MIN_WIDTH && 
+          newWidth <= SIDEBAR_SETTINGS.RIGHT_SIDEBAR.MAX_WIDTH) {
         setSidebarWidth(newWidth);
       }
     };
@@ -53,8 +57,8 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
         const finalWidth = window.innerWidth - e.clientX;
         // Apply constraints to ensure valid width
         const validWidth = Math.max(
-          UI_SETTINGS.RIGHT_SIDEBAR.MIN_WIDTH,
-          Math.min(finalWidth, UI_SETTINGS.RIGHT_SIDEBAR.MAX_WIDTH)
+          SIDEBAR_SETTINGS.RIGHT_SIDEBAR.MIN_WIDTH,
+          Math.min(finalWidth, SIDEBAR_SETTINGS.RIGHT_SIDEBAR.MAX_WIDTH)
         );
         // First update local state
         setSidebarWidth(validWidth);
@@ -83,9 +87,10 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
     };
   }, [isResizing, updateRightSidebarWidth]);
 
-  if (!isOpen) return null;
+  // Don't render if sidebar is closed or if settings are still loading
+  if (!isOpen || isLoading) return null;
   
-  // Construct style object only once at render time
+  // Just apply the width directly, no transition needed since we only render when we have the correct width
   const sidebarStyle = {
     width: `${sidebarWidth}px`,
     transition: isResizing ? 'none' : 'width 300ms ease-in-out'
