@@ -1,87 +1,14 @@
 import { BaseRepository } from './base.repository';
 import { DbClient } from '@/lib/db';
 import { DatabaseError, NotFoundError } from '@/lib/errors';
-
-/**
- * Definition of spark category
- */
-export interface SparkCategory {
-  id: string;
-  name: string;
-}
-
-/**
- * Definition of spark tag
- */
-export interface SparkTag {
-  id: string;
-  name: string;
-}
-
-/**
- * Database model for a spark
- */
-export interface SparkModel {
-  id: string;
-  user_id: string;
-  body: string;
-  todo_created_at: string | null;
-  todo_id: string | null;
-  md5_uid: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * Detailed spark with categories and tags
- */
-export interface SparkWithRelations {
-  id: string;
-  user_id: string;
-  body: string;
-  todo_created_at: string | null;
-  todo_id: string | null;
-  md5_uid: string | null;
-  created_at: string;
-  updated_at: string;
-  categories: {
-    category: {
-      id: string;
-      name: string;
-    };
-  }[];
-  tags: {
-    tag: {
-      id: string;
-      name: string;
-    };
-  }[];
-}
-
-/**
- * Spark domain model
- */
-export interface SparkDomain {
-  id: string;
-  body: string;
-  createdAt: string;
-  todoCreatedAt: string | null;
-  todoId: string | null;
-  md5Uid: string | null;
-  updatedAt: string;
-  categories: SparkCategory[];
-  tags: SparkTag[];
-}
-
-/**
- * Input to create a new spark
- */
-export interface CreateSparkInput {
-  body: string;
-  todoCreatedAt?: string | null;
-  todoId?: string | null;
-  md5Uid?: string | null;
-}
+import { 
+  SparkCategory, 
+  SparkTag, 
+  SparkModel, 
+  SparkWithRelations, 
+  SparkDomain,
+  CreateSparkInput
+} from '@/lib/types';
 
 /**
  * Repository for sparks

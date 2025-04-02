@@ -1,32 +1,6 @@
 import { BaseRepository } from './base.repository';
 import { handleServiceError } from '@/lib/errors';
-
-export interface FunctionLogModel {
-  id: string;
-  function_name: string;
-  function_id: string;
-  run_id: string;
-  status: 'started' | 'completed' | 'failed';
-  started_at: string;
-  completed_at: string | null;
-  duration_ms: number | null;
-  input_params: any;
-  result_data: any;
-  error_message: string | null;
-  error_stack: string | null;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-}
-
-export interface FunctionLogsFilter {
-  function_name?: string;
-  status?: 'started' | 'completed' | 'failed';
-  order_by?: string;
-  order_direction?: 'asc' | 'desc';
-  limit?: number;
-  offset?: number;
-}
+import { FunctionLogModel, FunctionLogsFilter } from '@/lib/types';
 
 export class FunctionLogsRepository extends BaseRepository {
   /**

@@ -2,36 +2,7 @@ import { BaseRepository } from './base.repository';
 import { DbClient } from '@/lib/db';
 import { DatabaseError, ValidationError } from '@/lib/errors';
 import { Resource, ResourceType } from '@/lib/categorization/types';
-
-/**
- * Database model for a category
- */
-export interface CategoryModel {
-  id: string;
-  user_id: string;
-  name: string;
-  slug: string;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * Category domain model
- */
-export interface CategoryDomain {
-  id: string;
-  name: string;
-  slug: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * Input to create a new category
- */
-export interface CreateCategoryInput {
-  name: string;
-}
+import { CategoryModel, CategoryDomain, CreateCategoryInput } from '@/lib/types';
 
 /**
  * Repository for categories

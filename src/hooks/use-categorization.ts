@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useCategorization as useCategorizationService } from '@/lib/categorization';
-import { Resource, Category, Tag, CategorizationJob } from '@/lib/categorization/types';
+import { 
+  Resource, 
+  Category, 
+  Tag, 
+  CategorizationJob, 
+  CategorizationResult 
+} from '@/lib/categorization/types';
 import { toast } from 'react-toastify';
 import { useAuthService } from './use-services';
 
@@ -52,7 +58,7 @@ export function useCategories(): UseCategoriesReturn {
   useEffect(() => {
     let isMounted = true;
     
-    const loadCategories = async () => {
+    const loadCategories = async (): Promise<void> => {
       try {
         setIsLoading(true);
         
@@ -189,7 +195,7 @@ export function useTags(): UseTagsReturn {
   useEffect(() => {
     let isMounted = true;
     
-    const loadTags = async () => {
+    const loadTags = async (): Promise<void> => {
       try {
         setIsLoading(true);
         
@@ -326,7 +332,7 @@ export function useCategorizationJobs(): UseJobsReturn {
   useEffect(() => {
     let isMounted = true;
     
-    const loadJobs = async () => {
+    const loadJobs = async (): Promise<void> => {
       try {
         setIsLoading(true);
         

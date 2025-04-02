@@ -1,5 +1,5 @@
 import { getRepositories } from '@/repositories';
-import { HighlightDomain, CreateHighlightInput } from '@/repositories/highlights.repository';
+import { HighlightDomain, CreateHighlightInput } from '@/lib/types';
 import { handleServiceError, handleServiceItemError } from '@/lib/errors';
 
 /**

@@ -4,16 +4,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSparksService } from './use-services';
 import { useAuthService } from './use-services';
 import { toast } from 'react-toastify';
+import { SparkDomain, EnhancedSparkItem, CreateSparkInput } from '@/lib/types';
 
 // Define interfaces for our hook return values
 interface UseSparksReturn {
-  sparks: any[]; // We should define a proper type for sparks
+  sparks: EnhancedSparkItem[];
   isLoading: boolean;
   error: Error | null;
-  getSparks: () => Promise<any[]>;
-  getSparkDetails: (sparkId: string) => Promise<any | null>;
-  createSpark: (data: any) => Promise<any | null>;
-  updateSpark: (sparkId: string, data: any) => Promise<any | null>;
+  getSparks: () => Promise<EnhancedSparkItem[]>;
+  getSparkDetails: (sparkId: string) => Promise<SparkDomain | null>;
+  createSpark: (data: CreateSparkInput) => Promise<SparkDomain | null>;
+  updateSpark: (sparkId: string, data: Partial<CreateSparkInput>) => Promise<SparkDomain | null>;
   deleteSpark: (sparkId: string) => Promise<boolean>;
 }
 
@@ -21,7 +22,7 @@ interface UseSparksReturn {
  * React hook for managing sparks with loading states and error handling
  */
 export function useSparks(): UseSparksReturn {
-  const [sparks, setSparks] = useState<any[]>([]);
+  const [sparks, setSparks] = useState<EnhancedSparkItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   
@@ -81,7 +82,7 @@ export function useSparks(): UseSparksReturn {
   
   // Function to get sparks
   const getSparks = useCallback(
-    async (): Promise<any[]> => {
+    async (): Promise<EnhancedSparkItem[]> => {
       try {
         setIsLoading(true);
         const data = await sparksService.getSparks();
@@ -104,7 +105,7 @@ export function useSparks(): UseSparksReturn {
   
   // Function to get a specific spark's details
   const getSparkDetails = useCallback(
-    async (sparkId: string): Promise<any | null> => {
+    async (sparkId: string): Promise<SparkDomain | null> => {
       try {
         return await sparksService.getSparkDetails(sparkId);
       } catch (err) {
@@ -118,12 +119,21 @@ export function useSparks(): UseSparksReturn {
   
   // Function to create a new spark
   const createSpark = useCallback(
-    async (data: any): Promise<any | null> => {
+    async (data: CreateSparkInput): Promise<SparkDomain | null> => {
       try {
         const newSpark = await sparksService.createSpark(data);
         
-        // Update local state
-        setSparks(prev => [newSpark, ...prev]);
+        // Update local state with the new spark
+        if (newSpark) {
+          const enhancedSpark: EnhancedSparkItem = {
+            id: newSpark.id,
+            name: newSpark.body,
+            date: newSpark.createdAt,
+            details: newSpark
+          };
+          
+          setSparks(prev => [enhancedSpark, ...prev]);
+        }
         
         toast.success('Spark created successfully');
         return newSpark;
@@ -138,14 +148,20 @@ export function useSparks(): UseSparksReturn {
   
   // Function to update a spark
   const updateSpark = useCallback(
-    async (sparkId: string, data: any): Promise<any | null> => {
+    async (sparkId: string, data: Partial<CreateSparkInput>): Promise<SparkDomain | null> => {
       try {
         const updatedSpark = await sparksService.updateSpark(sparkId, data);
         
         // Update local state
-        setSparks(prev => prev.map(spark => 
-          spark.id === sparkId ? updatedSpark : spark
-        ));
+        if (updatedSpark) {
+          setSparks(prev => prev.map(spark => 
+            spark.id === sparkId ? {
+              ...spark,
+              name: updatedSpark.body,
+              details: updatedSpark
+            } : spark
+          ));
+        }
         
         toast.success('Spark updated successfully');
         return updatedSpark;

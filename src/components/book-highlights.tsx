@@ -14,7 +14,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useHighlightsService } from '@/hooks';
-import { HighlightDomain } from '@/repositories/highlights.repository';
+import { HighlightDomain } from '@/lib/types';
 
 interface BookHighlightsProps {
   highlights: HighlightDomain[];

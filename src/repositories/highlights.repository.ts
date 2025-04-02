@@ -1,97 +1,14 @@
 import { BaseRepository } from './base.repository';
 import { DbClient } from '@/lib/db';
 import { DatabaseError, NotFoundError } from '@/lib/errors';
-
-/**
- * Definition of highlight tag
- */
-export interface HighlightTag {
-  id: string;
-  name: string;
-}
-
-/**
- * Definition of highlight category
- */
-export interface HighlightCategory {
-  id: string;
-  name: string;
-}
-
-/**
- * Database model for a highlight
- */
-export interface HighlightModel {
-  id: string;
-  user_id: string;
-  book_id: string;
-  rw_id: number;
-  rw_text: string | null;
-  rw_note: string | null;
-  rw_location: string | null;
-  rw_location_type: string | null;
-  rw_highlighted_at: string | null;
-  rw_url: string | null;
-  rw_color: string | null;
-  rw_tags: (string | { id: string; name: string })[] | null;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * Detailed highlight with categories and tags
- */
-export interface HighlightWithRelations extends HighlightModel {
-  categories: {
-    category: {
-      id: string;
-      name: string;
-    };
-  }[];
-  tags: {
-    tag: {
-      id: string;
-      name: string;
-    };
-  }[];
-}
-
-/**
- * Highlight domain model
- */
-export interface HighlightDomain {
-  id: string;
-  bookId: string;
-  rwId: number;
-  text: string;
-  note: string | null;
-  location: string | null;
-  locationType: string | null;
-  highlightedAt: string | null;
-  url: string | null;
-  color: string | null;
-  rwTags: (string | { id: string; name: string })[] | null;
-  categories: HighlightCategory[];
-  tags: HighlightTag[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * Input to create a new highlight
- */
-export interface CreateHighlightInput {
-  bookId: string;
-  rwId: number;
-  rwText: string;
-  rwNote?: string | null;
-  rwLocation?: string | null;
-  rwLocationType?: string | null;
-  rwHighlightedAt?: string | null;
-  rwUrl?: string | null;
-  rwColor?: string | null;
-  rwTags?: (string | { id: string; name: string })[] | null;
-}
+import { 
+  HighlightTag,
+  HighlightCategory,
+  HighlightModel,
+  HighlightWithRelations,
+  HighlightDomain,
+  CreateHighlightInput
+} from '@/lib/types';
 
 /**
  * Repository for highlights
@@ -102,7 +19,7 @@ export class HighlightsRepository extends BaseRepository {
   }
 
   /**
-   * Get all highlights for a book
+   * Get highlights for a book
    */
   async getHighlightsByBookId(bookId: string): Promise<HighlightWithRelations[]> {
     const userId = await this.getUserId();

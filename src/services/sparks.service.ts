@@ -1,15 +1,7 @@
 import { getRepositories } from '@/repositories';
-import { SparkDomain, CreateSparkInput } from '@/repositories/sparks.repository';
+import { CreateSparkInput, SparkDomain, EnhancedSparkItem, SidebarItem } from '@/lib/types';
 import { formatDate } from '@/lib/db';
-import { SidebarItem } from '@/lib/types';
 import { handleServiceError, handleServiceItemError } from '@/lib/errors';
-
-/**
- * Extended interface that combines SidebarItem with SparkDetails
- */
-export interface EnhancedSparkItem extends SidebarItem {
-  details: SparkDomain;
-}
 
 /**
  * Service for handling sparks-related operations

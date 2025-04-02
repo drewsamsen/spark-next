@@ -1,23 +1,7 @@
 import { getRepositories } from '@/repositories';
 import { handleServiceItemError } from '@/lib/errors';
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
-
-/**
- * Type for auth user data
- */
-export interface AuthUser {
-  id: string;
-  email: string;
-}
-
-/**
- * Type for auth session data
- */
-export interface AuthSession {
-  user: AuthUser;
-  token: string;
-  expiresAt: number;
-}
+import { AuthUser, AuthSession } from '@/lib/types';
 
 /**
  * Type for auth change callback
@@ -25,7 +9,7 @@ export interface AuthSession {
 export type AuthChangeCallback = (session: AuthSession | null) => void;
 
 /**
- * Service for handling authentication operations
+ * Service for handling authentication-related operations
  */
 export const authService = {
   /**

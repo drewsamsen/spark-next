@@ -1,118 +1,15 @@
 import { BaseRepository } from './base.repository';
 import { DbClient } from '@/lib/db';
 import { DatabaseError, NotFoundError } from '@/lib/errors';
-
-/**
- * Definition of book category
- */
-export interface BookCategory {
-  id: string;
-  name: string;
-}
-
-/**
- * Definition of book tag
- */
-export interface BookTag {
-  id: string;
-  name: string;
-}
-
-/**
- * Database model for a book
- */
-export interface BookModel {
-  id: string;
-  user_id: string;
-  rw_id: number;
-  rw_title: string | null;
-  rw_author: string | null;
-  rw_category: string | null;
-  rw_source: string | null;
-  rw_num_highlights: number | null;
-  rw_last_highlight_at: string | null;
-  rw_updated: string | null;
-  rw_cover_image_url: string | null;
-  rw_highlights_url: string | null;
-  rw_source_url: string | null;
-  rw_asin: string | null;
-  rw_tags: string[] | null;
-  rw_document_note: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * Detailed book with categories and tags
- */
-export interface BookWithRelations extends BookModel {
-  categories: {
-    category: {
-      id: string;
-      name: string;
-    };
-  }[];
-  tags: {
-    tag: {
-      id: string;
-      name: string;
-    };
-  }[];
-}
-
-/**
- * Book domain model
- */
-export interface BookDomain {
-  id: string;
-  rwId: number;
-  title: string;
-  author: string | null;
-  category: string | null;
-  source: string | null;
-  numHighlights: number;
-  lastHighlightAt: string | null;
-  coverImageUrl: string | null;
-  highlightsUrl: string | null;
-  sourceUrl: string | null;
-  documentNote: string | null;
-  rwTags: string[] | null;
-  categories: BookCategory[];
-  tags: BookTag[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * Basic book info for lists
- */
-export interface BookBasicInfo {
-  id: string;
-  rwId: number;
-  title: string;
-  numHighlights: number;
-  lastHighlightAt: string | null;
-}
-
-/**
- * Input to create a new book
- */
-export interface CreateBookInput {
-  rwId: number;
-  rwTitle?: string | null;
-  rwAuthor?: string | null;
-  rwCategory?: string | null;
-  rwSource?: string | null;
-  rwNumHighlights?: number | null;
-  rwLastHighlightAt?: string | null;
-  rwUpdated?: string | null;
-  rwCoverImageUrl?: string | null;
-  rwHighlightsUrl?: string | null;
-  rwSourceUrl?: string | null;
-  rwAsin?: string | null;
-  rwTags?: string[] | null;
-  rwDocumentNote?: string | null;
-}
+import { 
+  BookCategory, 
+  BookTag, 
+  BookModel, 
+  BookWithRelations, 
+  BookDomain,
+  BookBasicInfo,
+  CreateBookInput
+} from '@/lib/types';
 
 /**
  * Repository for books

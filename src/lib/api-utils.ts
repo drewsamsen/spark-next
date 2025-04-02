@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/services';
+import { AuthenticatedUser } from './types';
 
 /**
- * Interface for authenticated user data
- */
-export interface AuthenticatedUser {
-  id: string;
-  email: string;
-}
-
-/**
- * Interface for authentication result
+ * Interface for authentication result specific to API routes
  */
 export interface AuthResult {
   user: AuthenticatedUser | null;

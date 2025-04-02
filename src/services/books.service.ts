@@ -1,8 +1,6 @@
 import { getRepositories } from '@/repositories';
-import { BookDomain, CreateBookInput } from '@/repositories/books.repository';
-import { HighlightDomain } from '@/repositories/highlights.repository';
+import { BookDomain, CreateBookInput, SidebarItem, HighlightDomain } from '@/lib/types';
 import { formatDate } from '@/lib/db';
-import { SidebarItem } from '@/lib/types';
 import { handleServiceError, handleServiceItemError } from '@/lib/errors';
 
 /**

@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useBooksService } from '@/hooks';
-import { BookDomain } from '@/repositories/books.repository'; 
-import { HighlightDomain } from '@/repositories/highlights.repository';
+import { BookDomain, HighlightDomain } from '@/lib/types'; 
 import BookHighlights from '@/components/book-highlights';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ExternalLink, Calendar, Book, Hash } from 'lucide-react';

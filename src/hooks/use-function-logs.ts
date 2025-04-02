@@ -4,41 +4,16 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from "react-toastify";
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { useRealtimeSubscription } from './use-realtime-subscription';
+import { FunctionLogModel, FunctionLogsFilter } from '@/lib/types';
 
-// Define the FunctionLog type
-export interface FunctionLog {
-  id: string;
-  function_name: string;
-  function_id: string;
-  run_id: string;
-  status: 'started' | 'completed' | 'failed';
-  started_at: string;
-  completed_at: string | null;
-  duration_ms: number | null;
-  input_params: any;
-  result_data: any;
-  error_message: string | null;
-  error_stack: string | null;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-}
-
-// Define filters for the logs
-export interface FunctionLogsFilter {
-  function_name?: string;
-  status?: 'started' | 'completed' | 'failed';
-  order_by?: string;
-  order_direction?: 'asc' | 'desc';
-  limit?: number;
-  offset?: number;
-}
+// Define the type alias for the legacy name for backwards compatibility
+export type FunctionLog = FunctionLogModel;
 
 /**
  * Hook to fetch and subscribe to function logs with real-time updates
  */
 export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?: string | null) {
-  const [logs, setLogs] = useState<FunctionLog[]>([]);
+  const [logs, setLogs] = useState<FunctionLogModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalLogs, setTotalLogs] = useState(0);
@@ -137,7 +112,7 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
     
     if (eventType === 'INSERT') {
       // For new logs, add them to the state if they match current filters
-      const newLog = payload.new as FunctionLog;
+      const newLog = payload.new as FunctionLogModel;
       
       // Only show toast for non-started logs to reduce noise
       if (newLog.status !== 'started') {
@@ -157,8 +132,8 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
           
           const newLogs = [...prev, newLog];
           return newLogs.sort((a, b) => {
-            const aVal = a[sortBy as keyof FunctionLog] as any;
-            const bVal = b[sortBy as keyof FunctionLog] as any;
+            const aVal = a[sortBy as keyof FunctionLogModel] as any;
+            const bVal = b[sortBy as keyof FunctionLogModel] as any;
             return isDESC ? (aVal > bVal ? -1 : 1) : (aVal > bVal ? 1 : -1);
           }).slice(0, filters.limit || 10); // Keep the same page size
         });
@@ -168,7 +143,7 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
       }
     } else if (eventType === 'UPDATE') {
       // For updated logs, update them in-place
-      const updatedLog = payload.new as FunctionLog;
+      const updatedLog = payload.new as FunctionLogModel;
       
       // Show toast for status changes, but prevent duplicate toasts
       if (payload.old && payload.old.status !== updatedLog.status) {
@@ -189,7 +164,7 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
       );
     } else if (eventType === 'DELETE') {
       // For deleted logs, remove them from state
-      const deletedLog = payload.old as FunctionLog;
+      const deletedLog = payload.old as FunctionLogModel;
       
       setLogs(prev => 
         prev.filter(log => log.id !== deletedLog.id)
@@ -201,7 +176,7 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
   }, [filters, logs]);
   
   // Subscribe to realtime updates - properly scoped
-  const { isConnected } = useRealtimeSubscription<FunctionLog>(
+  const { isConnected } = useRealtimeSubscription<FunctionLogModel>(
     { table: 'function_logs' },
     handleRealtimeUpdate
   );

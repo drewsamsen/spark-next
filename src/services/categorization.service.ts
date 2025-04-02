@@ -1,5 +1,5 @@
 import { getRepositories } from '@/repositories';
-import { CategoryDomain } from '@/repositories/categories.repository';
+import { CategoryDomain } from '@/lib/types';
 import { TagDomain } from '@/repositories/tags.repository';
 import { Resource, ResourceType, Category, Tag, CategorizationJob, CategorizationAction, CategorizationResult } from '@/lib/categorization/types';
 import { CategoryService, TagService, JobService } from '@/lib/categorization/services';
