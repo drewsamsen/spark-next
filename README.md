@@ -8,11 +8,13 @@ Spark is a Next.js application built with a focus on clean architecture, type sa
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 (App Router), React, TypeScript
+- **Frontend**: Next.js 15 (App Router), React, TypeScript
 - **Styling**: Tailwind CSS, Lucide icons
+- **State Management**: React hooks
 - **Database**: Supabase (PostgreSQL)
 - **Authentication**: Supabase Auth
 - **Background Jobs**: Inngest
+- **Notifications**: `react-toastify`
 - **API**: TypeScript interfaces with strict typing
 - **Deployment**: Vercel
 
@@ -20,12 +22,20 @@ Spark is a Next.js application built with a focus on clean architecture, type sa
 
 Spark follows a layered architecture:
 
-1. **Repository Layer**: Handles direct database access
-2. **Service Layer**: Implements business logic
+1. **Repository Layer**: Handles direct database access through Supabase
+2. **Service Layer**: Implements business logic using repositories
 3. **React Hooks**: Provides components with access to services
 4. **Components**: Consume hooks for UI and interactions
 
 This pattern ensures separation of concerns, testability, and maintainability.
+
+## Key Design Patterns
+
+- **Clean Architecture**: Separation of concerns with distinct layers
+- **Repository Pattern**: Abstraction over database operations
+- **Service Pattern**: Centralized business logic
+- **Hook Pattern**: Simplified component access to services
+- **Atomic Components**: Small, reusable UI components
 
 ## Getting Started
 
@@ -109,6 +119,16 @@ Our development follows standardized practices defined in `.cursor/rules`:
 - **File Structure**: Consistent directory organization
 
 These standards serve as the authoritative reference for development.
+
+### Development Guidelines
+
+- Use TypeScript with strict typing
+- Prefer functional components with `"use client"` when needed
+- Implement new features following the `repo → service → hook → component` flow
+- Centralize types in `src/lib/types.ts`
+- Follow established naming conventions:
+  - **PascalCase** for components
+  - **kebab-case** for routes
 
 ## Background Jobs
 
