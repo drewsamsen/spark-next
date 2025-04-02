@@ -171,7 +171,7 @@ export default function LeftSidebar({
     ? { width: `${iconWidth}px`, transition: 'none' }
     : { 
         width: `${sidebarWidth}px`, 
-        transition: isResizing ? 'none' : 'width 300ms ease-in-out' 
+        transition: 'none' 
       };
 
   return (

@@ -11,7 +11,11 @@ export {
   useResourceHelper,
   useAuthService,
   useIntegrationsService,
-  useSidebarService
+  useSidebarService,
+  useHeaderService,
+  useUserSettingsService
 } from './use-services';
 
-export { useFunctionLogsService } from './use-function-logs-service'; 
+export { useFunctionLogsService } from './use-function-logs-service';
+
+export { useUserSettings } from './use-user-settings-service'; 

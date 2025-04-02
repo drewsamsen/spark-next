@@ -66,6 +66,20 @@ export function useFunctionLogsService() {
 }
 
 /**
+ * Hook to access the header service in React components
+ */
+export function useHeaderService() {
+  return services.header;
+}
+
+/**
+ * Hook to access the user settings service in React components
+ */
+export function useUserSettingsService() {
+  return services.userSettings;
+}
+
+/**
  * Helper hook for working with resources in the categorization system
  * This provides convenience methods to create resource objects
  */

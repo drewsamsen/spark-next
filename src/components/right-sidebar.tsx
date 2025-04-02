@@ -93,7 +93,7 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
   // Just apply the width directly, no transition needed since we only render when we have the correct width
   const sidebarStyle = {
     width: `${sidebarWidth}px`,
-    transition: isResizing ? 'none' : 'width 300ms ease-in-out'
+    transition: 'none'
   };
 
   return (
@@ -106,7 +106,7 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
         ref={resizeHandleRef}
         className="absolute inset-y-0 left-0 w-2 bg-transparent hover:bg-spark-primary/20 dark:hover:bg-spark-dark-primary/20 cursor-ew-resize z-30"
         title="Drag to resize"
-        style={{ transition: isResizing ? 'none' : 'opacity 200ms ease-in-out' }}
+        style={{ transition: 'none' }}
       >
         <div className="absolute top-1/2 left-0 h-8 w-1 bg-transparent hover:bg-spark-primary/20 dark:hover:bg-spark-dark-primary/20 rounded opacity-0 hover:opacity-100" />
       </div>

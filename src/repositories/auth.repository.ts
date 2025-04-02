@@ -1,6 +1,12 @@
 import { BaseRepository } from './base.repository';
 import { DbClient } from '@/lib/db';
 import { AuthError } from '@/lib/errors';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
+
+/**
+ * Type for auth state change callback
+ */
+export type AuthStateChangeCallback = (event: AuthChangeEvent, session: Session | null) => void;
 
 /**
  * Repository for authentication operations
@@ -63,6 +69,33 @@ export class AuthRepository extends BaseRepository {
     });
     
     return data.session;
+  }
+
+  /**
+   * Validate a token and get the associated user
+   */
+  async validateToken(token: string) {
+    const { data, error } = await this.client.auth.getUser(token);
+    
+    if (error) {
+      console.error('Error validating token:', error);
+      return {
+        data: { user: null },
+        error: error.message
+      };
+    }
+    
+    return {
+      data,
+      error: null
+    };
+  }
+
+  /**
+   * Subscribe to auth state changes
+   */
+  onAuthStateChange(callback: AuthStateChangeCallback) {
+    return this.client.auth.onAuthStateChange(callback);
   }
 
   /**

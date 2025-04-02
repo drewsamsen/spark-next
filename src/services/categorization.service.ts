@@ -430,10 +430,48 @@ class JobServiceImpl implements JobService {
 export const jobService: JobService = new JobServiceImpl();
 
 /**
+ * Type for tag migration data
+ */
+export interface TagMigrationData {
+  userId: string;
+}
+
+/**
  * Convenience object to access all categorization services
  */
 export const categorizationService = {
   categories: categoryService,
   tags: tagService,
-  jobs: jobService
+  jobs: jobService,
+  
+  /**
+   * Validate tag migration data
+   */
+  validateTagMigrationData(
+    userId: string
+  ): { valid: boolean; error?: string } {
+    try {
+      // Validate required parameters
+      if (!userId) {
+        return { valid: false, error: 'User ID is required' };
+      }
+      
+      return { valid: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Unknown error during validation';
+      
+      return { valid: false, error: errorMessage };
+    }
+  },
+  
+  /**
+   * Prepare tag migration data
+   */
+  prepareTagMigrationData(
+    userId: string
+  ): TagMigrationData {
+    return { userId };
+  }
 }; 

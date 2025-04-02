@@ -7,6 +7,7 @@ import { TagsRepository } from './tags.repository';
 import { AuthRepository } from './auth.repository';
 import { IntegrationsRepository } from './integrations.repository';
 import { FunctionLogsRepository } from './function-logs.repository';
+import { UserSettingsRepository } from './user-settings.repository';
 import type { SparkDomain } from './sparks.repository'; 
 import type { BookDomain } from './books.repository';
 import type { HighlightDomain } from './highlights.repository';
@@ -28,6 +29,7 @@ class RepositoriesRegistry {
   private authRepo: AuthRepository | null = null;
   private integrationsRepo: IntegrationsRepository | null = null;
   private functionLogsRepo: FunctionLogsRepository | null = null;
+  private userSettingsRepo: UserSettingsRepository | null = null;
   
   constructor(serverSide: boolean = false) {
     this.client = getDbClient(serverSide);
@@ -114,6 +116,16 @@ class RepositoriesRegistry {
   }
   
   /**
+   * Get the User Settings repository
+   */
+  get userSettings(): UserSettingsRepository {
+    if (!this.userSettingsRepo) {
+      this.userSettingsRepo = new UserSettingsRepository(this.client);
+    }
+    return this.userSettingsRepo;
+  }
+  
+  /**
    * Reset all repositories (useful for testing)
    */
   reset(): void {
@@ -125,6 +137,7 @@ class RepositoriesRegistry {
     this.authRepo = null;
     this.integrationsRepo = null;
     this.functionLogsRepo = null;
+    this.userSettingsRepo = null;
   }
 }
 
@@ -157,7 +170,8 @@ export type {
   TagsRepository,
   AuthRepository,
   IntegrationsRepository,
-  FunctionLogsRepository
+  FunctionLogsRepository,
+  UserSettingsRepository
 };
 
 // Re-export repository domain models for convenience

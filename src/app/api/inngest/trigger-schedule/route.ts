@@ -1,29 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { inngest } from '@/inngest';
-import { createServerClient } from '@/lib/supabase';
+import { authenticateRequest, createErrorResponse, createSuccessResponse } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split(' ')[1];
-    const supabase = createServerClient();
-    
-    // Verify the token
-    const { data: authData, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !authData.user) {
-      return NextResponse.json(
-        { error: 'Authentication failed' },
-        { status: 401 }
-      );
+    // Authenticate the request without requiring a specific user ID
+    const authResult = await authenticateRequest(request);
+    if (authResult.error) {
+      return authResult.error;
     }
 
     // Send the Inngest event manually
@@ -34,15 +18,14 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({
-      success: true,
-      message: 'Readwise daily sync job triggered manually'
-    });
+    return createSuccessResponse(
+      { triggered: true }, 
+      'Readwise daily sync job triggered manually'
+    );
   } catch (error) {
     console.error('API Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to trigger Readwise sync job' },
-      { status: 500 }
+    return createErrorResponse(
+      error instanceof Error ? error.message : 'Failed to trigger Readwise sync job'
     );
   }
 }

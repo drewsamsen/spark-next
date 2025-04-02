@@ -1,5 +1,6 @@
 import { getRepositories } from '@/repositories';
 import { handleServiceItemError } from '@/lib/errors';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 /**
  * Type for auth user data
@@ -17,6 +18,11 @@ export interface AuthSession {
   token: string;
   expiresAt: number;
 }
+
+/**
+ * Type for auth change callback
+ */
+export type AuthChangeCallback = (session: AuthSession | null) => void;
 
 /**
  * Service for handling authentication operations
@@ -111,6 +117,90 @@ export const authService = {
       };
     } catch (error) {
       return handleServiceItemError<AuthSession>(error, 'Error in authService.getSession');
+    }
+  },
+
+  /**
+   * Check if a user is currently authenticated
+   */
+  async isAuthenticated(): Promise<boolean> {
+    try {
+      const session = await this.getSession();
+      return !!session?.user?.id;
+    } catch (error) {
+      console.error('Error in authService.isAuthenticated:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Validate a token and get the associated user
+   */
+  async validateToken(token: string): Promise<{ data: { user: AuthUser | null }, error: string | null }> {
+    try {
+      const repo = getRepositories().auth;
+      const result = await repo.validateToken(token);
+      
+      if (result.error || !result.data.user) {
+        return {
+          data: { user: null },
+          error: result.error || 'Invalid token'
+        };
+      }
+      
+      return {
+        data: {
+          user: {
+            id: result.data.user.id,
+            email: result.data.user.email || ''
+          }
+        },
+        error: null
+      };
+    } catch (error) {
+      console.error('Error in authService.validateToken:', error);
+      return {
+        data: { user: null },
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  },
+
+  /**
+   * Subscribe to auth state changes
+   * @param callback Function to call when auth state changes
+   * @returns Function to unsubscribe
+   */
+  onAuthStateChange(callback: AuthChangeCallback): { unsubscribe: () => void } {
+    const repo = getRepositories().auth;
+    
+    try {
+      const { data: { subscription } } = repo.onAuthStateChange(
+        (event: AuthChangeEvent, supabaseSession: Session | null) => {
+          if (supabaseSession) {
+            // Convert to our AuthSession format
+            const session: AuthSession = {
+              user: {
+                id: supabaseSession.user.id,
+                email: supabaseSession.user.email || '',
+              },
+              token: supabaseSession.access_token,
+              expiresAt: new Date(supabaseSession.expires_at || '').getTime(),
+            };
+            callback(session);
+          } else {
+            callback(null);
+          }
+        }
+      );
+      
+      return subscription;
+    } catch (error) {
+      console.error('Error in authService.onAuthStateChange:', error);
+      // Return a dummy unsubscribe function
+      return {
+        unsubscribe: () => {}
+      };
     }
   },
 

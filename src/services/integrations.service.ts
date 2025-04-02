@@ -19,6 +19,23 @@ export interface ReadwiseSettings {
 }
 
 /**
+ * Type for Readwise connection test data
+ */
+export interface ReadwiseConnectionTestData {
+  userId: string;
+  apiKey: string;
+}
+
+/**
+ * Type for Readwise sync data
+ */
+export interface ReadwiseSyncData {
+  userId: string;
+  apiKey: string;
+  fullSync?: boolean;
+}
+
+/**
  * Service for managing integrations
  */
 export const integrationsService = {
@@ -123,6 +140,88 @@ export const integrationsService = {
       console.error('Error in integrationsService.triggerReadwiseSync:', error);
       return false;
     }
+  },
+
+  /**
+   * Validate Readwise connection test data
+   */
+  validateReadwiseConnectionData(
+    userId: string, 
+    apiKey: string
+  ): { valid: boolean; error?: string } {
+    try {
+      // Validate required parameters
+      if (!userId) {
+        return { valid: false, error: 'User ID is required' };
+      }
+      
+      if (!apiKey) {
+        return { valid: false, error: 'API key is required' };
+      }
+      
+      return { valid: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Unknown error during validation';
+      
+      return { valid: false, error: errorMessage };
+    }
+  },
+  
+  /**
+   * Prepare Readwise connection test data
+   */
+  prepareReadwiseConnectionData(
+    userId: string, 
+    apiKey: string
+  ): ReadwiseConnectionTestData {
+    return {
+      userId,
+      apiKey
+    };
+  },
+
+  /**
+   * Validate Readwise sync data
+   */
+  validateReadwiseSyncData(
+    userId: string, 
+    apiKey: string,
+    fullSync?: boolean
+  ): { valid: boolean; error?: string } {
+    try {
+      // Validate required parameters (reusing connection test validation)
+      const baseValidation = this.validateReadwiseConnectionData(userId, apiKey);
+      if (!baseValidation.valid) {
+        return baseValidation;
+      }
+      
+      // Additional validation can be added here for sync-specific requirements
+      
+      return { valid: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Unknown error during validation';
+      
+      return { valid: false, error: errorMessage };
+    }
+  },
+  
+  /**
+   * Prepare Readwise sync data
+   */
+  prepareReadwiseSyncData(
+    userId: string, 
+    apiKey: string,
+    fullSync: boolean = false
+  ): ReadwiseSyncData {
+    return {
+      userId,
+      apiKey,
+      fullSync
+    };
   },
 
   /**

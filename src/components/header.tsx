@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,7 @@ import { LogoutButton } from "@/components/auth/LogoutButton";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { LogoIcon } from "@/components/icons/LogoIcon";
+import { useHeaderService } from "@/hooks";
 
 interface HeaderProps {
   toggleRightSidebar: () => void;
@@ -25,10 +27,25 @@ export default function Header({
   currentPath = "/dashboard"
 }: HeaderProps) {
   const pathname = usePathname();
+  const headerService = useHeaderService();
+  const [searchQuery, setSearchQuery] = useState("");
   
   const handleLogoClick = (e: React.MouseEvent) => {
     if (navigateTo) {
       navigateTo("/dashboard", e);
+    }
+  };
+  
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      try {
+        const results = await headerService.search(searchQuery);
+        // In the future, this would display search results
+        console.log('Search results:', results);
+      } catch (error) {
+        console.error('Error performing search:', error);
+      }
     }
   };
   
@@ -56,14 +73,16 @@ export default function Header({
         
         {/* Center section */}
         <div className="flex-1 flex justify-center px-4 max-w-3xl mx-auto">
-          <div className="relative w-full max-w-lg">
+          <form onSubmit={handleSearch} className="relative w-full max-w-lg">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <input
               type="search"
               placeholder="Search..."
               className="w-full rounded-md border bg-background pl-9 py-2 text-sm outline-none focus:ring-1 focus:ring-spark-primary dark:focus:ring-spark-dark-primary dark:border-spark-dark-neutral/30"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-          </div>
+          </form>
         </div>
         
         {/* Right section */}

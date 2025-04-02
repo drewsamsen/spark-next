@@ -16,12 +16,17 @@ export { authService } from './auth.service';
 export { integrationsService } from './integrations.service';
 export { functionLogsService } from './function-logs.service';
 export { sidebarService } from './sidebar.service';
+export { headerService } from './header.service';
+export { userSettingsService } from './user-settings.service';
+export { airtableService } from './airtable.service';
 
 // Re-export type interfaces from services for convenience
 export type { EnhancedSparkItem } from './sparks.service';
 export type { AuthUser, AuthSession } from './auth.service';
-export type { AirtableSettings, ReadwiseSettings } from './integrations.service';
+export type { AirtableSettings, ReadwiseSettings, ReadwiseConnectionTestData, ReadwiseSyncData } from './integrations.service';
 export type { SortField, SortDirection, SortState } from './sidebar.service';
+export type { AirtableImportData } from './airtable.service';
+export type { TagMigrationData } from './categorization.service';
 
 /**
  * Convenience bundler for all services
@@ -34,6 +39,9 @@ import { authService } from './auth.service';
 import { integrationsService } from './integrations.service';
 import { sidebarService } from './sidebar.service';
 import { functionLogsService } from './function-logs.service';
+import { headerService } from './header.service';
+import { userSettingsService } from './user-settings.service';
+import { airtableService } from './airtable.service';
 
 export const services = {
   sparks: sparksService,
@@ -43,5 +51,8 @@ export const services = {
   auth: authService,
   integrations: integrationsService,
   sidebar: sidebarService,
-  functionLogs: functionLogsService
+  functionLogs: functionLogsService,
+  header: headerService,
+  userSettings: userSettingsService,
+  airtable: airtableService
 }; 

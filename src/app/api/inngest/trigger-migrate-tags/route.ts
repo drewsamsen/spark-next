@@ -1,48 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { inngest } from "@/inngest";
-import { createServerClient } from "@/lib/supabase";
+import { categorizationService } from "@/services";
+import { authenticateRequest, createErrorResponse, createSuccessResponse } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
-  // Get the auth token from the request headers
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  
-  const token = authHeader.slice(7); // Remove 'Bearer ' prefix
-  
-  // Validate the token and get the user
-  const supabase = createServerClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  
-  if (authError || !user) {
-    console.error('Authentication error:', authError);
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-  }
-  
   try {
     // Parse the request body
     const body = await request.json();
-    const userId = body.userId || user.id;
+    const userId = body.userId;
     
-    // Validate user permissions if the requester wants to run for a different user
-    if (userId !== user.id) {
-      // Only allow admins to run for other users
-      // This would need a proper role check in a real system
-      return NextResponse.json({ error: 'Unauthorized to run task for another user' }, { status: 403 });
+    // Validate input parameters using the service
+    const validation = categorizationService.validateTagMigrationData(userId);
+    if (!validation.valid) {
+      return createErrorResponse(validation.error || 'Invalid input data', 400);
+    }
+
+    // Authenticate the request
+    const authResult = await authenticateRequest(request, userId);
+    if (authResult.error) {
+      return authResult.error;
     }
     
+    // Get the migration data from the service
+    const migrationData = categorizationService.prepareTagMigrationData(userId);
+
     // Trigger the Inngest event
     await inngest.send({
       name: "tags/migrate-highlight-tags",
-      data: { userId }
+      data: migrationData
     });
     
-    return NextResponse.json({ success: true });
+    return createSuccessResponse(
+      { triggered: true }, 
+      'Highlight tag migration job triggered successfully'
+    );
   } catch (error) {
     console.error('Error triggering highlight tag migration:', error);
-    return NextResponse.json({ 
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return createErrorResponse(
+      error instanceof Error ? error.message : 'Unknown error'
+    );
   }
 } 

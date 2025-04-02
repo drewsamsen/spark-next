@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { inngest } from '@/inngest';
-import { createServerClient } from '@/lib/supabase';
+import { authService, integrationsService } from '@/services';
 
 export async function POST(request: NextRequest) {
   try {
     // Get the request body
     const { userId, apiKey } = await request.json();
 
-    if (!userId || !apiKey) {
+    // Validate input parameters using the service
+    const validation = integrationsService.validateReadwiseConnectionData(userId, apiKey);
+    if (!validation.valid) {
       return NextResponse.json(
-        { error: 'Missing userId or apiKey' },
+        { error: validation.error },
         { status: 400 }
       );
     }
@@ -24,12 +26,11 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.split(' ')[1];
-    const supabase = createServerClient();
     
-    // Verify the token
-    const { data: authData, error: authError } = await supabase.auth.getUser(token);
+    // Validate the token using the auth service
+    const { data: { user }, error: authError } = await authService.validateToken(token);
     
-    if (authError || !authData.user) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Authentication failed' },
         { status: 401 }
@@ -37,20 +38,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Ensure the requesting user is the same as the userId in the payload
-    if (authData.user.id !== userId) {
+    if (user.id !== userId) {
       return NextResponse.json(
         { error: 'Unauthorized: Cannot access another user\'s data' },
         { status: 403 }
       );
     }
 
+    // Get the connection test data from the service
+    const connectionData = integrationsService.prepareReadwiseConnectionData(userId, apiKey);
+
     // Send the Inngest event
     await inngest.send({
       name: "readwise/test-connection",
-      data: {
-        userId,
-        apiKey
-      }
+      data: connectionData
     });
 
     return NextResponse.json({

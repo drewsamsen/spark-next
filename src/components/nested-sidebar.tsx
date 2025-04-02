@@ -165,7 +165,7 @@ export default function NestedSidebar({
   // Apply width to the sidebar
   const nestedSidebarStyle = { 
     width: `${sidebarWidth}px`,
-    transition: isResizing ? 'none' : 'none'
+    transition: 'none'
   };
 
   const [hoverTimer, setHoverTimer] = useState<NodeJS.Timeout | null>(null);
