@@ -17,6 +17,7 @@ src/
 ├── lib/
 │   ├── db.ts                   # Database utilities
 │   ├── errors.ts               # Error handling utilities
+│   ├── types.ts                # Shared type definitions
 │   └── categorization/         # Categorization type definitions
 ├── repositories/               # Repository classes for data access
 │   ├── base.repository.ts      # Base repository with shared functionality

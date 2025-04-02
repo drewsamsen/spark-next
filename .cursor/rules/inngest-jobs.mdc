@@ -12,6 +12,13 @@ alwaysApply: false
   - `inngest.config.ts`
   - `src/app/api/inngest/route.ts` functions array
 
+## Function Naming Conventions
+
+- All function variables should be named with the suffix `Fn`, e.g., `readwiseCountBooksFn`
+- All function IDs should be kebab-case, e.g., `readwise-count-books`
+- Each function should be in its own file, named in kebab-case matching the function ID
+- Files should export the function variable, not the ID or event type
+
 ## Designing Job Functions
 
 - Implement standardized `isLastStep` convention for all multi-step functions
@@ -35,7 +42,7 @@ alwaysApply: false
 // src/inngest/jobs/processDocument.ts
 import { inngest } from "../client";
 
-export const processDocumentFunction = inngest.createFunction(
+export const processDocumentFn = inngest.createFunction(
   { id: "process-document" },
   { event: "document/created" },
   async ({ event, step }) => {
@@ -77,25 +84,14 @@ export const processDocumentFunction = inngest.createFunction(
 Make sure to register all functions in both required locations:
 
 ```typescript
-// inngest.config.ts
-import { processDocumentFunction } from "./src/inngest/jobs/processDocument";
-
-export default {
-  // Inngest config
-  functions: [
-    processDocumentFunction,
-    // Other functions...
-  ]
-};
-
 // src/app/api/inngest/route.ts
-import { processDocumentFunction } from "@/inngest/jobs/processDocument";
+import { processDocumentFn } from "@/inngest/functions/document/process-document";
 
-export const inngestHandler = serve({
+export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [
-    processDocumentFunction,
+    processDocumentFn,
     // Other functions...
-  ]
+  ],
 });
 ``` 

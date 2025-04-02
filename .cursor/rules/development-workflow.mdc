@@ -11,6 +11,7 @@ alwaysApply: false
 - Do not automatically try and do too much.
 - Never try to run the development server yourself. Never run `npm run dev`
 - If the user requests A, do not deliver A, B, C, and D.  Instead, complete A, and when you're finished, recommend the next steps of B, C, and D for the user to decide how to proceed next.
+- After each task, consider if any relevant documentation should be updated.
 
 ## Version Control and git
 

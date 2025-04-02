@@ -74,7 +74,9 @@ Visit `http://localhost:8288` to access the Inngest Dev UI.
 
 ## Creating Functions
 
-Functions are now defined in domain-specific files under the `src/inngest/functions/` directory. Example:
+Functions are defined in domain-specific files under the `src/inngest/functions/` directory. Each function should be in its own file and exported with a name that includes the `Fn` suffix.
+
+Example:
 
 ```typescript
 // In src/inngest/functions/domain/my-function.ts
@@ -203,7 +205,7 @@ For production:
 
 ### Common Issues
 
-- **Function not registered**: Ensure your function is exported in `inngest.config.ts` and included in the `functions` array in `src/app/api/inngest/route.ts`
+- **Function not registered**: Ensure your function is exported in your domain directory and included in the `functions` array in `src/app/api/inngest/route.ts`
 - **Events not triggering**: Check network requests in browser dev tools for errors
 - **"Cannot find module" errors**: These are related to Node.js protocol handling - ensure you're using the webpack configuration in `next.config.ts`
 
@@ -260,7 +262,7 @@ Functions are defined in domain-specific files. Example:
 import { inngest } from "../../client";
 import { markAsLastStep } from "../../utils/function-conventions";
 
-export const myNewFunction = inngest.createFunction(
+export const myNewFunctionFn = inngest.createFunction(
   { id: "my-new-function" },
   { event: "domain/event-name" },
   async ({ event, step, logger }) => {
