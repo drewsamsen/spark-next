@@ -5,6 +5,8 @@ import { toast } from "react-toastify";
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { useRealtimeSubscription } from './use-realtime-subscription';
 import { FunctionLogModel, FunctionLogsFilter } from '@/lib/types';
+import { handleError } from '@/lib/error-handling';
+import { useAuthService } from './use-services';
 
 // Define the type alias for the legacy name for backwards compatibility
 export type FunctionLog = FunctionLogModel;
@@ -12,11 +14,14 @@ export type FunctionLog = FunctionLogModel;
 /**
  * Hook to fetch and subscribe to function logs with real-time updates
  */
-export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?: string | null) {
+export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, enabled: boolean = true) {
   const [logs, setLogs] = useState<FunctionLogModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalLogs, setTotalLogs] = useState(0);
+  
+  // Use auth service to handle authentication
+  const authService = useAuthService();
   
   // Memoize filters to prevent unnecessary re-renders
   const filters = useMemo(() => initialFilters, [
@@ -29,8 +34,24 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
   ]);
   
   // Function to fetch logs from the API - properly memoized
-  const fetchLogs = useCallback(async () => {
-    if (!token) return;
+  const fetchLogs = useCallback(async (customFilters?: FunctionLogsFilter) => {
+    if (!enabled) return;
+    
+    // Check authentication first
+    const isAuthenticated = await authService.isAuthenticated();
+    if (!isAuthenticated) {
+      setLogs([]);
+      setError("Authentication required");
+      return;
+    }
+    
+    // Get the session which contains the token
+    const session = await authService.getSession();
+    const token = session?.token;
+    if (!token) {
+      setError("Authentication token not available");
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
@@ -38,29 +59,30 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
     try {
       // Build query parameters
       const queryParams = new URLSearchParams();
+      const activeFilters = customFilters || filters;
       
-      if (filters.limit) {
-        queryParams.append("limit", filters.limit.toString());
+      if (activeFilters.limit) {
+        queryParams.append("limit", activeFilters.limit.toString());
       }
       
-      if (filters.offset) {
-        queryParams.append("offset", filters.offset.toString());
+      if (activeFilters.offset) {
+        queryParams.append("offset", activeFilters.offset.toString());
       }
       
-      if (filters.order_by) {
-        queryParams.append("order_by", filters.order_by);
+      if (activeFilters.order_by) {
+        queryParams.append("order_by", activeFilters.order_by);
       }
       
-      if (filters.order_direction) {
-        queryParams.append("order_direction", filters.order_direction);
+      if (activeFilters.order_direction) {
+        queryParams.append("order_direction", activeFilters.order_direction);
       }
       
-      if (filters.status) {
-        queryParams.append("status", filters.status);
+      if (activeFilters.status) {
+        queryParams.append("status", activeFilters.status);
       }
       
-      if (filters.function_name) {
-        queryParams.append("function_name", filters.function_name.trim());
+      if (activeFilters.function_name) {
+        queryParams.append("function_name", activeFilters.function_name.trim());
       }
       
       // Make the API request
@@ -83,25 +105,38 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to fetch function logs";
       setError(errorMessage);
-      console.error("Error fetching logs:", err);
       
-      // Only show toast for errors that aren't auth related
-      if (!errorMessage.includes("Unauthorized")) {
-        toast.error(errorMessage);
-      }
+      // Use our standardized error handling
+      handleError(err, {
+        context: 'useFunctionLogs',
+        showToast: !errorMessage.includes("Unauthorized"), // Only show non-auth errors as toast
+        fallbackMessage: "Failed to fetch function logs"
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [token, filters]);
+  }, [filters, enabled, authService]);
   
-  // Fetch logs ONCE when filters or token changes
-  // Not on every render
+  // Fetch logs when filters change
   useEffect(() => {
-    if (token) {
-      console.log("Initial fetch of function logs");
+    if (enabled) {
       fetchLogs();
     }
-  }, [token, fetchLogs]);
+  }, [fetchLogs, enabled]);
+  
+  // Subscribe to auth state changes
+  useEffect(() => {
+    if (!enabled) return;
+    
+    const subscription = authService.onAuthStateChange(() => {
+      console.log("Auth state changed, refreshing function logs");
+      fetchLogs();
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [authService, fetchLogs, enabled]);
   
   // Handle realtime updates with a stable callback
   const handleRealtimeUpdate = useCallback((payload: any) => {
@@ -181,12 +216,36 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, token?:
     handleRealtimeUpdate
   );
   
+  // Helper functions
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "—";
+    const date = new Date(dateStr);
+    return date.toLocaleString();
+  };
+  
+  const formatDuration = (durationMs: number | null | undefined) => {
+    if (durationMs === null || durationMs === undefined) return "—";
+    
+    if (durationMs < 1000) {
+      return `${durationMs}ms`;
+    } else if (durationMs < 60000) {
+      return `${(durationMs / 1000).toFixed(2)}s`;
+    } else {
+      const minutes = Math.floor(durationMs / 60000);
+      const seconds = ((durationMs % 60000) / 1000).toFixed(2);
+      return `${minutes}m ${seconds}s`;
+    }
+  };
+  
   return {
     logs,
     isLoading,
     error,
     totalLogs,
     fetchLogs,
-    realtimeConnected: isConnected
+    realtimeConnected: isConnected,
+    formatDate,
+    formatDuration,
+    filters
   };
 } 

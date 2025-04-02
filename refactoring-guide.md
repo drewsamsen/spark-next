@@ -117,27 +117,27 @@ Each item is represented as a one-point developer story with context, guidance, 
 - [x] **Implement optimistic updates in all data modification hooks**  
   Review all hooks to ensure they implement optimistic updates for data modifications following the pattern in data-architecture.mdc.
 
-- [ ] **Standardize error handling and toast notifications**  
+- [x] **Standardize error handling and toast notifications**  
   Ensure all hooks and services follow the same error handling and toast notification pattern for consistent user feedback.
 
-- [ ] **Implement auth state change subscription in all data hooks**  
+- [x] **Implement auth state change subscription in all data hooks**  
   Ensure all data-fetching hooks properly subscribe to auth state changes and reload data when authentication state changes.
 
 ### Component Structure and Styling
 
-- [ ] **Break down FunctionLogsTable.tsx**  
+- [x] **Break down FunctionLogsTable.tsx**  
   Split the large `src/components/FunctionLogsTable.tsx` (452 lines) into smaller components for table header, table body, status badge, and pagination. Create a new directory to organize these components.
 
-- [ ] **Break down nested-sidebar.tsx**  
+- [x] **Break down nested-sidebar.tsx**  
   Split the large `src/components/nested-sidebar.tsx` (398 lines) into smaller components for different sections of the sidebar.
 
-- [ ] **Break down book-highlights.tsx**  
+- [x] **Break down book-highlights.tsx**  
   Split the large `src/components/book-highlights.tsx` (346 lines) into smaller components for different sections and features.
 
-- [ ] **Break down spark-preview-panel.tsx**  
+- [x] **Break down spark-preview-panel.tsx**  
   Split the large `src/components/spark-preview-panel.tsx` (323 lines) into smaller components for different sections and features.
 
-- [ ] **Break down ScheduledTasksTable.tsx**  
+- [x] **Break down ScheduledTasksTable.tsx**  
   Split the large `src/components/ScheduledTasksTable.tsx` (217 lines) into smaller components for different parts of the table.
 
 - [ ] **Create a consistent Button component library**  

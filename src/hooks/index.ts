@@ -17,6 +17,7 @@ export {
 } from './use-services';
 
 export { useFunctionLogsService } from './use-function-logs-service';
+export { useFunctionLogs } from './use-function-logs';
 
 export { useUserSettings } from './use-user-settings-service';
 

@@ -1,12 +1,18 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Tag, Plus, Calendar } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
-import { SparkDomain } from "@/repositories/sparks.repository";
+import { SparkDomain } from "@/lib/types";
 import { useSparksService, useCategorization, useResourceHelper } from "@/hooks";
+import {
+  SparkContent,
+  SparkCategories,
+  SparkTags,
+  adjustPanelPosition,
+  formatDate
+} from "./SparkPreview";
 
 interface SparkPreviewPanelProps {
   sparkId: string | null;
@@ -23,8 +29,6 @@ export default function SparkPreviewPanel({
 }: SparkPreviewPanelProps) {
   const [sparkDetails, setSparkDetails] = useState<SparkDomain | null>(initialSparkDetails);
   const [loading, setLoading] = useState(false);
-  const [newTag, setNewTag] = useState("");
-  const [showTagInput, setShowTagInput] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -36,6 +40,7 @@ export default function SparkPreviewPanel({
   const { tags: tagService } = useCategorization();
   const { createSparkResource } = useResourceHelper();
 
+  // Load spark details when ID changes
   useEffect(() => {
     if (sparkId) {
       if (!initialSparkDetails) {
@@ -46,6 +51,7 @@ export default function SparkPreviewPanel({
     }
   }, [sparkId, initialSparkDetails]);
   
+  // Update details when initialSparkDetails changes
   useEffect(() => {
     if (initialSparkDetails) {
       setSparkDetails(initialSparkDetails);
@@ -54,23 +60,11 @@ export default function SparkPreviewPanel({
   
   // Adjust position to stay in viewport
   useEffect(() => {
-    // Default to the provided position
-    const newPosition = {...position};
-    
-    // Make sure the panel doesn't go below the viewport
-    const windowHeight = window.innerHeight;
-    const bottomEdge = position.top + panelMaxHeight;
-    
-    if (bottomEdge > windowHeight) {
-      // Move the panel up to fit in the viewport
-      newPosition.top = Math.max(0, windowHeight - panelMaxHeight);
-    }
-    
-    // No need to adjust right position anymore since we're using left
-    
+    const newPosition = adjustPanelPosition(position, panelMaxHeight);
     setAdjustedPosition(newPosition);
   }, [position, panelMaxHeight]);
 
+  // Fetch spark details from the API
   const fetchSparkDetails = async (id: string) => {
     setLoading(true);
     try {
@@ -84,6 +78,7 @@ export default function SparkPreviewPanel({
     }
   };
 
+  // Handle mouse interactions
   const handleMouseEnter = () => {
     setIsHovering(true);
   };
@@ -94,17 +89,16 @@ export default function SparkPreviewPanel({
     onClose();
   };
 
-  const handleAddTag = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!sparkId || !newTag.trim() || !sparkDetails) return;
+  // Handle tag operations
+  const handleAddTag = async (newTag: string) => {
+    if (!sparkId || !sparkDetails) return;
     
     try {
       // Create a resource object for the spark
       const sparkResource = createSparkResource(sparkId);
       
       // Create or reuse an existing tag
-      const newTagObj = await tagService.createTag(newTag.trim());
+      const newTagObj = await tagService.createTag(newTag);
       
       // Associate the tag with the spark
       await tagService.addTagToResource(sparkResource, newTagObj.id);
@@ -114,7 +108,7 @@ export default function SparkPreviewPanel({
         if (!prev) return null;
         
         // Check if tag already exists to avoid duplicates
-        const tagExists = prev.tags.some(tag => tag.name.toLowerCase() === newTag.trim().toLowerCase());
+        const tagExists = prev.tags.some(tag => tag.name.toLowerCase() === newTag.toLowerCase());
         
         if (tagExists) {
           return prev;
@@ -126,12 +120,11 @@ export default function SparkPreviewPanel({
         };
       });
       
-      setNewTag("");
-      setShowTagInput(false);
       toast.success("Tag added successfully");
     } catch (error) {
       console.error("Error adding tag:", error);
       toast.error("Failed to add tag");
+      throw error;
     }
   };
 
@@ -158,18 +151,8 @@ export default function SparkPreviewPanel({
     } catch (error) {
       console.error("Error removing tag:", error);
       toast.error("Failed to remove tag");
+      throw error;
     }
-  };
-
-  // Format date using service
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric"
-    });
   };
 
   if (!sparkId || !sparkDetails) return null;
@@ -204,117 +187,24 @@ export default function SparkPreviewPanel({
           </div>
         ) : (
           <>
-            {/* Spark Body Text */}
-            <div className="mb-4 pr-8">
-              <p className="text-sm">{sparkDetails.body}</p>
-            </div>
-            
-            {/* Date Info */}
-            <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5" />
-              <span>
-                {sparkDetails.todoCreatedAt 
-                  ? formatDate(sparkDetails.todoCreatedAt) 
-                  : formatDate(sparkDetails.createdAt)}
-              </span>
-            </div>
+            {/* Spark Content */}
+            <SparkContent 
+              sparkDetails={sparkDetails} 
+              formatDate={formatDate} 
+            />
             
             {/* Categories */}
-            {sparkDetails.categories.length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-xs font-medium mb-2 flex items-center gap-1.5">
-                  <Tag className="h-3.5 w-3.5" />
-                  Categories
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {sparkDetails.categories.map(category => (
-                    <Badge 
-                      key={category.id}
-                      variant="secondary"
-                      className="text-xs"
-                    >
-                      {category.name}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
+            <SparkCategories 
+              categories={sparkDetails.categories} 
+            />
             
             {/* Tags */}
-            <div className="mb-4">
-              <h4 className="text-xs font-medium mb-2 flex items-center gap-1.5">
-                <Tag className="h-3.5 w-3.5" />
-                Tags
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {sparkDetails.tags.map(tag => (
-                  <Badge 
-                    key={tag.id}
-                    variant="outline"
-                    className="text-xs group relative hover:pr-6"
-                  >
-                    {tag.name}
-                    <span 
-                      className="absolute right-1 top-0.5 opacity-0 group-hover:opacity-100 cursor-pointer text-muted-foreground hover:text-red-500"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveTag(tag.id);
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </span>
-                  </Badge>
-                ))}
-                
-                {/* Add Tag Button */}
-                {!showTagInput && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 rounded-md px-2 text-xs flex items-center gap-1"
-                    onClick={() => setShowTagInput(true)}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add Tag
-                  </Button>
-                )}
-              </div>
-              
-              {/* New Tag Input */}
-              {showTagInput && (
-                <form onSubmit={handleAddTag} className="mt-2 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    placeholder="Enter tag name..."
-                    className="text-xs px-2 py-1 border rounded flex-1"
-                    autoFocus
-                  />
-                  <Button 
-                    type="submit" 
-                    variant="default" 
-                    size="sm" 
-                    className="h-6 text-xs"
-                    disabled={!newTag.trim()}
-                  >
-                    Add
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 text-xs"
-                    onClick={() => {
-                      setShowTagInput(false);
-                      setNewTag("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </form>
-              )}
-            </div>
+            <SparkTags 
+              sparkId={sparkId}
+              tags={sparkDetails.tags}
+              onAddTag={handleAddTag}
+              onRemoveTag={handleRemoveTag}
+            />
           </>
         )}
       </div>

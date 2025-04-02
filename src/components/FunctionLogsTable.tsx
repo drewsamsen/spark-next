@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Search, RefreshCw, CheckCircle, XCircle, Clock, Filter, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
-import { useFunctionLogsService, useAuthSession } from "@/hooks";
-import { FunctionLogModel } from "@/repositories/function-logs.repository";
+import { AlertTriangle } from "lucide-react";
+import { useFunctionLogs, useAuthSession } from "@/hooks";
+import { FunctionLogsFilter } from "@/lib/types";
+import { TableHeader, TableBody, Pagination } from "./FunctionLogs";
 
 interface FunctionLogsTableProps {
   className?: string;
@@ -12,16 +13,20 @@ interface FunctionLogsTableProps {
 export default function FunctionLogsTable({ className = "" }: FunctionLogsTableProps) {
   // Auth
   const { session, loading: authLoading, error: authError } = useAuthSession();
-  const token = session?.token;
   
   // State
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
   const [offset, setOffset] = useState(0);
   const [limit] = useState(10);
   const [sortField, setSortField] = useState("started_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  
+  // Initial filters
+  const initialFilters: FunctionLogsFilter = {
+    limit,
+    offset,
+    order_by: sortField,
+    order_direction: sortDirection
+  };
   
   // Use the function logs service hook with filters
   const {
@@ -34,30 +39,25 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
     formatDate,
     formatDuration,
     filters
-  } = useFunctionLogsService(
-    {
-      limit,
-      offset,
-      order_by: sortField,
-      order_direction: sortDirection,
-      status: statusFilter as 'started' | 'completed' | 'failed' | undefined,
-      function_name: searchTerm.trim() || undefined
-    },
-    !!token // Only enable if token is available
-  );
+  } = useFunctionLogs(initialFilters, !!session?.token);
   
-  // Handle search
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setOffset(0); // Reset to first page
-    fetchLogs({
-      limit,
-      offset: 0,
-      order_by: sortField,
-      order_direction: sortDirection,
-      status: statusFilter as 'started' | 'completed' | 'failed' | undefined,
-      function_name: searchTerm.trim() || undefined
-    });
+  // Handle search and filter
+  const handleSearch = (newFilters: FunctionLogsFilter) => {
+    // Update state to match the new filters
+    if (newFilters.offset !== undefined) {
+      setOffset(newFilters.offset);
+    }
+    
+    if (newFilters.order_by) {
+      setSortField(newFilters.order_by);
+    }
+    
+    if (newFilters.order_direction) {
+      setSortDirection(newFilters.order_direction);
+    }
+    
+    // Fetch logs with new filters
+    fetchLogs(newFilters);
   };
   
   // Handle sort
@@ -66,68 +66,31 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
       // Toggle direction if clicking the same field
       const newDirection = sortDirection === "asc" ? "desc" : "asc";
       setSortDirection(newDirection);
-      fetchLogs({
-        limit,
-        offset,
+      handleSearch({
+        ...filters,
         order_by: field,
-        order_direction: newDirection,
-        status: statusFilter as 'started' | 'completed' | 'failed' | undefined,
-        function_name: searchTerm.trim() || undefined
+        order_direction: newDirection
       });
     } else {
       // Default to desc for new field
       setSortField(field);
       setSortDirection("desc");
-      fetchLogs({
-        limit,
-        offset,
+      handleSearch({
+        ...filters,
         order_by: field,
-        order_direction: "desc",
-        status: statusFilter as 'started' | 'completed' | 'failed' | undefined,
-        function_name: searchTerm.trim() || undefined
+        order_direction: "desc"
       });
     }
   };
   
-  // Status badge component
-  const StatusBadge = ({ status }: { status: string }) => {
-    switch (status) {
-      case "completed":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Completed
-          </span>
-        );
-      case "failed":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
-            <XCircle className="w-3 h-3 mr-1" />
-            Failed
-          </span>
-        );
-      case "started":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
-            <Clock className="w-3 h-3 mr-1" />
-            Running
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100">
-            {status}
-          </span>
-        );
-    }
-  };
-  
-  // Toggle row expansion
-  const toggleRowExpansion = (logId: string) => {
-    setExpandedRows(prev => ({
-      ...prev,
-      [logId]: !prev[logId]
-    }));
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    const newOffset = (page - 1) * limit;
+    setOffset(newOffset);
+    handleSearch({
+      ...filters,
+      offset: newOffset
+    });
   };
   
   // Auth loading or error state
@@ -142,7 +105,7 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
     );
   }
   
-  if (authError || !token) {
+  if (authError || !session?.token) {
     return (
       <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-6 ${className}`}>
         <div className="flex flex-col items-center justify-center py-6 text-center space-y-4">
@@ -163,72 +126,13 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
   return (
     <div className={`bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden ${className}`}>
       {/* Table Header with filters */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">History</h3>
-          {realtimeConnected && (
-            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
-              <span className="mr-1 h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-              Live
-            </span>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          {/* Search */}
-          <form onSubmit={handleSearch} className="relative w-full sm:w-auto">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Search className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            </div>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full sm:w-64 pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-              placeholder="Search function name..."
-            />
-          </form>
-          
-          {/* Status filter */}
-          <div className="relative w-40">
-            <select 
-              value={statusFilter} 
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setOffset(0); // Reset to first page
-                fetchLogs({
-                  limit,
-                  offset: 0,
-                  order_by: sortField,
-                  order_direction: sortDirection,
-                  status: e.target.value as 'started' | 'completed' | 'failed' | undefined,
-                  function_name: searchTerm.trim() || undefined
-                });
-              }}
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-            >
-              <option value="">All statuses</option>
-              <option value="started">Running</option>
-              <option value="completed">Completed</option>
-              <option value="failed">Failed</option>
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-              <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            </div>
-          </div>
-          
-          {/* Refresh button */}
-          <button
-            type="button"
-            onClick={() => fetchLogs()}
-            disabled={isLoading}
-            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Loading...' : 'Refresh'}
-          </button>
-        </div>
-      </div>
+      <TableHeader
+        onSearch={handleSearch}
+        onRefresh={() => fetchLogs()}
+        isLoading={isLoading}
+        realtimeConnected={realtimeConnected}
+        currentFilters={filters}
+      />
       
       {/* Error message */}
       {error && (
@@ -242,211 +146,27 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
       
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-800">
-            <tr>
-              <th className="w-10 px-3 py-3"></th>
-              <th 
-                onClick={() => handleSort("function_name")}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
-              >
-                Function
-                {sortField === "function_name" && (
-                  <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                )}
-              </th>
-              <th 
-                onClick={() => handleSort("status")}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
-              >
-                Status
-                {sortField === "status" && (
-                  <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                )}
-              </th>
-              <th 
-                onClick={() => handleSort("started_at")}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
-              >
-                Started
-                {sortField === "started_at" && (
-                  <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                )}
-              </th>
-              <th 
-                onClick={() => handleSort("duration_ms")}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
-              >
-                Duration
-                {sortField === "duration_ms" && (
-                  <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                )}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Result
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-            {isLoading && !logs.length ? (
-              // Loading skeleton rows
-              Array(5).fill(0).map((_, i) => (
-                <tr key={`skeleton-${i}`}>
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-20 animate-pulse"></div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 animate-pulse"></div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
-                  </td>
-                </tr>
-              ))
-            ) : logs.length === 0 ? (
-              // Empty state
-              <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                  <div className="flex flex-col items-center">
-                    <p className="mt-2 font-medium">No function logs found</p>
-                    <p className="mt-1 text-xs">Try changing your search filters or run a background job</p>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              // Table rows with expandable content
-              logs.map((log: FunctionLogModel) => (
-                <>
-                  <tr 
-                    key={log.id} 
-                    className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${log.status === "completed" && log.result_data ? "cursor-pointer" : ""}`}
-                    onClick={() => {
-                      if (log.status === "completed" && log.result_data) {
-                        toggleRowExpansion(log.id);
-                      }
-                    }}
-                  >
-                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {log.status === "completed" && log.result_data && (
-                        <div className="text-gray-500 dark:text-gray-400">
-                          {expandedRows[log.id] 
-                            ? <ChevronDown className="w-4 h-4" /> 
-                            : <ChevronRight className="w-4 h-4" />}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {log.function_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <StatusBadge status={log.status} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {formatDate(log.started_at)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {formatDuration(log.duration_ms)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {log.status === "failed" && log.error_message ? (
-                        <span className="text-red-500">{log.error_message}</span>
-                      ) : log.status === "completed" && log.result_data ? (
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {JSON.stringify(log.result_data).substring(0, 30)}
-                          {JSON.stringify(log.result_data).length > 30 ? "..." : ""}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                  
-                  {/* Expandable row for result data */}
-                  {expandedRows[log.id] && log.result_data && (
-                    <tr className="bg-gray-50 dark:bg-gray-800/50">
-                      <td colSpan={6} className="px-6 py-4">
-                        <div className="max-h-80 overflow-auto">
-                          <pre className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap bg-gray-100 dark:bg-gray-900 p-4 rounded-md">
-                            {JSON.stringify(log.result_data, null, 2)}
-                          </pre>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </>
-              ))
-            )}
-          </tbody>
-        </table>
+        <TableBody
+          logs={logs}
+          isLoading={isLoading}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          handleSort={handleSort}
+          formatDate={formatDate}
+          formatDuration={formatDuration}
+        />
       </div>
       
       {/* Pagination */}
-      <div className="bg-white dark:bg-gray-900 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
-        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm text-gray-700 dark:text-gray-300">
-              Showing <span className="font-medium">{Math.min(offset + 1, totalLogs)}</span> to{" "}
-              <span className="font-medium">{Math.min(offset + logs.length, totalLogs)}</span> of{" "}
-              <span className="font-medium">{totalLogs}</span> results
-            </p>
-          </div>
-          <div>
-            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button
-                onClick={() => {
-                  const newOffset = Math.max(0, offset - limit);
-                  setOffset(newOffset);
-                  fetchLogs({
-                    ...filters,
-                    offset: newOffset
-                  });
-                }}
-                disabled={offset === 0}
-                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-              >
-                <span className="sr-only">Previous</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              
-              {/* Current page indicator */}
-              <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Page {currentPage} of {pageCount}
-              </span>
-              
-              <button
-                onClick={() => {
-                  if (offset + limit < totalLogs) {
-                    const newOffset = offset + limit;
-                    setOffset(newOffset);
-                    fetchLogs({
-                      ...filters,
-                      offset: newOffset
-                    });
-                  }
-                }}
-                disabled={offset + limit >= totalLogs}
-                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-              >
-                <span className="sr-only">Next</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </nav>
-          </div>
-        </div>
-      </div>
+      <Pagination
+        currentPage={currentPage}
+        pageCount={pageCount}
+        onPageChange={handlePageChange}
+        offset={offset}
+        limit={limit}
+        totalItems={totalLogs}
+        itemsOnPage={logs.length}
+      />
     </div>
   );
 } 
