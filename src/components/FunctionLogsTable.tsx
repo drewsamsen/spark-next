@@ -41,6 +41,9 @@ export default function FunctionLogsTable({ className = "" }: FunctionLogsTableP
     filters
   } = useFunctionLogs(initialFilters, !!session?.token);
   
+  // Debug log data
+  console.log('FunctionLogsTable - received logs:', { logs, totalLogs, isLoading, error });
+  
   // Handle search and filter
   const handleSearch = (newFilters: FunctionLogsFilter) => {
     // Update state to match the new filters

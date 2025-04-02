@@ -1,12 +1,15 @@
 import React from 'react';
+import { IconProps } from './IconTemplate';
 
-interface LogoIconProps extends React.SVGProps<SVGSVGElement> {
-  // Additional props can be added here
-}
-
-export function LogoIcon({ className, ...props }: LogoIconProps) {
+export function LogoIcon({ 
+  size = 24,
+  className = "", 
+  ...props 
+}: IconProps) {
   return (
     <svg 
+      width={size}
+      height={size}
       viewBox="0 0 43.3492 43.3492"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"

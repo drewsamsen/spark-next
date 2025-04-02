@@ -100,8 +100,12 @@ export function useFunctionLogs(initialFilters: FunctionLogsFilter = {}, enabled
       }
       
       const data = await response.json();
-      setLogs(data.logs || []);
-      setTotalLogs(data.pagination?.total || 0);
+      console.log('API response:', data); // Debug
+      
+      // Access the nested data structure from createSuccessResponse
+      const responseData = data.data || data;
+      setLogs(responseData.logs || []);
+      setTotalLogs(responseData.pagination?.total || 0);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to fetch function logs";
       setError(errorMessage);
