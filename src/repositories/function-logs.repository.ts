@@ -1,8 +1,13 @@
 import { BaseRepository } from './base.repository';
 import { handleServiceError } from '@/lib/errors';
 import { FunctionLogModel, FunctionLogsFilter } from '@/lib/types';
+import { DbClient } from '@/lib/db';
 
-export class FunctionLogsRepository extends BaseRepository {
+export class FunctionLogsRepository extends BaseRepository<FunctionLogModel> {
+  constructor(client: DbClient) {
+    super(client, 'function_logs');
+  }
+  
   /**
    * Get function logs for the current user with optional filters
    */

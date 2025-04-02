@@ -1,25 +1,29 @@
 import { getRepositories } from '@/repositories';
-import { CreateSparkInput, SparkDomain, EnhancedSparkItem, SidebarItem } from '@/lib/types';
+import { CreateSparkInput, SparkDomain, EnhancedSparkItem, SidebarItem, SparkModel } from '@/lib/types';
 import { formatDate } from '@/lib/db';
 import { handleServiceError, handleServiceItemError } from '@/lib/errors';
+import { BaseService } from './base.service';
+import { SparksRepository } from '@/repositories/sparks.repository';
 
 /**
  * Service for handling sparks-related operations
  */
-export const sparksService = {
+class SparksService extends BaseService<SparkModel, SparksRepository> {
+  constructor() {
+    super(getRepositories().sparks);
+  }
+
   /**
    * Get all sparks for the current user with complete details
    */
   async getSparks(): Promise<EnhancedSparkItem[]> {
     try {
-      const repo = getRepositories().sparks;
-      
       // Fetch all sparks from the repository
-      const sparksWithRelations = await repo.getSparks();
+      const sparksWithRelations = await this.repository.getSparks();
       
       // Transform the results into the expected format
       const enhancedSparks = sparksWithRelations.map(spark => {
-        const sparkDomain = repo.mapToDomain(spark);
+        const sparkDomain = this.repository.mapToDomain(spark);
         
         return {
           id: sparkDomain.id,
@@ -31,57 +35,53 @@ export const sparksService = {
       
       return enhancedSparks;
     } catch (error) {
-      return handleServiceError<EnhancedSparkItem>(error, 'Error in sparksService.getSparks');
+      return handleServiceError<EnhancedSparkItem>(error, 'Error in SparksService.getSparks');
     }
-  },
+  }
 
   /**
    * Get detailed information for a single spark
    */
   async getSparkDetails(sparkId: string): Promise<SparkDomain | null> {
     try {
-      const repo = getRepositories().sparks;
-      
-      const sparkWithRelations = await repo.getSparkById(sparkId);
+      const sparkWithRelations = await this.repository.getSparkById(sparkId);
       
       if (!sparkWithRelations) {
         return null;
       }
       
-      return repo.mapToDomain(sparkWithRelations);
+      return this.repository.mapToDomain(sparkWithRelations);
     } catch (error) {
-      return handleServiceItemError<SparkDomain>(error, `Error in sparksService.getSparkDetails for spark ${sparkId}`);
+      return handleServiceItemError<SparkDomain>(error, `Error in SparksService.getSparkDetails for spark ${sparkId}`);
     }
-  },
+  }
 
   /**
    * Create a new spark
    */
   async createSpark(input: Omit<CreateSparkInput, 'md5Uid'>): Promise<SparkDomain | null> {
     try {
-      const repo = getRepositories().sparks;
-      
       // Generate a simple hash to avoid duplicates
       const md5Uid = await this.generateMd5Hash(input.body);
       
       // Create the spark
-      const newSpark = await repo.createSpark({
+      const newSpark = await this.repository.createSpark({
         ...input,
         md5Uid
       });
       
       // Get the full details with relationships
-      const sparkWithRelations = await repo.getSparkById(newSpark.id);
+      const sparkWithRelations = await this.repository.getSparkById(newSpark.id);
       
       if (!sparkWithRelations) {
         return null;
       }
       
-      return repo.mapToDomain(sparkWithRelations);
+      return this.repository.mapToDomain(sparkWithRelations);
     } catch (error) {
-      return handleServiceItemError<SparkDomain>(error, 'Error in sparksService.createSpark');
+      return handleServiceItemError<SparkDomain>(error, 'Error in SparksService.createSpark');
     }
-  },
+  }
 
   /**
    * Update an existing spark
@@ -91,38 +91,28 @@ export const sparksService = {
     updates: Partial<Omit<CreateSparkInput, 'md5Uid'>>
   ): Promise<SparkDomain | null> {
     try {
-      const repo = getRepositories().sparks;
-      
       // Update the spark
-      await repo.updateSpark(sparkId, updates);
+      await this.repository.updateSpark(sparkId, updates);
       
       // Get the updated spark with relationships
-      const sparkWithRelations = await repo.getSparkById(sparkId);
+      const sparkWithRelations = await this.repository.getSparkById(sparkId);
       
       if (!sparkWithRelations) {
         return null;
       }
       
-      return repo.mapToDomain(sparkWithRelations);
+      return this.repository.mapToDomain(sparkWithRelations);
     } catch (error) {
-      return handleServiceItemError<SparkDomain>(error, `Error in sparksService.updateSpark for spark ${sparkId}`);
+      return handleServiceItemError<SparkDomain>(error, `Error in SparksService.updateSpark for spark ${sparkId}`);
     }
-  },
+  }
 
   /**
-   * Delete a spark
+   * Delete a spark - overrides base service delete method
    */
   async deleteSpark(sparkId: string): Promise<boolean> {
-    try {
-      const repo = getRepositories().sparks;
-      
-      await repo.deleteSpark(sparkId);
-      return true;
-    } catch (error) {
-      console.error(`Error in sparksService.deleteSpark for spark ${sparkId}:`, error);
-      return false;
-    }
-  },
+    return this.delete(sparkId);
+  }
 
   /**
    * Generate an MD5 hash from a string
@@ -150,4 +140,9 @@ export const sparksService = {
     }
     return hash.toString(16);
   }
-}; 
+}
+
+/**
+ * Export a singleton instance of the SparksService
+ */
+export const sparksService = new SparksService(); 

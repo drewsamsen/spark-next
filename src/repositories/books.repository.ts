@@ -14,28 +14,17 @@ import {
 /**
  * Repository for books
  */
-export class BooksRepository extends BaseRepository {
+export class BooksRepository extends BaseRepository<BookModel> {
   constructor(client: DbClient) {
-    super(client);
+    super(client, 'books');
   }
 
   /**
    * Get all books for the current user
+   * @deprecated Use getAll() from BaseRepository instead
    */
   async getBooks(): Promise<BookModel[]> {
-    const userId = await this.getUserId();
-    
-    const { data, error } = await this.client
-      .from('books')
-      .select('*')
-      .eq('user_id', userId)
-      .order('rw_title', { ascending: true });
-    
-    if (error) {
-      throw new DatabaseError('Error fetching books', error);
-    }
-    
-    return data;
+    return this.getAll();
   }
 
   /**
@@ -121,35 +110,22 @@ export class BooksRepository extends BaseRepository {
    * Create a new book
    */
   async createBook(input: CreateBookInput): Promise<BookModel> {
-    const userId = await this.getUserId();
-    
-    const { data, error } = await this.client
-      .from('books')
-      .insert({
-        user_id: userId,
-        rw_id: input.rwId,
-        rw_title: input.rwTitle || null,
-        rw_author: input.rwAuthor || null,
-        rw_category: input.rwCategory || null,
-        rw_source: input.rwSource || null,
-        rw_num_highlights: input.rwNumHighlights || 0,
-        rw_last_highlight_at: input.rwLastHighlightAt || null,
-        rw_updated: input.rwUpdated || null,
-        rw_cover_image_url: input.rwCoverImageUrl || null,
-        rw_highlights_url: input.rwHighlightsUrl || null,
-        rw_source_url: input.rwSourceUrl || null,
-        rw_asin: input.rwAsin || null,
-        rw_tags: input.rwTags || null,
-        rw_document_note: input.rwDocumentNote || null
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      throw new DatabaseError('Error creating book', error);
-    }
-    
-    return data;
+    return this.create({
+      rw_id: input.rwId,
+      rw_title: input.rwTitle || null,
+      rw_author: input.rwAuthor || null,
+      rw_category: input.rwCategory || null,
+      rw_source: input.rwSource || null,
+      rw_num_highlights: input.rwNumHighlights || 0,
+      rw_last_highlight_at: input.rwLastHighlightAt || null,
+      rw_updated: input.rwUpdated || null,
+      rw_cover_image_url: input.rwCoverImageUrl || null,
+      rw_highlights_url: input.rwHighlightsUrl || null,
+      rw_source_url: input.rwSourceUrl || null,
+      rw_asin: input.rwAsin || null,
+      rw_tags: input.rwTags || null,
+      rw_document_note: input.rwDocumentNote || null
+    });
   }
 
   /**
@@ -159,60 +135,29 @@ export class BooksRepository extends BaseRepository {
     bookId: string, 
     updates: Partial<CreateBookInput>
   ): Promise<BookModel> {
-    const userId = await this.getUserId();
-    
-    // Verify the book exists and belongs to this user
-    await this.verifyUserOwnership('books', bookId, userId);
-    
-    const { data, error } = await this.client
-      .from('books')
-      .update({
-        rw_title: updates.rwTitle,
-        rw_author: updates.rwAuthor,
-        rw_category: updates.rwCategory,
-        rw_source: updates.rwSource,
-        rw_num_highlights: updates.rwNumHighlights,
-        rw_last_highlight_at: updates.rwLastHighlightAt,
-        rw_updated: updates.rwUpdated,
-        rw_cover_image_url: updates.rwCoverImageUrl,
-        rw_highlights_url: updates.rwHighlightsUrl,
-        rw_source_url: updates.rwSourceUrl,
-        rw_asin: updates.rwAsin,
-        rw_tags: updates.rwTags,
-        rw_document_note: updates.rwDocumentNote,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', bookId)
-      .eq('user_id', userId)
-      .select()
-      .single();
-    
-    if (error) {
-      throw new DatabaseError(`Error updating book with ID ${bookId}`, error);
-    }
-    
-    return data;
+    return this.update(bookId, {
+      rw_title: updates.rwTitle,
+      rw_author: updates.rwAuthor,
+      rw_category: updates.rwCategory,
+      rw_source: updates.rwSource,
+      rw_num_highlights: updates.rwNumHighlights,
+      rw_last_highlight_at: updates.rwLastHighlightAt,
+      rw_updated: updates.rwUpdated,
+      rw_cover_image_url: updates.rwCoverImageUrl,
+      rw_highlights_url: updates.rwHighlightsUrl,
+      rw_source_url: updates.rwSourceUrl,
+      rw_asin: updates.rwAsin,
+      rw_tags: updates.rwTags,
+      rw_document_note: updates.rwDocumentNote,
+    });
   }
 
   /**
    * Delete a book
+   * @deprecated Use delete() from BaseRepository instead
    */
   async deleteBook(bookId: string): Promise<void> {
-    const userId = await this.getUserId();
-    
-    // Verify the book exists and belongs to this user
-    await this.verifyUserOwnership('books', bookId, userId);
-    
-    // Delete the book
-    const { error } = await this.client
-      .from('books')
-      .delete()
-      .eq('id', bookId)
-      .eq('user_id', userId);
-    
-    if (error) {
-      throw new DatabaseError(`Error deleting book with ID ${bookId}`, error);
-    }
+    return this.delete(bookId);
   }
 
   /**

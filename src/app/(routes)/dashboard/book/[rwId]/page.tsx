@@ -12,7 +12,7 @@ import Image from 'next/image';
 export default function BookDetailsPage() {
   const params = useParams();
   const rwId = parseInt(params.rwId as string, 10); // Parse the rwId from the URL
-  const { getBookByReadwiseId, getBookHighlights } = useBooksService();
+  const booksService = useBooksService();
   const [book, setBook] = useState<BookDomain | null>(null);
   const [highlights, setHighlights] = useState<HighlightDomain[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,12 +22,12 @@ export default function BookDetailsPage() {
       setIsLoading(true);
       try {
         // Fetch book details by Readwise ID
-        const bookDetails = await getBookByReadwiseId(rwId);
+        const bookDetails = await booksService.getBookByReadwiseId(rwId);
         setBook(bookDetails);
 
         // Fetch book highlights if the book was found
         if (bookDetails) {
-          const bookHighlights = await getBookHighlights(bookDetails.id);
+          const bookHighlights = await booksService.getBookHighlights(bookDetails.id);
           setHighlights(bookHighlights);
         }
       } catch (error) {
@@ -40,7 +40,7 @@ export default function BookDetailsPage() {
     if (rwId && !isNaN(rwId)) {
       loadBookData();
     }
-  }, [rwId, getBookByReadwiseId, getBookHighlights]);
+  }, [rwId, booksService]);
 
   if (isLoading) {
     return (

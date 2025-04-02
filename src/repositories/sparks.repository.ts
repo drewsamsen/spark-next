@@ -13,9 +13,9 @@ import {
 /**
  * Repository for sparks
  */
-export class SparksRepository extends BaseRepository {
+export class SparksRepository extends BaseRepository<SparkModel> {
   constructor(client: DbClient) {
-    super(client);
+    super(client, 'sparks');
   }
 
   /**
@@ -94,25 +94,12 @@ export class SparksRepository extends BaseRepository {
    * Create a new spark
    */
   async createSpark(input: CreateSparkInput): Promise<SparkModel> {
-    const userId = await this.getUserId();
-    
-    const { data, error } = await this.client
-      .from('sparks')
-      .insert({
-        body: input.body,
-        user_id: userId,
-        todo_created_at: input.todoCreatedAt || null,
-        todo_id: input.todoId || null,
-        md5_uid: input.md5Uid || null
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      throw new DatabaseError('Error creating spark', error);
-    }
-    
-    return data;
+    return this.create({
+      body: input.body,
+      todo_created_at: input.todoCreatedAt || null,
+      todo_id: input.todoId || null,
+      md5_uid: input.md5Uid || null
+    });
   }
 
   /**
@@ -122,50 +109,19 @@ export class SparksRepository extends BaseRepository {
     sparkId: string, 
     updates: Partial<Omit<CreateSparkInput, 'md5Uid'>>
   ): Promise<SparkModel> {
-    const userId = await this.getUserId();
-    
-    // Verify the spark exists and belongs to this user
-    await this.verifyUserOwnership('sparks', sparkId, userId);
-    
-    const { data, error } = await this.client
-      .from('sparks')
-      .update({
-        body: updates.body,
-        todo_created_at: updates.todoCreatedAt,
-        todo_id: updates.todoId,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', sparkId)
-      .eq('user_id', userId)
-      .select()
-      .single();
-    
-    if (error) {
-      throw new DatabaseError(`Error updating spark with ID ${sparkId}`, error);
-    }
-    
-    return data;
+    return this.update(sparkId, {
+      body: updates.body,
+      todo_created_at: updates.todoCreatedAt,
+      todo_id: updates.todoId
+    });
   }
 
   /**
    * Delete a spark
+   * @deprecated Use delete() from BaseRepository instead
    */
   async deleteSpark(sparkId: string): Promise<void> {
-    const userId = await this.getUserId();
-    
-    // Verify the spark exists and belongs to this user
-    await this.verifyUserOwnership('sparks', sparkId, userId);
-    
-    // Delete the spark
-    const { error } = await this.client
-      .from('sparks')
-      .delete()
-      .eq('id', sparkId)
-      .eq('user_id', userId);
-    
-    if (error) {
-      throw new DatabaseError(`Error deleting spark with ID ${sparkId}`, error);
-    }
+    return this.delete(sparkId);
   }
 
   /**
