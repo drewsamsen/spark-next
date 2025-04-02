@@ -1,0 +1,101 @@
+---
+description: Guidelines for Inngest background jobs and event-driven workflows
+globs:
+alwaysApply: false
+---
+# Inngest Background Jobs
+
+## Configuration
+
+- Use `inngest.config.ts` for Inngest configuration
+- Register all functions in both:
+  - `inngest.config.ts`
+  - `src/app/api/inngest/route.ts` functions array
+
+## Designing Job Functions
+
+- Implement standardized `isLastStep` convention for all multi-step functions
+- Use clear, descriptive function and step names
+- Provide comprehensive logging for job execution
+
+## Database Change Detection
+
+- Use Supabase realtime to detect when functions make changes to the database
+- Ensure proper error handling and retry mechanisms
+
+## Categorization Jobs
+
+- All automated tag and category creation/application must be wrapped in a categorization job
+- Implement job actions that provide a complete audit trail
+- Allow for future review and potential rollback of automated changes
+
+## Example Inngest Function
+
+```typescript
+// src/inngest/jobs/processDocument.ts
+import { inngest } from "../client";
+
+export const processDocumentFunction = inngest.createFunction(
+  { id: "process-document" },
+  { event: "document/created" },
+  async ({ event, step }) => {
+    // Step 1: Extract text from document
+    const extractedText = await step.run("extract-text", async () => {
+      // Text extraction logic
+      return { text: "Extracted document text..." };
+    });
+    
+    // Step 2: Analyze content
+    const analysis = await step.run("analyze-content", async () => {
+      // Content analysis logic
+      return { 
+        categories: ["finance", "reporting"],
+        sentimentScore: 0.75
+      };
+    });
+    
+    // Step 3: Store results
+    const result = await step.run("store-results", async () => {
+      // Store results in database
+      return { success: true };
+    });
+    
+    // Final step - mark as completed
+    const isLastStep = true;
+    
+    return { 
+      document: event.data.documentId,
+      analysis: analysis,
+      isLastStep 
+    };
+  }
+);
+```
+
+## Registering Functions
+
+Make sure to register all functions in both required locations:
+
+```typescript
+// inngest.config.ts
+import { processDocumentFunction } from "./src/inngest/jobs/processDocument";
+
+export default {
+  // Inngest config
+  functions: [
+    processDocumentFunction,
+    // Other functions...
+  ]
+};
+
+// src/app/api/inngest/route.ts
+import { processDocumentFunction } from "@/inngest/jobs/processDocument";
+
+export const inngestHandler = serve({
+  client: inngest,
+  functions: [
+    processDocumentFunction,
+    // Other functions...
+  ]
+});
+``` 

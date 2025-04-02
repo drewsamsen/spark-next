@@ -1,0 +1,94 @@
+---
+description: Guidelines for Supabase database access, auth, and migrations
+globs: 
+alwaysApply: false
+---
+# Supabase Guidelines
+
+## Database Access
+
+- Use the repository pattern to encapsulate Supabase queries
+- Type all database responses using TypeScript interfaces
+- Handle errors consistently across repositories
+
+## Authentication
+
+- Use Supabase Auth for user authentication
+- Implement auth flows through appropriate service layer methods
+- Secure routes and API endpoints based on auth state
+
+## Migrations
+
+- Use `npx supabase migration new [migration-name]` to generate migration files
+- Do not run migration files directly
+- Do not push data to the database directly
+- Create migration files and instruct users on how to proceed
+
+## Example Repository Implementation
+
+```typescript
+// src/repositories/postRepository.ts
+import { supabase } from "@/lib/supabase";
+import { Post, CreatePostInput, UpdatePostInput } from "@/lib/types";
+
+export class PostRepository {
+  async getAll(): Promise<Post[]> {
+    const { data, error } = await supabase
+      .from("posts")
+      .select("*")
+      .order("created_at", { ascending: false });
+      
+    if (error) throw error;
+    return data || [];
+  }
+  
+  async create(input: CreatePostInput): Promise<Post> {
+    const { data, error } = await supabase
+      .from("posts")
+      .insert(input)
+      .select()
+      .single();
+      
+    if (error) throw error;
+    return data;
+  }
+  
+  async update(id: string, input: UpdatePostInput): Promise<Post> {
+    const { data, error } = await supabase
+      .from("posts")
+      .update(input)
+      .eq("id", id)
+      .select()
+      .single();
+      
+    if (error) throw error;
+    return data;
+  }
+  
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from("posts")
+      .delete()
+      .eq("id", id);
+      
+    if (error) throw error;
+  }
+}
+```
+
+## Creating Migrations
+
+When schema changes are needed:
+
+1. Create a migration file:
+   ```bash
+   npx supabase migration new add_status_to_posts
+   ```
+   
+2. Edit the generated SQL file with your schema changes:
+   ```sql
+   -- Add status column to posts table
+   ALTER TABLE posts ADD COLUMN status TEXT NOT NULL DEFAULT 'draft';
+   ```
+   
+3. Instruct users to apply the migration 

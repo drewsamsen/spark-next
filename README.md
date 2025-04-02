@@ -133,6 +133,19 @@ This project includes a special development mode that connects to your productio
 - `supabase/` - Supabase migrations and configurations
   - `migrations/` - Database migrations
 - `scripts/` - Setup and utility scripts
+- `docs/` - Project documentation
+
+## 📚 Documentation
+
+All project documentation is now organized in the `docs/` directory. For an overview of all available documentation, check the [Documentation Index](docs/README.md).
+
+Documentation is organized into:
+- Getting Started guides
+- Development guides
+- Architecture documentation
+- Feature-specific documentation
+
+Module-specific documentation remains in the module directories for easy access during development.
 
 ## 🚀 Deployment
 

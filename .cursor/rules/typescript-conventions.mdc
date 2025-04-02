@@ -1,0 +1,92 @@
+---
+description: Guidelines for TypeScript usage, types, and coding conventions
+globs: **/*.ts **/*.tsx
+alwaysApply: false
+---
+# TypeScript Conventions
+
+## Type Safety
+
+- Use strict TypeScript with proper typing
+- Avoid using `any` type
+- Define interfaces and types for all data structures
+- Centralize shared types in `src/lib/types.ts`
+
+## Type Best Practices
+
+- Use optional chaining (`?.`) for nullable properties
+- Prefer union types over enums
+- Use TypeScript's utility types when appropriate (e.g., `Partial<T>`, `Pick<T>`)
+- Properly type async functions with `Promise<T>`
+
+## Example Type Definitions
+
+```typescript
+// src/lib/types.ts
+
+// Entity interfaces
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+  authorId: string;
+  status: "draft" | "published" | "archived";
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Input types
+export interface CreatePostInput {
+  title: string;
+  content: string;
+  authorId: string;
+}
+
+export interface UpdatePostInput {
+  title?: string;
+  content?: string;
+  status?: "draft" | "published" | "archived";
+}
+
+// Response types
+export interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+  status: number;
+}
+```
+
+## Import Organization
+
+Sort imports in the following order:
+1. External dependencies
+2. Internal modules
+3. Sibling modules
+4. Styles
+
+Example:
+
+```typescript
+// External dependencies
+import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
+
+// Internal modules/libraries
+import { supabase } from "@/lib/supabase";
+import { User } from "@/lib/types";
+
+// Sibling/component imports
+import { UserAvatar } from "./UserAvatar";
+import { Loader } from "../common/Loader";
+
+// Styles (if applicable)
+import "./styles.css";
+``` 

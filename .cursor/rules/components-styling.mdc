@@ -1,0 +1,70 @@
+---
+description: Guidelines for React components, naming, and Tailwind styling
+globs:
+alwaysApply: false
+---
+# Components and Styling
+
+## Component Structure
+
+- Use functional components with TypeScript
+- Add `"use client"` directive when components use client-side features
+- Name components using PascalCase
+- Store components in `src/components/` directory
+- Keep components small and focused on a single responsibility
+
+## Styling with Tailwind
+
+- Use Tailwind CSS for styling components
+- Use Tailwind for common UI components (buttons, inputs, etc.)
+- Do not use Radix or Shadcn components
+
+## Icons
+
+- Prefer `lucide-react` for icons
+- Name icon components using PascalCase
+- Place custom icons in `src/components/icons`
+
+## Component Example
+
+```tsx
+// src/components/UserProfile.tsx
+"use client";
+
+import { User } from "@/lib/types";
+import { UserCircle } from "lucide-react";
+
+interface UserProfileProps {
+  user: User;
+  onEdit?: () => void;
+}
+
+export function UserProfile({ user, onEdit }: UserProfileProps) {
+  return (
+    <div className="p-4 bg-white rounded-lg shadow">
+      <div className="flex items-center gap-3">
+        <UserCircle className="w-10 h-10 text-gray-700" />
+        <div>
+          <h3 className="font-medium">{user.name}</h3>
+          <p className="text-sm text-gray-500">{user.email}</p>
+        </div>
+      </div>
+      
+      {onEdit && (
+        <button 
+          onClick={onEdit}
+          className="mt-4 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Edit Profile
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+## Toast Notifications
+
+- Use `react-toastify` for toast notifications
+- Implement in client components only
+- Use provided methods: `toast.success()`, `toast.error()`, etc. 

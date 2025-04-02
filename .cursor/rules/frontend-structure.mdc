@@ -1,0 +1,37 @@
+---
+description: Guidelines for Next.js structure, routing, and file organization
+globs:
+alwaysApply: false
+---
+# Next.js Structure and Organization
+
+## App Router Structure
+
+- Use App Router in `app/` directory
+- Server components by default, add `"use client"` for client-side logic
+- Use `.env` for environment variables and secrets
+
+## File & Folder Naming
+
+- Next.js routes should use kebab-case (e.g., `app/user-profile/page.tsx`)
+- Follow Next.js conventions for special files:
+  - `page.tsx` - Route pages
+  - `layout.tsx` - Layouts
+  - `loading.tsx` - Loading states
+  - `error.tsx` - Error boundaries
+
+## Route Organization
+
+```typescript
+// app/dashboard/page.tsx - Main dashboard page
+export default function DashboardPage() {
+  // Server component by default
+}
+
+// app/dashboard/settings/page.tsx - Settings page
+"use client"; // Client component when needed
+
+export default function SettingsPage() {
+  // Client-side logic
+}
+``` 

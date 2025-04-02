@@ -1,0 +1,24 @@
+---
+description: Guidelines for building, debugging, and general workflow practices
+globs:
+alwaysApply: false
+---
+
+## Workflow
+
+- After all changes are made, ALWAYS build the project with `npm run build`. Ignore warnings, fix errors.
+- Do not over-deliver. If you see opportunities for a good next step, pause and make the suggestion to the user. 
+- Do not automatically try and do too much.
+- Never try to run the development server yourself. Never run `npm run dev`
+- If the user requests A, do not deliver A, B, C, and D.  Instead, complete A, and when you're finished, recommend the next steps of B, C, and D for the user to decide how to proceed next.
+
+## Version Control and git
+
+- Do not run `git add` or `git commit` after making changes. 
+- The user will handle git.
+
+## Debugging 
+
+- When debugging, Avoid a shotgun approach where you make many changes at once to try to fix the issue.
+- Think carefully, step by step, and identify the most probable cause of the issue and make that one fix only.
+- The user can test after each attempted fix and we can iterate from there.  Avoid trying too many fixes at once.

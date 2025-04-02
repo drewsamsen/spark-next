@@ -1,0 +1,69 @@
+---
+description: Guidelines for project directory structure and file organization
+globs: 
+alwaysApply: false
+---
+# Project File Structure
+
+## Directory Organization
+
+The project follows a well-defined directory structure:
+
+- `/src/app`: Next.js App Router routes
+- `/src/components`: UI components
+- `/src/repositories`: Database access classes
+- `/src/services`: Business logic implementation
+- `/src/hooks`: React hooks for components
+- `/src/inngest`: Background job definitions
+- `/src/lib`: Shared utilities, types, and helpers
+
+## File Naming Conventions
+
+- **Next.js Routes**: Use kebab-case for route folders (e.g., `user-profile`)
+- **Components**: Use PascalCase (e.g., `UserProfile.tsx`)
+- **Hooks**: Use camelCase with `use` prefix (e.g., `useUser.ts`)
+- **Services**: Use camelCase with `Service` suffix (e.g., `userService.ts`)
+- **Repositories**: Use camelCase with `Repository` suffix (e.g., `userRepository.ts`)
+- **Types**: Centralize in `src/lib/types.ts`
+
+## Component Directory Structure
+
+For complex components that consist of multiple files:
+
+```
+src/components/UserDashboard/
+├── UserDashboard.tsx      # Main component
+├── UserStats.tsx          # Sub-component
+├── RecentActivity.tsx     # Sub-component
+└── index.ts               # Re-export main component
+```
+
+## Route Structure
+
+Follow Next.js App Router conventions:
+
+```
+src/app/
+├── layout.tsx             # Root layout
+├── page.tsx               # Home page
+├── dashboard/
+│   ├── layout.tsx         # Dashboard layout
+│   ├── page.tsx           # Dashboard main page
+│   └── settings/
+│       └── page.tsx       # Settings page
+└── api/
+    └── inngest/
+        └── route.ts       # Inngest API route
+```
+
+## Library Code
+
+Organize utility code in the lib directory:
+
+```
+src/lib/
+├── types.ts               # Shared type definitions
+├── utils.ts               # General utilities
+├── supabase.ts            # Supabase client
+└── constants.ts           # Application constants
+``` 

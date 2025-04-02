@@ -1,0 +1,98 @@
+---
+description: Guidelines for repository-service-hook pattern and data flow
+globs:
+alwaysApply: false
+---
+# Data Architecture
+
+## Layer Structure
+
+- **Repository Layer**: Handles direct database access through Supabase
+- **Service Layer**: Implements business logic using repositories
+- **React Hooks**: Provides components with access to services
+- **Components**: Consume hooks to display UI and handle interactions
+
+## Implementation Flow
+
+When implementing new features, follow the `repository → service → hook → component` flow:
+
+1. Create/update repository methods for database operations
+2. Implement business logic in services using repositories
+3. Create hooks to expose services to components
+4. Build components that consume the hooks
+
+## Repository Layer
+
+```typescript
+// src/repositories/userRepository.ts
+import { supabase } from "@/lib/supabase";
+import { User } from "@/lib/types";
+
+export class UserRepository {
+  async getById(id: string): Promise<User | null> {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", id)
+      .single();
+      
+    if (error) throw error;
+    return data;
+  }
+  
+  // Additional database operations...
+}
+```
+
+## Service Layer
+
+```typescript
+// src/services/userService.ts
+import { UserRepository } from "@/repositories/userRepository";
+import { User } from "@/lib/types";
+
+export class UserService {
+  private userRepo = new UserRepository();
+  
+  async getUserProfile(userId: string): Promise<User | null> {
+    return this.userRepo.getById(userId);
+  }
+  
+  // Business logic methods...
+}
+```
+
+## Hook Layer
+
+```typescript
+// src/hooks/useUser.ts
+import { useState, useEffect } from "react";
+import { UserService } from "@/services/userService";
+import { User } from "@/lib/types";
+
+export function useUser(userId: string) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  
+  const userService = new UserService();
+  
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        setLoading(true);
+        const userData = await userService.getUserProfile(userId);
+        setUser(userData);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadUser();
+  }, [userId]);
+  
+  return { user, loading, error };
+}
+``` 
