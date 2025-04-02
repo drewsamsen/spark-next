@@ -1,31 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase';
+import { authenticateRequest, createErrorResponse, createSuccessResponse } from '@/lib/api-utils';
 import { FunctionLogsService } from '@/lib/function-logs-service';
 
 // GET handler for fetching logs
 export async function GET(request: NextRequest) {
   try {
-    // Get auth header from the request
-    const supabase = createServerClient();
+    // Authenticate the request
+    const { user, error: authError } = await authenticateRequest(request);
+    if (authError || !user) {
+      return authError || createErrorResponse('Authentication failed', 401);
+    }
+    
     const { searchParams } = new URL(request.url);
-    
-    // Authenticate the user from the request
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const token = authHeader.substring(7);
-    
-    // Validate the token and get user info
-    const { data: userData, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !userData?.user) {
-      console.error('Auth error in function logs API:', authError);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const userId = userData.user.id;
     
     // Get query params for filtering and pagination
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -35,8 +21,8 @@ export async function GET(request: NextRequest) {
     const orderBy = searchParams.get('order_by') || 'started_at';
     const orderDirection = searchParams.get('order_direction') as 'asc' | 'desc' | undefined;
     
-    // Fetch the logs
-    const { logs, count, error } = await FunctionLogsService.getUserFunctionLogs(userId, {
+    // Fetch the logs using the service
+    const { logs, count, error } = await FunctionLogsService.getUserFunctionLogs(user.id, {
       limit,
       offset,
       function_name: functionName,
@@ -46,10 +32,10 @@ export async function GET(request: NextRequest) {
     });
     
     if (error) {
-      return NextResponse.json({ error }, { status: 500 });
+      return createErrorResponse(error);
     }
     
-    return NextResponse.json({
+    return createSuccessResponse({
       logs,
       pagination: {
         total: count,
@@ -59,9 +45,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in function logs API:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch function logs' },
-      { status: 500 }
-    );
+    return createErrorResponse('Failed to fetch function logs');
   }
 } 

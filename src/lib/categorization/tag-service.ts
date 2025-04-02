@@ -1,4 +1,4 @@
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { getRepositories } from "@/repositories";
 import { Resource, ResourceType, Tag } from "./types";
 import { TagService } from "./services";
 import { getResourceIdColumn, getTagJunctionTable, prepareTagJunction, toResource, verifyResourceOwnership } from "./db-utils";
@@ -8,12 +8,9 @@ export class TagServiceImpl implements TagService {
    * Get all tags
    */
   async getTags(): Promise<Tag[]> {
-    const supabase = getSupabaseBrowserClient();
+    const repo = getRepositories().categorization;
     
-    const { data, error } = await supabase
-      .from('tags')
-      .select('*')
-      .order('name');
+    const { data, error } = await repo.getAllTags();
       
     if (error) {
       console.error('Error fetching tags:', error);
@@ -34,22 +31,14 @@ export class TagServiceImpl implements TagService {
       throw new Error('Tag name cannot be empty');
     }
     
-    const supabase = getSupabaseBrowserClient();
+    const repo = getRepositories().categorization;
     
-    const { data, error } = await supabase
-      .from('tags')
-      .insert({ name })
-      .select()
-      .single();
+    const { data, error } = await repo.createTag(name);
       
     if (error) {
       if (error.code === '23505') { // Unique violation
         // Check if it exists
-        const { data: existingTag } = await supabase
-          .from('tags')
-          .select('*')
-          .eq('name', name)
-          .single();
+        const { data: existingTag } = await repo.findTagByName(name);
           
         if (existingTag) {
           return {
@@ -72,7 +61,7 @@ export class TagServiceImpl implements TagService {
    * Get tags for a specific resource
    */
   async getTagsForResource(resource: Resource): Promise<Tag[]> {
-    const supabase = getSupabaseBrowserClient();
+    const repo = getRepositories().categorization;
     const junctionTable = getTagJunctionTable(resource.type);
     const resourceIdColumn = getResourceIdColumn(resource.type);
     
@@ -85,15 +74,7 @@ export class TagServiceImpl implements TagService {
       };
     };
     
-    const { data, error } = await supabase
-      .from(junctionTable)
-      .select(`
-        tag_id,
-        tags:tag_id (
-          id, name
-        )
-      `)
-      .eq(resourceIdColumn, resource.id);
+    const { data, error } = await repo.getTagsForResource(resource, resourceIdColumn, junctionTable);
       
     if (error) {
       console.error(`Error fetching tags for ${resource.type}:`, error);
@@ -120,7 +101,7 @@ export class TagServiceImpl implements TagService {
    * Get all resources of a specified type that have a tag
    */
   async getResourcesForTag(tagId: string, type?: ResourceType): Promise<Resource[]> {
-    const supabase = getSupabaseBrowserClient();
+    const repo = getRepositories().categorization;
     const results: Resource[] = [];
     
     // If type is specified, only query that resource type
@@ -141,15 +122,12 @@ export class TagServiceImpl implements TagService {
         };
       };
       
-      const { data, error } = await supabase
-        .from(junctionTable)
-        .select(`
-          ${resourceIdColumn},
-          ${joinColumnName}:${resourceIdColumn} (
-            id, user_id
-          )
-        `)
-        .eq('tag_id', tagId);
+      const { data, error } = await repo.getResourcesForTag(
+        tagId, 
+        junctionTable, 
+        resourceIdColumn, 
+        joinColumnName
+      );
         
       if (error) {
         console.error(`Error fetching ${resourceType} resources for tag:`, error);
@@ -178,16 +156,14 @@ export class TagServiceImpl implements TagService {
       throw new Error(`Resource not found or you don't have access to it`);
     }
     
-    const supabase = getSupabaseBrowserClient();
+    const repo = getRepositories().categorization;
     const junctionTable = getTagJunctionTable(resource.type);
     
     // Prepare the junction record
     const junction = prepareTagJunction(resource, tagId);
     junction.created_by = source;
     
-    const { error } = await supabase
-      .from(junctionTable)
-      .upsert(junction);
+    const { error } = await repo.addTagToResource(junctionTable, junction);
       
     if (error) {
       throw new Error(`Failed to add tag: ${error.message}`);
@@ -198,15 +174,16 @@ export class TagServiceImpl implements TagService {
    * Remove a tag from a resource
    */
   async removeTagFromResource(resource: Resource, tagId: string): Promise<void> {
-    const supabase = getSupabaseBrowserClient();
+    const repo = getRepositories().categorization;
     const junctionTable = getTagJunctionTable(resource.type);
     const resourceIdColumn = getResourceIdColumn(resource.type);
     
-    const { error } = await supabase
-      .from(junctionTable)
-      .delete()
-      .eq(resourceIdColumn, resource.id)
-      .eq('tag_id', tagId);
+    const { error } = await repo.removeTagFromResource(
+      junctionTable,
+      resourceIdColumn,
+      resource.id,
+      tagId
+    );
       
     if (error) {
       throw new Error(`Failed to remove tag: ${error.message}`);

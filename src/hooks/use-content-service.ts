@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { contentService, QuickAccessItem, ActivityItem, DocumentItem } from '@/services/content.service';
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useAuthSession } from '@/hooks/use-auth-session';
 
 /**
  * Hook for accessing content service functionality
  */
 export function useContentService() {
-  const { session } = useSupabaseAuth();
+  const { session } = useAuthSession();
   const userId = session?.user?.id;
   
   const [quickAccessItems, setQuickAccessItems] = useState<QuickAccessItem[]>([]);

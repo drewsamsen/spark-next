@@ -1,17 +1,17 @@
-import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { Category, Resource, ResourceType } from "./types";
 import { CategoryService } from "./services";
-import { getCategoryJunctionTable, getResourceIdColumn, prepareCategoryJunction, toResource, verifyResourceOwnership } from "./db-utils";
 import { generateSlug } from "@/lib/utils";
+import { getRepositories } from "@/repositories";
+import { getDbClient } from "@/lib/db";
 
 export class CategoryServiceImpl implements CategoryService {
   /**
    * Get all categories
    */
   async getCategories(): Promise<Category[]> {
-    const supabase = getSupabaseBrowserClient();
+    const db = getDbClient();
     
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('categories')
       .select('*')
       .order('name');
@@ -21,7 +21,7 @@ export class CategoryServiceImpl implements CategoryService {
       return [];
     }
     
-    return data.map(row => ({
+    return data.map((row: any) => ({
       id: row.id,
       name: row.name,
       slug: row.slug
@@ -36,10 +36,10 @@ export class CategoryServiceImpl implements CategoryService {
       throw new Error('Category name cannot be empty');
     }
     
-    const supabase = getSupabaseBrowserClient();
+    const db = getDbClient();
     const slug = generateSlug(name);
     
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('categories')
       .insert({ name, slug })
       .select()
@@ -48,7 +48,7 @@ export class CategoryServiceImpl implements CategoryService {
     if (error) {
       if (error.code === '23505') { // Unique violation
         // Check if it exists
-        const { data: existingCategory } = await supabase
+        const { data: existingCategory } = await db
           .from('categories')
           .select('*')
           .eq('slug', slug)
@@ -77,9 +77,10 @@ export class CategoryServiceImpl implements CategoryService {
    * Get categories for a specific resource
    */
   async getCategoriesForResource(resource: Resource): Promise<Category[]> {
-    const supabase = getSupabaseBrowserClient();
-    const junctionTable = getCategoryJunctionTable(resource.type);
-    const resourceIdColumn = getResourceIdColumn(resource.type);
+    const repos = getRepositories();
+    const db = getDbClient();
+    const junctionTable = repos.categorization.getCategoryJunctionTable(resource.type);
+    const resourceIdColumn = repos.categorization.getResourceIdColumn(resource.type);
     
     // Add explicit type for the SQL result
     type JunctionResult = {
@@ -91,7 +92,7 @@ export class CategoryServiceImpl implements CategoryService {
       };
     };
     
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from(junctionTable)
       .select(`
         category_id,
@@ -127,15 +128,18 @@ export class CategoryServiceImpl implements CategoryService {
    * Get all resources of a specified type that have a category
    */
   async getResourcesForCategory(categoryId: string, type?: ResourceType): Promise<Resource[]> {
-    const supabase = getSupabaseBrowserClient();
+    const repos = getRepositories();
+    const db = getDbClient();
     const results: Resource[] = [];
     
     // If type is specified, only query that resource type
-    const typesToQuery = type ? [type] : Object.keys(getCategoryJunctionTable) as ResourceType[];
+    const typesToQuery = type 
+      ? [type] 
+      : ['book', 'highlight', 'spark'] as ResourceType[];
     
     for (const resourceType of typesToQuery) {
-      const junctionTable = getCategoryJunctionTable(resourceType);
-      const resourceIdColumn = getResourceIdColumn(resourceType);
+      const junctionTable = repos.categorization.getCategoryJunctionTable(resourceType);
+      const resourceIdColumn = repos.categorization.getResourceIdColumn(resourceType);
       
       // Format column name for the join
       const joinColumnName = `resource_data`;
@@ -148,7 +152,7 @@ export class CategoryServiceImpl implements CategoryService {
         };
       };
       
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from(junctionTable)
         .select(`
           ${resourceIdColumn},
@@ -167,7 +171,7 @@ export class CategoryServiceImpl implements CategoryService {
       (data as unknown as JunctionWithResource[]).forEach(row => {
         const resourceData = row[joinColumnName];
         if (resourceData) {
-          results.push(toResource(resourceType, resourceData));
+          results.push(repos.categorization.toResource(resourceType, resourceData));
         }
       });
     }
@@ -179,20 +183,22 @@ export class CategoryServiceImpl implements CategoryService {
    * Add a category to a resource
    */
   async addCategoryToResource(resource: Resource, categoryId: string, source: string = 'user'): Promise<void> {
+    const repos = getRepositories();
+    
     // Verify the resource exists and belongs to the user
-    const isValid = await verifyResourceOwnership(resource);
+    const isValid = await repos.categorization.verifyResourceOwnership(resource);
     if (!isValid) {
       throw new Error(`Resource not found or you don't have access to it`);
     }
     
-    const supabase = getSupabaseBrowserClient();
-    const junctionTable = getCategoryJunctionTable(resource.type);
+    const db = getDbClient();
+    const junctionTable = repos.categorization.getCategoryJunctionTable(resource.type);
     
     // Prepare the junction record
-    const junction = prepareCategoryJunction(resource, categoryId);
+    const junction = repos.categorization.prepareCategoryJunction(resource, categoryId);
     junction.created_by = source;
     
-    const { error } = await supabase
+    const { error } = await db
       .from(junctionTable)
       .upsert(junction);
       
@@ -205,11 +211,12 @@ export class CategoryServiceImpl implements CategoryService {
    * Remove a category from a resource
    */
   async removeCategoryFromResource(resource: Resource, categoryId: string): Promise<void> {
-    const supabase = getSupabaseBrowserClient();
-    const junctionTable = getCategoryJunctionTable(resource.type);
-    const resourceIdColumn = getResourceIdColumn(resource.type);
+    const repos = getRepositories();
+    const db = getDbClient();
+    const junctionTable = repos.categorization.getCategoryJunctionTable(resource.type);
+    const resourceIdColumn = repos.categorization.getResourceIdColumn(resource.type);
     
-    const { error } = await supabase
+    const { error } = await db
       .from(junctionTable)
       .delete()
       .eq(resourceIdColumn, resource.id)

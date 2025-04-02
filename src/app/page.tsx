@@ -2,17 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { authService } from "@/services";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const supabase = getSupabaseBrowserClient();
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const session = await authService.getSession();
         
         if (session) {
           // User is logged in, redirect to dashboard
@@ -30,7 +29,7 @@ export default function Home() {
     };
 
     checkAuth();
-  }, [router, supabase]);
+  }, [router]);
 
   if (isLoading) {
     return (

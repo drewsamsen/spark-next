@@ -18,4 +18,6 @@ export {
 
 export { useFunctionLogsService } from './use-function-logs-service';
 
-export { useUserSettings } from './use-user-settings-service'; 
+export { useUserSettings } from './use-user-settings-service';
+
+export { useAuthSession } from './use-auth-session'; 

@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { Search, RefreshCw, CheckCircle, XCircle, Clock, Filter, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
-import { useFunctionLogsService } from "@/hooks";
+import { useFunctionLogsService, useAuthSession } from "@/hooks";
 import { FunctionLogModel } from "@/repositories/function-logs.repository";
 
 interface FunctionLogsTableProps {
@@ -12,8 +11,8 @@ interface FunctionLogsTableProps {
 
 export default function FunctionLogsTable({ className = "" }: FunctionLogsTableProps) {
   // Auth
-  const { session, loading: authLoading, error: authError } = useSupabaseAuth();
-  const token = session?.access_token;
+  const { session, loading: authLoading, error: authError } = useAuthSession();
+  const token = session?.token;
   
   // State
   const [searchTerm, setSearchTerm] = useState("");

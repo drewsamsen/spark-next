@@ -1,7 +1,7 @@
-import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { Category, CategorizationAction, CategorizationJob, CategorizationResult, Resource, ResourceType, Tag } from "./types";
 import { JobService } from "./services";
-import { findCategoryJobAction, findTagJobAction, getCategoryJunctionTable, getResourceIdColumn, getTagJunctionTable } from "./db-utils";
+import { getRepositories } from "@/repositories";
+import { getDbClient } from "@/lib/db";
 import { generateSlug } from "@/lib/utils";
 
 export class JobServiceImpl implements JobService {
@@ -9,7 +9,8 @@ export class JobServiceImpl implements JobService {
    * Create a new categorization job
    */
   async createJob(job: CategorizationJob): Promise<CategorizationResult> {
-    const supabase = getSupabaseBrowserClient();
+    const db = getDbClient();
+    const repos = getRepositories();
     const createdResources = {
       categories: [] as Category[],
       tags: [] as Tag[]
@@ -17,7 +18,7 @@ export class JobServiceImpl implements JobService {
     
     try {
       // Start a transaction
-      const { data: newJob, error: jobError } = await supabase
+      const { data: newJob, error: jobError } = await db
         .from('categorization_jobs')
         .insert({
           user_id: job.userId,
@@ -43,7 +44,7 @@ export class JobServiceImpl implements JobService {
           const slug = generateSlug(action.categoryName);
           
           // Check if category already exists with this name/slug
-          const { data: existingCategory } = await supabase
+          const { data: existingCategory } = await db
             .from('categories')
             .select('*')
             .eq('slug', slug)
@@ -62,7 +63,7 @@ export class JobServiceImpl implements JobService {
           }
           
           // Create the new category
-          const { data: newCategory, error: createError } = await supabase
+          const { data: newCategory, error: createError } = await db
             .from('categories')
             .insert({
               name: action.categoryName,
@@ -85,7 +86,7 @@ export class JobServiceImpl implements JobService {
           });
           
           // Create the job action record
-          const { data: jobAction, error: actionError } = await supabase
+          const { data: jobAction, error: actionError } = await db
             .from('categorization_job_actions')
             .insert({
               job_id: newJob.id,
@@ -103,11 +104,7 @@ export class JobServiceImpl implements JobService {
           
         } else if (action.actionType === 'create_tag' && action.tagName) {
           // Check if tag already exists with this name
-          const { data: existingTag } = await supabase
-            .from('tags')
-            .select('*')
-            .eq('name', action.tagName)
-            .single();
+          const { data: existingTag } = await repos.categorization.findTagByName(action.tagName);
           
           if (existingTag) {
             // Convert to add_tag action if tag already exists
@@ -122,14 +119,7 @@ export class JobServiceImpl implements JobService {
           }
           
           // Create the new tag
-          const { data: newTag, error: createError } = await supabase
-            .from('tags')
-            .insert({
-              name: action.tagName,
-              created_by_job_id: newJob.id
-            })
-            .select()
-            .single();
+          const { data: newTag, error: createError } = await repos.categorization.createTag(action.tagName);
             
           if (createError || !newTag) {
             throw new Error(`Failed to create tag: ${createError?.message || 'Unknown error'}`);
@@ -143,7 +133,7 @@ export class JobServiceImpl implements JobService {
           });
           
           // Create the job action record
-          const { data: jobAction, error: actionError } = await supabase
+          const { data: jobAction, error: actionError } = await db
             .from('categorization_job_actions')
             .insert({
               job_id: newJob.id,
@@ -169,7 +159,7 @@ export class JobServiceImpl implements JobService {
             (action.actionType === 'add_tag' && action.tagId && action.resource)) {
           
           // Create the job action
-          const { data: jobAction, error: actionError } = await supabase
+          const { data: jobAction, error: actionError } = await db
             .from('categorization_job_actions')
             .insert({
               job_id: newJob.id,
@@ -217,10 +207,10 @@ export class JobServiceImpl implements JobService {
    * Get a specific job by ID
    */
   async getJob(jobId: string): Promise<CategorizationJob | null> {
-    const supabase = getSupabaseBrowserClient();
+    const db = getDbClient();
     
     // Get the job
-    const { data: job, error: jobError } = await supabase
+    const { data: job, error: jobError } = await db
       .from('categorization_jobs')
       .select('*')
       .eq('id', jobId)
@@ -232,7 +222,7 @@ export class JobServiceImpl implements JobService {
     }
     
     // Get the job actions including created categories/tags
-    const { data, error: actionsError } = await supabase
+    const { data, error: actionsError } = await db
       .from('categorization_job_actions')
       .select('*')
       .eq('job_id', jobId);
@@ -246,12 +236,12 @@ export class JobServiceImpl implements JobService {
     const actions = data || [];
     
     // Get any categories/tags created by this job
-    const { data: categoriesData } = await supabase
+    const { data: categoriesData } = await db
       .from('categories')
       .select('*')
       .eq('created_by_job_id', jobId);
       
-    const { data: tagsData } = await supabase
+    const { data: tagsData } = await db
       .from('tags')
       .select('*')
       .eq('created_by_job_id', jobId);
@@ -309,9 +299,9 @@ export class JobServiceImpl implements JobService {
    * Get all jobs for the current user with optional filtering
    */
   async getJobs(filters?: { status?: string, source?: string }): Promise<CategorizationJob[]> {
-    const supabase = getSupabaseBrowserClient();
+    const db = getDbClient();
     
-    let query = supabase
+    let query = db
       .from('categorization_jobs')
       .select('*')
       .order('created_at', { ascending: false });
@@ -352,10 +342,10 @@ export class JobServiceImpl implements JobService {
    */
   async approveJob(jobId: string): Promise<CategorizationResult> {
     try {
-      const supabase = getSupabaseBrowserClient();
+      const db = getDbClient();
       
       // Call the database function to approve the job
-      const { error } = await supabase.rpc('approve_categorization_job', {
+      const { error } = await db.rpc('approve_categorization_job', {
         job_id_param: jobId
       });
       
@@ -378,10 +368,10 @@ export class JobServiceImpl implements JobService {
    */
   async rejectJob(jobId: string): Promise<CategorizationResult> {
     try {
-      const supabase = getSupabaseBrowserClient();
+      const db = getDbClient();
       
       // Call the database function to reject the job
-      const { error } = await supabase.rpc('reject_categorization_job', {
+      const { error } = await db.rpc('reject_categorization_job', {
         job_id_param: jobId
       });
       
@@ -403,23 +393,25 @@ export class JobServiceImpl implements JobService {
    * Find which job added a category/tag to a resource
    */
   async findOriginatingJob(resource: Resource, categoryId?: string, tagId?: string): Promise<CategorizationJob | null> {
+    const repos = getRepositories();
+    
     let jobActionId: string | null = null;
     
     // Find the job action ID from either category or tag
     if (categoryId) {
-      jobActionId = await findCategoryJobAction(resource, categoryId);
+      jobActionId = await repos.categorization.findCategoryJobAction(resource, categoryId);
     } else if (tagId) {
-      jobActionId = await findTagJobAction(resource, tagId);
+      jobActionId = await repos.categorization.findTagJobAction(resource, tagId);
     }
     
     if (!jobActionId) {
       return null;
     }
     
-    const supabase = getSupabaseBrowserClient();
+    const db = getDbClient();
     
     // Get the job ID from the action
-    const { data: action, error: actionError } = await supabase
+    const { data: action, error: actionError } = await db
       .from('categorization_job_actions')
       .select('job_id')
       .eq('id', jobActionId)
@@ -437,11 +429,12 @@ export class JobServiceImpl implements JobService {
    * Apply an add category action
    */
   private async applyAddCategoryAction(resource: Resource, categoryId: string, jobActionId: string): Promise<void> {
-    const supabase = getSupabaseBrowserClient();
-    const junctionTable = getCategoryJunctionTable(resource.type);
-    const resourceIdColumn = getResourceIdColumn(resource.type);
+    const repos = getRepositories();
+    const db = getDbClient();
+    const junctionTable = repos.categorization.getCategoryJunctionTable(resource.type);
+    const resourceIdColumn = repos.categorization.getResourceIdColumn(resource.type);
     
-    await supabase
+    await db
       .from(junctionTable)
       .upsert({
         [resourceIdColumn]: resource.id,
@@ -455,11 +448,12 @@ export class JobServiceImpl implements JobService {
    * Apply an add tag action
    */
   private async applyAddTagAction(resource: Resource, tagId: string, jobActionId: string): Promise<void> {
-    const supabase = getSupabaseBrowserClient();
-    const junctionTable = getTagJunctionTable(resource.type);
-    const resourceIdColumn = getResourceIdColumn(resource.type);
+    const repos = getRepositories();
+    const db = getDbClient();
+    const junctionTable = repos.categorization.getTagJunctionTable(resource.type);
+    const resourceIdColumn = repos.categorization.getResourceIdColumn(resource.type);
     
-    await supabase
+    await db
       .from(junctionTable)
       .upsert({
         [resourceIdColumn]: resource.id,

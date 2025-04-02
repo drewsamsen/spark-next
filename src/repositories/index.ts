@@ -8,6 +8,7 @@ import { AuthRepository } from './auth.repository';
 import { IntegrationsRepository } from './integrations.repository';
 import { FunctionLogsRepository } from './function-logs.repository';
 import { UserSettingsRepository } from './user-settings.repository';
+import { CategorizationRepository } from './categorization.repository';
 import type { SparkDomain } from './sparks.repository'; 
 import type { BookDomain } from './books.repository';
 import type { HighlightDomain } from './highlights.repository';
@@ -30,6 +31,7 @@ class RepositoriesRegistry {
   private integrationsRepo: IntegrationsRepository | null = null;
   private functionLogsRepo: FunctionLogsRepository | null = null;
   private userSettingsRepo: UserSettingsRepository | null = null;
+  private categorizationRepo: CategorizationRepository | null = null;
   
   constructor(serverSide: boolean = false) {
     this.client = getDbClient(serverSide);
@@ -126,6 +128,16 @@ class RepositoriesRegistry {
   }
   
   /**
+   * Get the Categorization repository
+   */
+  get categorization(): CategorizationRepository {
+    if (!this.categorizationRepo) {
+      this.categorizationRepo = new CategorizationRepository(this.client);
+    }
+    return this.categorizationRepo;
+  }
+  
+  /**
    * Reset all repositories (useful for testing)
    */
   reset(): void {
@@ -138,6 +150,7 @@ class RepositoriesRegistry {
     this.integrationsRepo = null;
     this.functionLogsRepo = null;
     this.userSettingsRepo = null;
+    this.categorizationRepo = null;
   }
 }
 
@@ -171,7 +184,8 @@ export type {
   AuthRepository,
   IntegrationsRepository,
   FunctionLogsRepository,
-  UserSettingsRepository
+  UserSettingsRepository,
+  CategorizationRepository
 };
 
 // Re-export repository domain models for convenience

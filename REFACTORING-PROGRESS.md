@@ -49,6 +49,23 @@ We've been refactoring the codebase to follow a clean architecture pattern:
 9. **MainContent**: ✅
    - Set up pattern for future real data implementation
 
+10. **LoginForm**: ✅
+    - Already using `useAuthService` hook
+    - Only references to Supabase are for environment information display
+
+### Hooks
+The following hooks have been created or refactored:
+
+1. **useAuthSession**: ✅
+   - Created new hook to handle authentication session state
+   - Manages loading and error states
+   - Provides standardized interface for components to access auth session
+   - Replaces direct usage of Supabase auth
+
+2. **useContentService**: ✅
+   - Refactored to use `useAuthSession` instead of `useSupabaseAuth`
+   - Maintains backward compatibility with existing components
+
 ### API Routes
 All Inngest-related API routes have been refactored:
 
@@ -72,6 +89,18 @@ All Inngest-related API routes have been refactored:
 
 7. **`trigger-schedule`**: ✅
    - Simplified with API utility functions
+
+Non-Inngest API routes that have been refactored:
+
+1. **`user-settings`**: ✅
+   - Refactored to use the UserSettingsService
+   - Implemented API utilities for authentication and standardized responses
+   - Added proper error handling and type safety
+
+2. **`function-logs`**: ✅
+   - Refactored to use the FunctionLogsService
+   - Implemented API utilities for authentication and standardized responses
+   - Simplified request handling and improved error messages
 
 ### Services
 1. **Sidebar Service**: ✅
@@ -121,12 +150,43 @@ All Inngest-related API routes have been refactored:
     - Handles Airtable-related functionality
     - Provides validation and data preparation methods
 
+12. **Content Service**: ✅
+    - Handles content retrieval and management
+    - Integrated with authentication service
+    - Uses repository pattern for data access
+
+13. **Tag Service**: ✅
+    - Refactored to use the categorization repository
+    - Eliminated direct Supabase calls
+    - Maintains the same API contract for backward compatibility
+
+### Pages
+1. **Home Page (/)**: ✅
+   - Replaced direct Supabase auth calls with AuthService
+   - Simplified authentication flow
+
+2. **Login Page (/login)**: ✅
+   - Replaced direct Supabase auth calls with AuthService
+   - Integrated with the clean architecture pattern
+
+### Repositories
+1. **Categorization Repository**: ✅
+   - Created to handle database operations for categorization module
+   - Eliminated direct Supabase calls from the categorization module
+   - Integrated with the clean architecture pattern
+   - Added tag-specific methods for use by the tag service
+
 ### Utilities
 
 1. **API Utilities**: ✅
    - Created `authenticateRequest` utility for authentication
    - Added standardized response helpers: `createErrorResponse` and `createSuccessResponse`
    - Improved error handling consistency
+
+2. **Categorization Utilities**: ✅
+   - Refactored `db-utils.ts` to use the categorization repository
+   - Removed direct Supabase database calls
+   - Maintained the same API for backward compatibility
 
 ## Benefits Achieved
 
@@ -157,13 +217,28 @@ All Inngest-related API routes have been refactored:
 ## Future Refactoring Plan
 
 ### High Priority (Next 1-2 weeks)
-1. **Review Remaining API Routes**:
-   - Identify any non-Inngest API routes still using direct database access
-   - Apply the same repository-service pattern
+1. **Continue API Utilities Standardization**:
+   - Create a central API utilities repository
+   - Standardize error codes and messages across all API routes
+   - Implement consistent logging for API routes
 
-2. **Component Audit**:
-   - Conduct comprehensive audit to identify any remaining components using direct database access
-   - Prioritize components with high usage or complexity
+2. **Complete Authentication Refactoring**:
+   - ✅ Successfully migrated root pages from direct Supabase usage to authService
+   - ✅ Migrated useContentService from useSupabaseAuth to useAuthSession
+   - Continue migration of remaining components from `useSupabaseAuth` to `useAuthSession`
+   - Update any remaining auth-related code to use the AuthService abstraction
+
+3. **Categorization Module Refactoring**:
+   - ✅ Created categorization repository to handle database operations
+   - ✅ Updated db-utils.ts to use the repository instead of direct Supabase calls
+   - ✅ Refactored tag-service.ts to use the repository methods
+   - ✅ Updated category-service.ts to use the repository methods
+   - ✅ Updated job-service.ts to use the repository methods
+   - Implement a dedicated CategoriesRepository to handle categories specific operations instead of using direct DB calls
+
+4. **Complete Component Audit**:
+   - Perform a more thorough component audit to ensure all components are following the established patterns
+   - Review all UI components to ensure they use hooks instead of direct service calls
 
 ### Medium Priority (2-4 weeks)
 1. **Testing Strategy**:
@@ -202,4 +277,16 @@ All Inngest-related API routes have been refactored:
 
 The refactoring effort has significantly improved the codebase organization, maintainability, and type safety. By consistently applying the repository-service-hook pattern across the application, we've reduced technical debt and ensured a cohesive architecture that will support future development efforts.
 
-The next steps focus on completing any remaining refactoring work, implementing a comprehensive testing strategy, and enhancing documentation to ensure the refactored architecture is well-understood by all developers working on the project.
+We've made substantial progress on our high-priority tasks, including:
+1. Successfully migrating authentication from direct Supabase calls to our auth service
+2. Completing the majority of the categorization module refactoring:
+   - Created the categorization repository with extensive functionality
+   - Refactored tag-service, category-service, and job-service to use the repository
+   - Updated db-utils to use repository methods
+3. Updating hooks to use our new architecture pattern
+
+The next steps will focus on:
+1. Implementing a dedicated CategoriesRepository to handle category-specific database operations
+2. Continuing to migrate remaining components that directly use Supabase
+3. Standardizing API utilities and error handling
+4. Conducting a comprehensive component audit to ensure consistent patterns

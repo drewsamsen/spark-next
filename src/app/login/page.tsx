@@ -3,21 +3,20 @@
 import { LoginForm } from "@/components/auth/LoginForm";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { authService } from "@/services";
 import Link from "next/link";
 import { LogoIcon } from "@/components/icons/LogoIcon";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const supabase = getSupabaseBrowserClient();
 
   useEffect(() => {
     const checkSession = async () => {
       setIsLoading(true);
       
       // Check if the user is already logged in
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await authService.getSession();
       
       if (session) {
         // User is already logged in, redirect to dashboard
@@ -28,7 +27,7 @@ export default function LoginPage() {
     };
     
     checkSession();
-  }, [router, supabase]);
+  }, [router]);
 
   if (isLoading) {
     return (
