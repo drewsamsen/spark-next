@@ -91,75 +91,36 @@ export default function DashboardLayout({
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingTags, setLoadingTags] = useState(false);
 
+  // Save sidebar states to localStorage
+  useEffect(() => {
+    if (hasMounted) {
+      // Save main sidebar visibility states only
+      localStorage.setItem('leftSidebarOpen', leftSidebarOpen.toString());
+      localStorage.setItem('rightSidebarOpen', rightSidebarOpen.toString());
+      
+      // No longer persisting nested sidebar states or active selections
+      // Everything except main sidebar visibility will reset on page refresh
+    }
+  }, [
+    hasMounted, 
+    leftSidebarOpen, 
+    rightSidebarOpen
+  ]);
+
   // Set hasMounted to true after the component mounts
   useEffect(() => {
     setHasMounted(true);
     
     // Load sidebar states from localStorage
     if (typeof window !== 'undefined') {
+      // Load main sidebar visibility states only
       setLeftSidebarOpen(loadBooleanFromStorage('leftSidebarOpen', true));
       setRightSidebarOpen(loadBooleanFromStorage('rightSidebarOpen', true));
-      setBooksSidebarOpen(loadBooleanFromStorage('booksSidebarOpen', false));
-      setSparksSidebarOpen(loadBooleanFromStorage('sparksSidebarOpen', false));
-      setCategoriesSidebarOpen(loadBooleanFromStorage('categoriesSidebarOpen', false));
-      setTagsSidebarOpen(loadBooleanFromStorage('tagsSidebarOpen', false));
-      setActiveSidebarItem(loadStringFromStorage('activeSidebarItem', null));
-      setActiveBook(loadStringFromStorage('activeBook', null));
-      setActiveSpark(loadStringFromStorage('activeSpark', null));
-      setActiveCategory(loadStringFromStorage('activeCategory', null));
-      setActiveTag(loadStringFromStorage('activeTag', null));
+      
+      // Not loading nested sidebar states or active selections
+      // Everything starts fresh on each page load as requested
     }
   }, []);
-
-  // Save sidebar states to localStorage
-  useEffect(() => {
-    if (hasMounted) {
-      localStorage.setItem('leftSidebarOpen', leftSidebarOpen.toString());
-      localStorage.setItem('rightSidebarOpen', rightSidebarOpen.toString());
-      localStorage.setItem('booksSidebarOpen', booksSidebarOpen.toString());
-      localStorage.setItem('sparksSidebarOpen', sparksSidebarOpen.toString());
-      localStorage.setItem('categoriesSidebarOpen', categoriesSidebarOpen.toString());
-      localStorage.setItem('tagsSidebarOpen', tagsSidebarOpen.toString());
-      if (activeSidebarItem) {
-        localStorage.setItem('activeSidebarItem', activeSidebarItem);
-      } else {
-        localStorage.removeItem('activeSidebarItem');
-      }
-      if (activeBook) {
-        localStorage.setItem('activeBook', activeBook);
-      } else {
-        localStorage.removeItem('activeBook');
-      }
-      if (activeSpark) {
-        localStorage.setItem('activeSpark', activeSpark);
-      } else {
-        localStorage.removeItem('activeSpark');
-      }
-      if (activeCategory) {
-        localStorage.setItem('activeCategory', activeCategory);
-      } else {
-        localStorage.removeItem('activeCategory');
-      }
-      if (activeTag) {
-        localStorage.setItem('activeTag', activeTag);
-      } else {
-        localStorage.removeItem('activeTag');
-      }
-    }
-  }, [
-    hasMounted, 
-    leftSidebarOpen, 
-    rightSidebarOpen, 
-    booksSidebarOpen, 
-    sparksSidebarOpen,
-    categoriesSidebarOpen,
-    tagsSidebarOpen,
-    activeSidebarItem,
-    activeBook,
-    activeSpark,
-    activeCategory,
-    activeTag
-  ]);
 
   useEffect(() => {
     if (hasMounted) {
