@@ -333,8 +333,17 @@ export default function DashboardLayout({
   // Handle category selection
   const handleCategorySelect = (categoryId: string) => {
     setActiveCategory(categoryId);
-    // Navigate to the category details page
-    router.push(`/dashboard/category/${categoryId}`);
+    
+    // Find the category to get its slug using categoriesData (which contains the slug)
+    // instead of the SidebarItem array which doesn't have the slug property
+    const selectedCategory = categoriesData.find(category => category.id === categoryId);
+    if (selectedCategory) {
+      // Navigate to the category details page using slug
+      router.push(`/dashboard/category/${selectedCategory.slug}`);
+    } else {
+      // Log error if category not found
+      console.error(`Category with ID ${categoryId} not found`);
+    }
   };
 
   // Handle tag selection

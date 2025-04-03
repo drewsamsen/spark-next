@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Category, Resource } from '@/lib/categorization/types';
 import { ArrowLeft, BookIcon, SparklesIcon, HighlighterIcon } from 'lucide-react';
 
-export default function CategoryPage({ params }: { params: { id: string } }) {
+export default function CategoryPage({ params }: { params: { slug: string } }) {
   const router = useRouter();
   const [category, setCategory] = useState<Category | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
@@ -23,9 +23,9 @@ export default function CategoryPage({ params }: { params: { id: string } }) {
         // Get category service
         const categoryService = services.categorization.categories;
         
-        // Fetch categories to find the one with matching ID
+        // Fetch categories to find the one with matching slug
         const categories = await categoryService.getCategories();
-        const categoryData = categories.find(c => c.id === params.id);
+        const categoryData = categories.find(c => c.slug === params.slug);
         
         if (!categoryData) {
           setError('Category not found');
@@ -36,7 +36,7 @@ export default function CategoryPage({ params }: { params: { id: string } }) {
         setCategory(categoryData);
         
         // Fetch resources for this category
-        const categoryResources = await categoryService.getResourcesForCategory(params.id);
+        const categoryResources = await categoryService.getResourcesForCategory(categoryData.id);
         setResources(categoryResources);
       } catch (err) {
         console.error('Error loading category data:', err);
@@ -47,7 +47,7 @@ export default function CategoryPage({ params }: { params: { id: string } }) {
     };
     
     loadCategoryData();
-  }, [params.id]);
+  }, [params.slug]);
 
   const getResourceIcon = (type: string) => {
     switch (type) {
