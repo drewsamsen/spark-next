@@ -158,7 +158,7 @@ export default function LeftSidebar({
       name: "Context Jobs",
       icon: <TagsIcon className="h-5 w-5" />,
       tooltip: "Context Jobs",
-      href: "/dashboard/context-jobs"
+      href: "/context-jobs"
     },
   ];
 
@@ -239,7 +239,7 @@ export default function LeftSidebar({
                         navigateTo("/settings", e);
                       }
                     }}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
+                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
                     aria-label="Settings"
                   >
                     <Settings className="h-5 w-5" />

@@ -9,3 +9,5 @@ alwaysApply: true
 - never try to run databse migrations
 - When implementing new features, we do not need to maintain backwards compatibility unless specifically mentioned in the request
 - Always clean up code and files that are no longer needed
+- to copy a file, always use `cp`
+- to move a file, always use `mv`

@@ -2,42 +2,31 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { authService } from "@/services";
+import { useAuthSession } from "@/hooks";
+import MainContent from "@/components/main-content";
 
-export default function Home() {
-  const [isLoading, setIsLoading] = useState(true);
+export default function HomePage() {
   const router = useRouter();
+  const { session, loading } = useAuthSession();
+  const [redirected, setRedirected] = useState(false);
 
+  // Only redirect if not loading and not already redirected
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const session = await authService.getSession();
-        
-        if (session) {
-          // User is logged in, redirect to dashboard
-          router.push("/dashboard");
-        } else {
-          // User is not logged in, redirect to login
-          router.push("/login");
-        }
-      } catch (error) {
-        console.error("Error checking auth:", error);
-        router.push("/login");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (!loading && !session && !redirected) {
+      setRedirected(true);
+      router.push("/login");
+    }
+  }, [session, router, loading, redirected]);
 
-    checkAuth();
-  }, [router]);
-
-  if (isLoading) {
+  // Show loading state while checking authentication
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-spark-primary dark:border-spark-dark-primary"></div>
       </div>
     );
   }
 
-  return null;
+  // If user is logged in, show the main content
+  return session ? <MainContent /> : null;
 }

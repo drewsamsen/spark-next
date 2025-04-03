@@ -9,6 +9,7 @@ import { LogoIcon } from "@/components/icons/LogoIcon";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [redirected, setRedirected] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -18,16 +19,17 @@ export default function LoginPage() {
       // Check if the user is already logged in
       const session = await authService.getSession();
       
-      if (session) {
+      if (session && !redirected) {
         // User is already logged in, redirect to dashboard
-        router.push("/dashboard");
+        setRedirected(true);
+        router.push("/");
       }
       
       setIsLoading(false);
     };
     
     checkSession();
-  }, [router]);
+  }, [router, redirected]);
 
   if (isLoading) {
     return (

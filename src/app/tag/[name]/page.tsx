@@ -4,52 +4,60 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { services } from '@/services';
 import { Button } from '@/components/ui/button';
-import { Category, Resource } from '@/lib/categorization/types';
+import { Tag, Resource } from '@/lib/categorization/types';
 import { ArrowLeft, BookIcon, SparklesIcon, HighlighterIcon } from 'lucide-react';
 
-export default function CategoryPage() {
+export default function TagPage() {
   const router = useRouter();
   const params = useParams();
-  const slug = params.slug as string;
-  const [category, setCategory] = useState<Category | null>(null);
+  const name = params.name as string;
+  const [tag, setTag] = useState<Tag | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadCategoryData = async () => {
+    const loadTagData = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        // Get category service
-        const categoryService = services.categorization.categories;
+        // Get tag service
+        const tagService = services.categorization.tags;
         
-        // Fetch categories to find the one with matching slug
-        const categories = await categoryService.getCategories();
-        const categoryData = categories.find(c => c.slug === slug);
+        // Fetch tags to find the one with matching name
+        const tags = await tagService.getTags();
         
-        if (!categoryData) {
-          setError('Category not found');
+        // Try to find by name (converted to lowercase and with spaces replaced by dashes)
+        const normalizedName = name.toLowerCase();
+        let tagData = tags.find(t => t.name.toLowerCase() === normalizedName);
+        
+        // If not found by name, try to find by ID as fallback (for backward compatibility)
+        if (!tagData) {
+          tagData = tags.find(t => t.id === name);
+        }
+        
+        if (!tagData) {
+          setError('Tag not found');
           setLoading(false);
           return;
         }
         
-        setCategory(categoryData);
+        setTag(tagData);
         
-        // Fetch resources for this category
-        const categoryResources = await categoryService.getResourcesForCategory(categoryData.id);
-        setResources(categoryResources);
+        // Fetch resources for this tag
+        const tagResources = await tagService.getResourcesForTag(tagData.id);
+        setResources(tagResources);
       } catch (err) {
-        console.error('Error loading category data:', err);
-        setError('Failed to load category data');
+        console.error('Error loading tag data:', err);
+        setError('Failed to load tag data');
       } finally {
         setLoading(false);
       }
     };
     
-    loadCategoryData();
-  }, [slug]);
+    loadTagData();
+  }, [name]);
 
   const getResourceIcon = (type: string) => {
     switch (type) {
@@ -66,9 +74,9 @@ export default function CategoryPage() {
 
   const handleResourceClick = (resource: Resource) => {
     if (resource.type === 'book') {
-      router.push(`/dashboard/book/${resource.id}`);
+      router.push(`/book/${resource.id}`);
     } else if (resource.type === 'spark') {
-      router.push(`/dashboard/spark/${resource.id}`);
+      router.push(`/spark/${resource.id}`);
     }
     // No direct navigation for highlights for now
   };
@@ -87,8 +95,8 @@ export default function CategoryPage() {
           </Button>
         </div>
         <div className="bg-white rounded-lg shadow p-6 dark:bg-neutral-800">
-          <h2 className="text-xl font-semibold mb-4">Loading category...</h2>
-          <p>Loading category details...</p>
+          <h2 className="text-xl font-semibold mb-4">Loading tag...</h2>
+          <p>Loading tag details...</p>
         </div>
       </div>
     );
@@ -118,20 +126,17 @@ export default function CategoryPage() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
-        <h1 className="text-2xl font-bold">Category: {category?.name}</h1>
+        <h1 className="text-2xl font-bold">Tag: {tag?.name}</h1>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6 mb-6 dark:bg-neutral-800">
-        <h2 className="text-xl font-semibold mb-4">Category Details</h2>
+        <h2 className="text-xl font-semibold mb-4">Tag Details</h2>
         <div className="space-y-2">
           <div>
-            <span className="font-semibold">Name:</span> {category?.name}
+            <span className="font-semibold">Name:</span> {tag?.name}
           </div>
           <div>
-            <span className="font-semibold">ID:</span> {category?.id}
-          </div>
-          <div>
-            <span className="font-semibold">Slug:</span> {category?.slug}
+            <span className="font-semibold">ID:</span> {tag?.id}
           </div>
         </div>
       </div>
@@ -139,7 +144,7 @@ export default function CategoryPage() {
       <div className="bg-white rounded-lg shadow p-6 dark:bg-neutral-800">
         <h2 className="text-xl font-semibold mb-4">Resources ({resources.length})</h2>
         {resources.length === 0 ? (
-          <p>No resources have been tagged with this category.</p>
+          <p>No resources have been tagged with this tag.</p>
         ) : (
           <div className="space-y-2">
             {resources.map((resource) => (

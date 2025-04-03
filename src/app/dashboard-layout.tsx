@@ -311,7 +311,7 @@ export default function DashboardLayout({
     
     // If rwId is directly provided, use it for navigation
     if (rwId) {
-      router.push(`/dashboard/highlights/${rwId}`);
+      router.push(`/highlights/${rwId}`);
       return;
     }
     
@@ -320,7 +320,7 @@ export default function DashboardLayout({
     
     if (selectedBook && selectedBook.rwId) {
       // Navigate using the Readwise ID
-      router.push(`/dashboard/highlights/${selectedBook.rwId}`);
+      router.push(`/highlights/${selectedBook.rwId}`);
     }
   };
 
@@ -339,7 +339,7 @@ export default function DashboardLayout({
     const selectedCategory = categoriesData.find(category => category.id === categoryId);
     if (selectedCategory) {
       // Navigate to the category details page using slug
-      router.push(`/dashboard/category/${selectedCategory.slug}`);
+      router.push(`/category/${selectedCategory.slug}`);
     } else {
       // Log error if category not found
       console.error(`Category with ID ${categoryId} not found`);
@@ -355,10 +355,10 @@ export default function DashboardLayout({
     if (selectedTag) {
       // Use the tag name in the URL instead of the ID
       // The tag name is already standardized (lowercase with dashes)
-      router.push(`/dashboard/tag/${selectedTag.name}`);
+      router.push(`/tag/${selectedTag.name}`);
     } else {
       // Fallback to ID if tag not found
-      router.push(`/dashboard/tag/${tagId}`);
+      router.push(`/tag/${tagId}`);
     }
   };
 

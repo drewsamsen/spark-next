@@ -50,11 +50,10 @@ export function LoginForm() {
       }
       
       // Login successful
-      toast.success("Login successful!");
+      toast.success("Logged in successfully");
       
-      // Redirect to dashboard
-      router.push("/dashboard");
-      router.refresh();
+      // Redirect to main dashboard after successful login
+      router.push("/");
     } catch (error) {
       console.error("Login error:", error);
       if (!errorMessage) {
