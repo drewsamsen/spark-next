@@ -19,6 +19,13 @@ export interface Category {
   slug: string;
 }
 
+/**
+ * Category with usage count
+ */
+export interface CategoryWithUsage extends Category {
+  usageCount: number;
+}
+
 // Tag entity
 export interface Tag {
   id: string;

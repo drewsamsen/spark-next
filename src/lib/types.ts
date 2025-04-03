@@ -598,11 +598,18 @@ export interface AuthResult {
  */
 export interface CategoryModel {
   id: string;
-  user_id: string;
   name: string;
   slug: string;
+  user_id: string;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Category model with usage count
+ */
+export interface CategoryModelWithUsage extends CategoryModel {
+  usage_count: number;
 }
 
 /**
@@ -614,6 +621,13 @@ export interface CategoryDomain {
   slug: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Domain model for a category with usage count
+ */
+export interface CategoryDomainWithUsage extends CategoryDomain {
+  usageCount: number;
 }
 
 /**

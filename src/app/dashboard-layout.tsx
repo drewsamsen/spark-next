@@ -56,7 +56,7 @@ export default function DashboardLayout({
   // Get services from hooks
   const booksService = useBooksService();
   const sparksService = useSparksService();
-  const { categories: categoriesData, isLoading: loadingCategoriesData } = useCategories();
+  const { categories: categoriesData, categoriesWithUsage, isLoading: loadingCategoriesData } = useCategories();
   const { tags: tagsData, isLoading: loadingTagsData } = useTags();
   
   // Track if component has mounted to prevent hydration mismatch
@@ -172,21 +172,22 @@ export default function DashboardLayout({
 
   // Handle categories data changes
   useEffect(() => {
-    if (hasMounted && categoriesData) {
-      console.log('Processing categories data, length:', categoriesData.length);
+    if (hasMounted && categoriesWithUsage) {
+      console.log('Processing categories with usage data, length:', categoriesWithUsage.length);
       
       // Even if empty, still set an empty array to avoid undefined
-      const categoryItems: SidebarItem[] = categoriesData.map((category) => ({
+      const categoryItems: SidebarItem[] = categoriesWithUsage.map((category) => ({
         id: category.id,
         name: category.name,
-        date: category.slug || ''
+        highlightsCount: category.usageCount,
+        date: ''
       }));
       
-      console.log('Mapped categories to sidebar items:', categoryItems);
+      console.log('Mapped categories to sidebar items with usage counts:', categoryItems);
       setCategories(categoryItems);
       setLoadingCategories(loadingCategoriesData);
     }
-  }, [hasMounted, categoriesData, loadingCategoriesData]);
+  }, [hasMounted, categoriesWithUsage, loadingCategoriesData]);
 
   // Handle tags data changes
   useEffect(() => {

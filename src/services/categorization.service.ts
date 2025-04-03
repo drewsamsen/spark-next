@@ -1,7 +1,7 @@
 import { getRepositories } from '@/repositories';
 import { CategoryDomain } from '@/lib/types';
 import { TagDomain } from '@/repositories/tags.repository';
-import { Resource, ResourceType, Category, Tag, CategorizationJob, CategorizationAction, CategorizationResult } from '@/lib/categorization/types';
+import { Resource, ResourceType, Category, Tag, CategorizationJob, CategorizationAction, CategorizationResult, CategoryWithUsage } from '@/lib/categorization/types';
 import { CategoryService, TagService, JobService } from '@/lib/categorization/services';
 import { handleServiceError, handleServiceItemError, ValidationError } from '@/lib/errors';
 
@@ -21,6 +21,21 @@ export const categoryService: CategoryService = {
       return categories.map(category => repo.mapToDomain(category));
     } catch (error) {
       return handleServiceError<Category>(error, 'Error in categoryService.getCategories');
+    }
+  },
+
+  /**
+   * Get all categories with usage counts
+   */
+  async getCategoriesWithUsage(): Promise<CategoryWithUsage[]> {
+    try {
+      const repo = getRepositories().categories;
+      
+      const categories = await repo.getCategoriesWithUsage();
+      
+      return categories.map(category => repo.mapToDomainWithUsage(category));
+    } catch (error) {
+      return handleServiceError<CategoryWithUsage>(error, 'Error in categoryService.getCategoriesWithUsage');
     }
   },
 

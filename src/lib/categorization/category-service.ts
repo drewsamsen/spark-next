@@ -1,4 +1,4 @@
-import { Category, Resource, ResourceType } from "./types";
+import { Category, Resource, ResourceType, CategoryWithUsage } from "./types";
 import { CategoryService } from "./services";
 import { getRepositories } from "@/repositories";
 
@@ -19,6 +19,27 @@ export class CategoryServiceImpl implements CategoryService {
       }));
     } catch (error) {
       console.error('Error fetching categories:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * Get all categories with usage counts
+   */
+  async getCategoriesWithUsage(): Promise<CategoryWithUsage[]> {
+    const repos = getRepositories();
+    
+    try {
+      const categories = await repos.categories.getCategoriesWithUsage();
+      
+      return categories.map(category => ({
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        usageCount: category.usage_count
+      }));
+    } catch (error) {
+      console.error('Error fetching categories with usage counts:', error);
       return [];
     }
   }

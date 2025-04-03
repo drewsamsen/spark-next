@@ -166,9 +166,9 @@ export default function NestedSidebar({
         
         <nav className="flex-1 overflow-auto scrollbar-thin">
           {/* Column Headers */}
-          {(title === "Books" || title === "Sparks") && (
+          {(title === "Books" || title === "Sparks" || title === "Categories") && (
             <SidebarColumnHeader 
-              type={title as 'Books' | 'Sparks'} 
+              type={title as 'Books' | 'Sparks' | 'Categories'} 
               onSort={handleSort} 
             />
           )}

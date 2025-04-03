@@ -7,7 +7,8 @@ import {
   Category, 
   Tag, 
   CategorizationJob, 
-  CategorizationResult 
+  CategorizationResult,
+  CategoryWithUsage
 } from '@/lib/categorization/types';
 import { toast } from 'react-toastify';
 import { useAuthService } from './use-services';
@@ -15,6 +16,7 @@ import { useAuthService } from './use-services';
 // Interface for useCategoriesHook return value
 interface UseCategoriesReturn {
   categories: Category[];
+  categoriesWithUsage: CategoryWithUsage[];
   isLoading: boolean;
   error: Error | null;
   getCategoriesForResource: (resource: Resource) => Promise<Category[]>;
@@ -48,6 +50,7 @@ interface UseJobsReturn {
  */
 export function useCategories(): UseCategoriesReturn {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesWithUsage, setCategoriesWithUsage] = useState<CategoryWithUsage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   
@@ -70,6 +73,7 @@ export function useCategories(): UseCategoriesReturn {
           console.log('useCategories - not authenticated, returning empty array');
           if (isMounted) {
             setCategories([]);
+            setCategoriesWithUsage([]);
             setIsLoading(false);
           }
           return;
@@ -80,8 +84,14 @@ export function useCategories(): UseCategoriesReturn {
         const data = await categoryService.getCategories();
         console.log('useCategories - raw categories data:', data);
         
+        // Fetch categories with usage
+        console.log('useCategories - fetching categories with usage');
+        const dataWithUsage = await categoryService.getCategoriesWithUsage();
+        console.log('useCategories - raw categories with usage data:', dataWithUsage);
+        
         if (isMounted) {
           setCategories(data);
+          setCategoriesWithUsage(dataWithUsage);
           setError(null);
         }
       } catch (err) {
@@ -89,6 +99,7 @@ export function useCategories(): UseCategoriesReturn {
         if (isMounted) {
           setError(err instanceof Error ? err : new Error('Failed to load categories'));
           setCategories([]);
+          setCategoriesWithUsage([]);
         }
       } finally {
         if (isMounted) {
@@ -177,6 +188,7 @@ export function useCategories(): UseCategoriesReturn {
   
   return {
     categories,
+    categoriesWithUsage,
     isLoading,
     error,
     getCategoriesForResource,

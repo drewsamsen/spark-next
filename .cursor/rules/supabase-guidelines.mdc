@@ -23,6 +23,7 @@ alwaysApply: false
 - Do not run migration files directly
 - Do not push data to the database directly
 - Create migration files and instruct users on how to proceed
+- Never try to run migrations
 
 ## Example Repository Implementation
 

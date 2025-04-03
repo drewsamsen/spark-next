@@ -4,4 +4,6 @@ globs:
 alwaysApply: true
 ---
 
-- Before you start each task, look in `.cursor/rules` for useful guidelines. Find and read the mdc files that are relevant to the task at hand.
+- Before you start each task, look in `.cursor/rules` for useful guidelines. 
+- Find and read the mdc files that are relevant to the task at hand.
+- never try to run databse migrations

@@ -1,4 +1,4 @@
-import { Category, CategorizationJob, CategorizationResult, Resource, ResourceType, Tag } from './types';
+import { Category, CategorizationJob, CategorizationResult, Resource, ResourceType, Tag, CategoryWithUsage } from './types';
 
 /**
  * Service for managing categories
@@ -8,6 +8,11 @@ export interface CategoryService {
    * Get all categories
    */
   getCategories(): Promise<Category[]>;
+  
+  /**
+   * Get all categories with usage counts
+   */
+  getCategoriesWithUsage(): Promise<CategoryWithUsage[]>;
   
   /**
    * Create a new category

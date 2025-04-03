@@ -2,7 +2,7 @@ import { BaseRepository } from './base.repository';
 import { DbClient } from '@/lib/db';
 import { DatabaseError, ValidationError } from '@/lib/errors';
 import { Resource, ResourceType } from '@/lib/categorization/types';
-import { CategoryModel, CategoryDomain, CreateCategoryInput } from '@/lib/types';
+import { CategoryModel, CategoryDomain, CreateCategoryInput, CategoryModelWithUsage, CategoryDomainWithUsage } from '@/lib/types';
 
 /**
  * Repository for categories
@@ -406,5 +406,46 @@ export class CategoriesRepository extends BaseRepository<CategoryModel> {
     }
     
     return junction;
+  }
+
+  /**
+   * Get all categories for the current user with usage counts
+   */
+  async getCategoriesWithUsage(): Promise<CategoryModelWithUsage[]> {
+    try {
+      const userId = await this.getUserId();
+      
+      const { data, error } = await this.client
+        .from('category_usage_counts')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name', { ascending: true });
+      
+      if (error) {
+        throw new DatabaseError('Error fetching categories with usage counts', error);
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('CategoriesRepository.getCategoriesWithUsage - error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new DatabaseError('Error fetching categories with usage counts', error);
+    }
+  }
+
+  /**
+   * Map a database category model with usage to the domain model
+   */
+  mapToDomainWithUsage(category: CategoryModelWithUsage): CategoryDomainWithUsage {
+    return {
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      createdAt: category.created_at,
+      updatedAt: category.updated_at,
+      usageCount: category.usage_count
+    };
   }
 } 
