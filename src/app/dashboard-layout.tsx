@@ -340,8 +340,17 @@ export default function DashboardLayout({
   // Handle tag selection
   const handleTagSelect = (tagId: string) => {
     setActiveTag(tagId);
-    // Navigate to the tag details page
-    router.push(`/dashboard/tag/${tagId}`);
+    
+    // Find the tag to get its name
+    const selectedTag = tags.find(tag => tag.id === tagId);
+    if (selectedTag) {
+      // Use the tag name in the URL instead of the ID
+      // The tag name is already standardized (lowercase with dashes)
+      router.push(`/dashboard/tag/${selectedTag.name}`);
+    } else {
+      // Fallback to ID if tag not found
+      router.push(`/dashboard/tag/${tagId}`);
+    }
   };
 
   // Width of icons-only part of the left sidebar when projects sidebar is open

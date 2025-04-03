@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tag, Resource } from '@/lib/categorization/types';
 import { ArrowLeft, BookIcon, SparklesIcon, HighlighterIcon } from 'lucide-react';
 
-export default function TagPage({ params }: { params: { id: string } }) {
+export default function TagPage({ params }: { params: { name: string } }) {
   const router = useRouter();
   const [tag, setTag] = useState<Tag | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
@@ -23,9 +23,17 @@ export default function TagPage({ params }: { params: { id: string } }) {
         // Get tag service
         const tagService = services.categorization.tags;
         
-        // Fetch tags to find the one with matching ID
+        // Fetch tags to find the one with matching name
         const tags = await tagService.getTags();
-        const tagData = tags.find(t => t.id === params.id);
+        
+        // Try to find by name (converted to lowercase and with spaces replaced by dashes)
+        const normalizedName = params.name.toLowerCase();
+        let tagData = tags.find(t => t.name.toLowerCase() === normalizedName);
+        
+        // If not found by name, try to find by ID as fallback (for backward compatibility)
+        if (!tagData) {
+          tagData = tags.find(t => t.id === params.name);
+        }
         
         if (!tagData) {
           setError('Tag not found');
@@ -36,7 +44,7 @@ export default function TagPage({ params }: { params: { id: string } }) {
         setTag(tagData);
         
         // Fetch resources for this tag
-        const tagResources = await tagService.getResourcesForTag(params.id);
+        const tagResources = await tagService.getResourcesForTag(tagData.id);
         setResources(tagResources);
       } catch (err) {
         console.error('Error loading tag data:', err);
@@ -47,7 +55,7 @@ export default function TagPage({ params }: { params: { id: string } }) {
     };
     
     loadTagData();
-  }, [params.id]);
+  }, [params.name]);
 
   const getResourceIcon = (type: string) => {
     switch (type) {

@@ -88,10 +88,13 @@ export class TagsRepository extends BaseRepository<TagModel> {
   async getTagByName(name: string): Promise<TagModel | null> {
     const userId = await this.getUserId();
     
+    // Standardize the name to match how it would be stored in the database
+    const standardizedName = name.trim().toLowerCase().replace(/\s+/g, '-');
+    
     const { data, error } = await this.client
       .from('tags')
       .select('*')
-      .eq('name', name)
+      .eq('name', standardizedName)
       .eq('user_id', userId)
       .single();
     
@@ -111,8 +114,11 @@ export class TagsRepository extends BaseRepository<TagModel> {
   async createTag(input: CreateTagInput): Promise<TagModel> {
     const userId = await this.getUserId();
     
+    // Standardize the name (this matches what the database trigger will do)
+    const standardizedName = input.name.trim().toLowerCase().replace(/\s+/g, '-');
+    
     // Check if tag with this name already exists
-    const existingTag = await this.getTagByName(input.name);
+    const existingTag = await this.getTagByName(standardizedName);
     if (existingTag) {
       return existingTag; // Return existing tag instead of creating duplicate
     }
@@ -121,7 +127,7 @@ export class TagsRepository extends BaseRepository<TagModel> {
       .from('tags')
       .insert({
         user_id: userId,
-        name: input.name
+        name: standardizedName // Use the standardized name
       })
       .select()
       .single();
