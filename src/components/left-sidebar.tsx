@@ -128,7 +128,7 @@ export default function LeftSidebar({
       name: "Dashboard",
       icon: <Home className="h-5 w-5" />,
       tooltip: "Dashboard",
-      href: "/dashboard"
+      href: "/"
     },
     {
       name: "Highlights",

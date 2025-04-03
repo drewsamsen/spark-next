@@ -24,7 +24,7 @@ interface HeaderProps {
 export default function Header({ 
   toggleRightSidebar,
   navigateTo,
-  currentPath = "/dashboard"
+  currentPath = "/"
 }: HeaderProps) {
   const pathname = usePathname();
   const headerService = useHeaderService();
@@ -32,7 +32,7 @@ export default function Header({
   
   const handleLogoClick = (e: React.MouseEvent) => {
     if (navigateTo) {
-      navigateTo("/dashboard", e);
+      navigateTo("/", e);
     }
   };
   
@@ -56,7 +56,7 @@ export default function Header({
         <div className="flex items-center gap-2">
           {navigateTo ? (
             <a 
-              href="/dashboard" 
+              href="/" 
               onClick={handleLogoClick} 
               className="flex items-center gap-1 hover:opacity-80"
             >
@@ -64,7 +64,7 @@ export default function Header({
               <span className="font-medium text-lg hidden md:inline-block">Spark</span>
             </a>
           ) : (
-            <Link href="/dashboard" className="flex items-center gap-1 hover:opacity-80">
+            <Link href="/" className="flex items-center gap-1 hover:opacity-80">
               <LogoIcon className="h-5 w-5 text-spark-brand dark:text-spark-dark-brand" />
               <span className="font-medium text-lg hidden md:inline-block">Spark</span>
             </Link>
