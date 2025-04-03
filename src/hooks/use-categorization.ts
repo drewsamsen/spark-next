@@ -8,7 +8,8 @@ import {
   Tag, 
   CategorizationJob, 
   CategorizationResult,
-  CategoryWithUsage
+  CategoryWithUsage,
+  TagWithUsage
 } from '@/lib/categorization/types';
 import { toast } from 'react-toastify';
 import { useAuthService } from './use-services';
@@ -28,6 +29,7 @@ interface UseCategoriesReturn {
 // Interface for useTagsHook return value
 interface UseTagsReturn {
   tags: Tag[];
+  tagsWithUsage: TagWithUsage[];
   isLoading: boolean;
   error: Error | null;
   getTagsForResource: (resource: Resource) => Promise<Tag[]>;
@@ -203,6 +205,7 @@ export function useCategories(): UseCategoriesReturn {
  */
 export function useTags(): UseTagsReturn {
   const [tags, setTags] = useState<Tag[]>([]);
+  const [tagsWithUsage, setTagsWithUsage] = useState<TagWithUsage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   
@@ -222,6 +225,7 @@ export function useTags(): UseTagsReturn {
         if (!isAuthenticated) {
           if (isMounted) {
             setTags([]);
+            setTagsWithUsage([]);
             setIsLoading(false);
           }
           return;
@@ -230,8 +234,12 @@ export function useTags(): UseTagsReturn {
         // Fetch tags
         const data = await tagService.getTags();
         
+        // Fetch tags with usage
+        const dataWithUsage = await tagService.getTagsWithUsage();
+        
         if (isMounted) {
           setTags(data);
+          setTagsWithUsage(dataWithUsage);
           setError(null);
         }
       } catch (err) {
@@ -239,6 +247,7 @@ export function useTags(): UseTagsReturn {
         if (isMounted) {
           setError(err instanceof Error ? err : new Error('Failed to load tags'));
           setTags([]);
+          setTagsWithUsage([]);
         }
       } finally {
         if (isMounted) {
@@ -326,6 +335,7 @@ export function useTags(): UseTagsReturn {
   
   return {
     tags,
+    tagsWithUsage,
     isLoading,
     error,
     getTagsForResource,

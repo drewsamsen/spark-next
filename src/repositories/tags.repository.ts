@@ -2,6 +2,7 @@ import { BaseRepository } from './base.repository';
 import { DbClient } from '@/lib/db';
 import { DatabaseError, ValidationError } from '@/lib/errors';
 import { Resource, ResourceType } from '@/lib/categorization/types';
+import { TagModelWithUsage, TagDomainWithUsage } from '@/lib/types';
 
 /**
  * Database model for a tag
@@ -34,9 +35,9 @@ export interface CreateTagInput {
 /**
  * Repository for tags
  */
-export class TagsRepository extends BaseRepository {
+export class TagsRepository extends BaseRepository<TagModel> {
   constructor(client: DbClient) {
-    super(client);
+    super(client, 'tags'); // Pass the table name to BaseRepository
   }
 
   /**
@@ -400,5 +401,45 @@ export class TagsRepository extends BaseRepository {
     }
     
     return junction;
+  }
+
+  /**
+   * Get all tags for the current user with usage counts
+   */
+  async getTagsWithUsage(): Promise<TagModelWithUsage[]> {
+    try {
+      const userId = await this.getUserId();
+      
+      const { data, error } = await this.client
+        .from('tag_usage_counts')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name', { ascending: true });
+      
+      if (error) {
+        throw new DatabaseError('Error fetching tags with usage counts', error);
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('TagsRepository.getTagsWithUsage - error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new DatabaseError('Error fetching tags with usage counts', error);
+    }
+  }
+
+  /**
+   * Map a database tag model with usage to the domain model
+   */
+  mapToDomainWithUsage(tag: TagModelWithUsage): TagDomainWithUsage {
+    return {
+      id: tag.id,
+      name: tag.name,
+      createdAt: tag.created_at,
+      updatedAt: tag.updated_at,
+      usageCount: tag.usage_count
+    };
   }
 } 

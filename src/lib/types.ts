@@ -642,20 +642,34 @@ export interface CreateCategoryInput {
  */
 export interface TagModel {
   id: string;
-  user_id: string;
   name: string;
+  user_id: string;
   created_at: string;
   updated_at: string;
 }
 
 /**
- * Tag domain model
+ * Tag model with usage count
+ */
+export interface TagModelWithUsage extends TagModel {
+  usage_count: number;
+}
+
+/**
+ * Domain model for a tag
  */
 export interface TagDomain {
   id: string;
   name: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Domain model for a tag with usage count
+ */
+export interface TagDomainWithUsage extends TagDomain {
+  usageCount: number;
 }
 
 /**

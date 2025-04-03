@@ -1,7 +1,7 @@
 import { getRepositories } from '@/repositories';
 import { CategoryDomain } from '@/lib/types';
 import { TagDomain } from '@/repositories/tags.repository';
-import { Resource, ResourceType, Category, Tag, CategorizationJob, CategorizationAction, CategorizationResult, CategoryWithUsage } from '@/lib/categorization/types';
+import { Resource, ResourceType, Category, Tag, CategorizationJob, CategorizationAction, CategorizationResult, CategoryWithUsage, TagWithUsage } from '@/lib/categorization/types';
 import { CategoryService, TagService, JobService } from '@/lib/categorization/services';
 import { handleServiceError, handleServiceItemError, ValidationError } from '@/lib/errors';
 
@@ -157,6 +157,21 @@ export const tagService: TagService = {
       return tags.map(tag => repo.mapToDomain(tag));
     } catch (error) {
       return handleServiceError<Tag>(error, 'Error in tagService.getTags');
+    }
+  },
+
+  /**
+   * Get all tags with usage counts
+   */
+  async getTagsWithUsage(): Promise<TagWithUsage[]> {
+    try {
+      const repo = getRepositories().tags;
+      
+      const tags = await repo.getTagsWithUsage();
+      
+      return tags.map(tag => repo.mapToDomainWithUsage(tag));
+    } catch (error) {
+      return handleServiceError<TagWithUsage>(error, 'Error in tagService.getTagsWithUsage');
     }
   },
 

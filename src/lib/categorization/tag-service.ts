@@ -1,5 +1,5 @@
 import { getRepositories } from "@/repositories";
-import { Resource, ResourceType, Tag } from "./types";
+import { Resource, ResourceType, Tag, TagWithUsage } from "./types";
 import { TagService } from "./services";
 import { getResourceIdColumn, getTagJunctionTable, prepareTagJunction, toResource, verifyResourceOwnership } from "./db-utils";
 
@@ -21,6 +21,26 @@ export class TagServiceImpl implements TagService {
       id: row.id,
       name: row.name
     }));
+  }
+  
+  /**
+   * Get all tags with usage counts
+   */
+  async getTagsWithUsage(): Promise<TagWithUsage[]> {
+    const repos = getRepositories();
+    
+    try {
+      const tags = await repos.tags.getTagsWithUsage();
+      
+      return tags.map(tag => ({
+        id: tag.id,
+        name: tag.name,
+        usageCount: tag.usage_count
+      }));
+    } catch (error) {
+      console.error('Error fetching tags with usage counts:', error);
+      return [];
+    }
   }
   
   /**

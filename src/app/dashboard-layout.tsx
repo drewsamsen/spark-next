@@ -57,7 +57,7 @@ export default function DashboardLayout({
   const booksService = useBooksService();
   const sparksService = useSparksService();
   const { categories: categoriesData, categoriesWithUsage, isLoading: loadingCategoriesData } = useCategories();
-  const { tags: tagsData, isLoading: loadingTagsData } = useTags();
+  const { tags: tagsData, tagsWithUsage, isLoading: loadingTagsData } = useTags();
   
   // Track if component has mounted to prevent hydration mismatch
   const [hasMounted, setHasMounted] = useState(false);
@@ -191,21 +191,22 @@ export default function DashboardLayout({
 
   // Handle tags data changes
   useEffect(() => {
-    if (hasMounted && tagsData) {
-      console.log('Processing tags data, length:', tagsData.length);
+    if (hasMounted && tagsWithUsage) {
+      console.log('Processing tags with usage data, length:', tagsWithUsage.length);
       
       // Even if empty, still set an empty array to avoid undefined
-      const tagItems: SidebarItem[] = tagsData.map((tag) => ({
+      const tagItems: SidebarItem[] = tagsWithUsage.map((tag) => ({
         id: tag.id,
         name: tag.name,
-        date: '' // Tags don't have a slug, so use empty string as date
+        highlightsCount: tag.usageCount,
+        date: ''
       }));
       
-      console.log('Mapped tags to sidebar items:', tagItems);
+      console.log('Mapped tags to sidebar items with usage counts:', tagItems);
       setTags(tagItems);
       setLoadingTags(loadingTagsData);
     }
-  }, [hasMounted, tagsData, loadingTagsData]);
+  }, [hasMounted, tagsWithUsage, loadingTagsData]);
 
   // Toggle left sidebar visibility
   const toggleLeftSidebar = () => {

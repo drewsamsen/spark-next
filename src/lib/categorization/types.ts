@@ -32,6 +32,13 @@ export interface Tag {
   name: string;
 }
 
+/**
+ * Tag with usage count
+ */
+export interface TagWithUsage extends Tag {
+  usageCount: number;
+}
+
 // Categorization job
 export interface CategorizationJob {
   id?: string;
