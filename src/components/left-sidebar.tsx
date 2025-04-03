@@ -131,9 +131,9 @@ export default function LeftSidebar({
       href: "/dashboard"
     },
     {
-      name: "Books",
+      name: "Highlights",
       icon: <Book className="h-5 w-5" />,
-      tooltip: "Books",
+      tooltip: "Highlights",
       hasSubmenu: true
     },
     {

@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useBooksService } from '@/hooks';
 import { BookDomain, HighlightDomain } from '@/lib/types'; 
-import BookHighlights from '@/components/book-highlights';
+import HighlightsList from '@/components/highlights-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ExternalLink, Calendar, Book, Hash } from 'lucide-react';
 import Image from 'next/image';
 
-export default function BookDetailsPage() {
+export default function HighlightsDetailsPage() {
   const params = useParams();
   const rwId = parseInt(params.rwId as string, 10); // Parse the rwId from the URL
   const booksService = useBooksService();
@@ -72,9 +72,9 @@ export default function BookDetailsPage() {
     return (
       <div className="container mx-auto p-6">
         <div className="text-center py-12">
-          <h2 className="text-2xl font-semibold mb-2">Book Not Found</h2>
+          <h2 className="text-2xl font-semibold mb-2">Highlights Not Found</h2>
           <p className="text-muted-foreground">
-            The book you're looking for could not be found or you don't have access to it.
+            The highlights you're looking for could not be found or you don't have access to them.
           </p>
         </div>
       </div>
@@ -191,7 +191,7 @@ export default function BookDetailsPage() {
         )}
         
         {/* Book Highlights Section */}
-        <BookHighlights highlights={highlights} />
+        <HighlightsList highlights={highlights} />
       </div>
     </div>
   );

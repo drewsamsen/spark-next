@@ -224,7 +224,7 @@ export default function DashboardLayout({
     
     // Close any open nested sidebars when navigating to pages that aren't related to them
     // This ensures nested sidebars close when clicking things like Settings
-    if (booksSidebarOpen && !path.includes("/book/")) {
+    if (booksSidebarOpen && !path.includes("/highlights/")) {
       setBooksSidebarOpen(false);
     }
     if (sparksSidebarOpen && !path.includes("/spark/")) {
@@ -236,7 +236,7 @@ export default function DashboardLayout({
 
   // Toggle nested sidebar visibility based on the clicked item
   const toggleSidebar = (item: string) => {
-    if (item === "Books") {
+    if (item === "Highlights") {
       // If already open, close it
       if (booksSidebarOpen) {
         setBooksSidebarOpen(false);
@@ -248,7 +248,7 @@ export default function DashboardLayout({
         setTagsSidebarOpen(false);
         // Then open Books sidebar
         setBooksSidebarOpen(true);
-        setActiveSidebarItem("Books");
+        setActiveSidebarItem("Highlights");
       }
     } else if (item === "Sparks") {
       // If already open, close it
@@ -311,7 +311,7 @@ export default function DashboardLayout({
     
     // If rwId is directly provided, use it for navigation
     if (rwId) {
-      router.push(`/dashboard/book/${rwId}`);
+      router.push(`/dashboard/highlights/${rwId}`);
       return;
     }
     
@@ -320,7 +320,7 @@ export default function DashboardLayout({
     
     if (selectedBook && selectedBook.rwId) {
       // Navigate using the Readwise ID
-      router.push(`/dashboard/book/${selectedBook.rwId}`);
+      router.push(`/dashboard/highlights/${selectedBook.rwId}`);
     }
   };
 
@@ -391,7 +391,7 @@ export default function DashboardLayout({
                 currentPath={pathname}
               />
 
-              {/* Books sidebar */}
+              {/* Highlights sidebar */}
               {booksSidebarOpen && (
                 <div 
                   className="absolute top-0 h-full z-[25]"
@@ -401,7 +401,7 @@ export default function DashboardLayout({
                 >
                   <NestedSidebar
                     isOpen={booksSidebarOpen}
-                    title="Books"
+                    title="Highlights"
                     icon={<Book className="h-5 w-5" />}
                     items={books}
                     activeItemId={activeBook}

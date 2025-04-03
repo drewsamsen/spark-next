@@ -8,3 +8,4 @@ alwaysApply: true
 - Find and read the mdc files that are relevant to the task at hand.
 - never try to run databse migrations
 - When implementing new features, we do not need to maintain backwards compatibility unless specifically mentioned in the request
+- Always clean up code and files that are no longer needed

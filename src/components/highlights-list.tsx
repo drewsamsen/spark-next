@@ -14,13 +14,13 @@ import {
   getTagCounts,
   filterHighlights,
   formatDate
-} from './BookHighlights';
+} from './Highlights';
 
-interface BookHighlightsProps {
+interface HighlightsListProps {
   highlights: HighlightDomain[];
 }
 
-export default function BookHighlights({ highlights }: BookHighlightsProps) {
+export default function HighlightsList({ highlights }: HighlightsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTag, setFilterTag] = useState<string | null>(null);
   

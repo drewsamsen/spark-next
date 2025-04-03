@@ -3,7 +3,7 @@
 import { SortField } from "@/services/sidebar.service";
 
 interface SidebarColumnHeaderProps {
-  type: 'Books' | 'Sparks' | 'Categories' | 'Tags';
+  type: 'Highlights' | 'Sparks' | 'Categories' | 'Tags';
   onSort: (field: SortField) => void;
 }
 
@@ -11,7 +11,7 @@ interface SidebarColumnHeaderProps {
  * Column headers component for sidebars
  */
 export function SidebarColumnHeader({ type, onSort }: SidebarColumnHeaderProps) {
-  if (type === "Books") {
+  if (type === "Highlights") {
     return (
       <div className="grid gap-1 px-2 max-w-full">
         <div className="flex items-center px-3 py-2 text-xs text-muted-foreground font-medium">
