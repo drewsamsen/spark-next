@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { services } from '@/services';
 import { Button } from '@/components/ui/button';
 import { Category, Resource } from '@/lib/categorization/types';
 import { ArrowLeft, BookIcon, SparklesIcon, HighlighterIcon } from 'lucide-react';
 
-export default function CategoryPage({ params }: { params: { slug: string } }) {
+export default function CategoryPage() {
   const router = useRouter();
+  const params = useParams();
+  const slug = params.slug as string;
   const [category, setCategory] = useState<Category | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,7 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
         
         // Fetch categories to find the one with matching slug
         const categories = await categoryService.getCategories();
-        const categoryData = categories.find(c => c.slug === params.slug);
+        const categoryData = categories.find(c => c.slug === slug);
         
         if (!categoryData) {
           setError('Category not found');
@@ -47,7 +49,7 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
     };
     
     loadCategoryData();
-  }, [params.slug]);
+  }, [slug]);
 
   const getResourceIcon = (type: string) => {
     switch (type) {

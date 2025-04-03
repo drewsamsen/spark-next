@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { services } from '@/services';
 import { Button } from '@/components/ui/button';
 import { Tag, Resource } from '@/lib/categorization/types';
 import { ArrowLeft, BookIcon, SparklesIcon, HighlighterIcon } from 'lucide-react';
 
-export default function TagPage({ params }: { params: { name: string } }) {
+export default function TagPage() {
   const router = useRouter();
+  const params = useParams();
+  const name = params.name as string;
   const [tag, setTag] = useState<Tag | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,12 +29,12 @@ export default function TagPage({ params }: { params: { name: string } }) {
         const tags = await tagService.getTags();
         
         // Try to find by name (converted to lowercase and with spaces replaced by dashes)
-        const normalizedName = params.name.toLowerCase();
+        const normalizedName = name.toLowerCase();
         let tagData = tags.find(t => t.name.toLowerCase() === normalizedName);
         
         // If not found by name, try to find by ID as fallback (for backward compatibility)
         if (!tagData) {
-          tagData = tags.find(t => t.id === params.name);
+          tagData = tags.find(t => t.id === name);
         }
         
         if (!tagData) {
@@ -55,7 +57,7 @@ export default function TagPage({ params }: { params: { name: string } }) {
     };
     
     loadTagData();
-  }, [params.name]);
+  }, [name]);
 
   const getResourceIcon = (type: string) => {
     switch (type) {
