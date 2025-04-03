@@ -7,7 +7,9 @@ import {
   Home,
   Settings,
   Sparkles,
-  TagsIcon
+  TagsIcon,
+  FolderIcon,
+  HashIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -138,6 +140,18 @@ export default function LeftSidebar({
       name: "Sparks",
       icon: <Sparkles className="h-5 w-5" />,
       tooltip: "Sparks",
+      hasSubmenu: true
+    },
+    {
+      name: "Categories",
+      icon: <FolderIcon className="h-5 w-5" />,
+      tooltip: "Categories",
+      hasSubmenu: true
+    },
+    {
+      name: "Tags",
+      icon: <HashIcon className="h-5 w-5" />,
+      tooltip: "Tags",
       hasSubmenu: true
     },
     {

@@ -62,9 +62,12 @@ export function useCategories(): UseCategoriesReturn {
       try {
         setIsLoading(true);
         
-        // Check if user is authenticated
+        // Add debug info
         const isAuthenticated = await authService.isAuthenticated();
+        console.log('useCategories - auth status:', isAuthenticated);
+        
         if (!isAuthenticated) {
+          console.log('useCategories - not authenticated, returning empty array');
           if (isMounted) {
             setCategories([]);
             setIsLoading(false);
@@ -73,7 +76,9 @@ export function useCategories(): UseCategoriesReturn {
         }
         
         // Fetch categories
+        console.log('useCategories - fetching categories');
         const data = await categoryService.getCategories();
+        console.log('useCategories - raw categories data:', data);
         
         if (isMounted) {
           setCategories(data);
@@ -95,7 +100,8 @@ export function useCategories(): UseCategoriesReturn {
     loadCategories();
     
     // Subscribe to auth state changes
-    const subscription = authService.onAuthStateChange(() => {
+    const subscription = authService.onAuthStateChange((session) => {
+      console.log('useCategories - auth state changed:', !!session);
       loadCategories();
     });
     

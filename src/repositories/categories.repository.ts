@@ -7,28 +7,41 @@ import { CategoryModel, CategoryDomain, CreateCategoryInput } from '@/lib/types'
 /**
  * Repository for categories
  */
-export class CategoriesRepository extends BaseRepository {
+export class CategoriesRepository extends BaseRepository<CategoryModel> {
   constructor(client: DbClient) {
-    super(client);
+    super(client, 'categories'); // Pass the table name to BaseRepository
   }
 
   /**
    * Get all categories for the current user
    */
   async getCategories(): Promise<CategoryModel[]> {
-    const userId = await this.getUserId();
-    
-    const { data, error } = await this.client
-      .from('categories')
-      .select('*')
-      .eq('user_id', userId)
-      .order('name', { ascending: true });
-    
-    if (error) {
+    try {
+      console.log('CategoriesRepository.getCategories - getting userId'); 
+      const userId = await this.getUserId();
+      console.log('CategoriesRepository.getCategories - userId:', userId);
+      
+      console.log('CategoriesRepository.getCategories - querying database');
+      const { data, error } = await this.client
+        .from('categories')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name', { ascending: true });
+      
+      console.log('CategoriesRepository.getCategories - query result:', { dataLength: data?.length, error });
+      
+      if (error) {
+        throw new DatabaseError('Error fetching categories', error);
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('CategoriesRepository.getCategories - error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new DatabaseError('Error fetching categories', error);
     }
-    
-    return data;
   }
 
   /**
