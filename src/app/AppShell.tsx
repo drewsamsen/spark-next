@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import AppLayout from './app-layout';
+import AppLayout from '@/layouts/AppLayout';
 import { usePathname } from 'next/navigation';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {

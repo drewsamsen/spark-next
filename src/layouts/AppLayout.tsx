@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Header, LeftSidebar, RightSidebar, NestedSidebar } from "@/components/Layout";
 import { Book, Sparkles, FolderIcon, HashIcon, Flame, TagsIcon, Highlighter, StickyNote } from "lucide-react";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
-import { SidebarItem } from "@/lib/types";
+import { SidebarItem, SidebarType } from "@/lib/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRouter, usePathname } from "next/navigation";
 import { useBooksService, useSparksService, useCategories, useTags, useNotesService } from "@/hooks";
@@ -39,9 +39,6 @@ function loadStringFromStorage(key: string, defaultValue: string | null): string
   }
   return defaultValue;
 }
-
-// Types for sidebar content
-type SidebarType = 'highlights' | 'sparks' | 'categories' | 'tags' | 'notes' | null;
 
 // Main application layout component used by all authenticated pages
 export default function AppLayout({

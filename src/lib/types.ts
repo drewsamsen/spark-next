@@ -262,6 +262,11 @@ export interface SidebarItem {
 }
 
 /**
+ * Type representing different sidebar sections in the app
+ */
+export type SidebarType = 'highlights' | 'sparks' | 'categories' | 'tags' | 'notes' | null;
+
+/**
  * Definition of spark category
  * 
  * @property id - Unique identifier for the category

@@ -36,18 +36,18 @@ The tasks below are arranged in optimal sequential order for implementation:
 
 ### 1. File Organization and Naming
 
-- [ ] **Rename component from "dashboard-layout" to "app-layout"**
+- [x] **Rename component from "dashboard-layout" to "app-layout"**
   - Already completed but verify all references have been updated
   - Update any comments or documentation referencing "dashboard layout"
 
-- [ ] **Move layout files to a dedicated layouts directory**
+- [x] **Move layout files to a dedicated layouts directory**
   - Create a `/src/layouts` directory for layout components
   - Move `app-layout.tsx` to `/src/layouts/AppLayout.tsx`
   - Update imports in other files
 
 ### 2. Type Definitions
 
-- [ ] **Move type definitions to a central location**
+- [x] **Move type definitions to a central location**
   - Add SidebarType and SidebarItem to `/src/lib/types.ts`
   - Ensure types are properly exported
   - Update imports in app-layout.tsx and other files
