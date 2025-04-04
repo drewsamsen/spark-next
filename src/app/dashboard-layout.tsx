@@ -5,7 +5,7 @@ import Header from "@/components/header";
 import LeftSidebar from "@/components/left-sidebar";
 import RightSidebar from "@/components/right-sidebar";
 import NestedSidebar from "@/components/nested-sidebar";
-import { Book, Sparkles, FolderIcon, HashIcon } from "lucide-react";
+import { Book, Sparkles, FolderIcon, HashIcon, Flame, TagsIcon, Highlighter } from "lucide-react";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
 import { SidebarItem } from "@/lib/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -402,7 +402,7 @@ export default function DashboardLayout({
                   <NestedSidebar
                     isOpen={booksSidebarOpen}
                     title="Highlights"
-                    icon={<Book className="h-5 w-5" />}
+                    icon={<Highlighter className="h-5 w-5" />}
                     items={books}
                     activeItemId={activeBook}
                     setActiveItemId={handleBookSelect}
@@ -423,7 +423,7 @@ export default function DashboardLayout({
                   <NestedSidebar
                     isOpen={sparksSidebarOpen}
                     title="Sparks"
-                    icon={<Sparkles className="h-5 w-5" />}
+                    icon={<Flame className="h-5 w-5" />}
                     items={sparks}
                     activeItemId={activeSpark}
                     setActiveItemId={handleSparkSelect}
@@ -465,7 +465,7 @@ export default function DashboardLayout({
                   <NestedSidebar
                     isOpen={tagsSidebarOpen}
                     title="Tags"
-                    icon={<HashIcon className="h-5 w-5" />}
+                    icon={<TagsIcon className="h-5 w-5" />}
                     items={tags}
                     activeItemId={activeTag}
                     setActiveItemId={handleTagSelect}

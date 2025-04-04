@@ -9,7 +9,10 @@ import {
   Sparkles,
   TagsIcon,
   FolderIcon,
-  HashIcon
+  HashIcon,
+  Workflow,
+  Flame,
+  Highlighter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -132,13 +135,13 @@ export default function LeftSidebar({
     },
     {
       name: "Highlights",
-      icon: <Book className="h-5 w-5" />,
+      icon: <Highlighter className="h-5 w-5" />,
       tooltip: "Highlights",
       hasSubmenu: true
     },
     {
       name: "Sparks",
-      icon: <Sparkles className="h-5 w-5" />,
+      icon: <Flame className="h-5 w-5" />,
       tooltip: "Sparks",
       hasSubmenu: true
     },
@@ -150,13 +153,13 @@ export default function LeftSidebar({
     },
     {
       name: "Tags",
-      icon: <HashIcon className="h-5 w-5" />,
+      icon: <TagsIcon className="h-5 w-5" />,
       tooltip: "Tags",
       hasSubmenu: true
     },
     {
       name: "Context Jobs",
-      icon: <TagsIcon className="h-5 w-5" />,
+      icon: <Workflow className="h-5 w-5" />,
       tooltip: "Context Jobs",
       href: "/context-jobs"
     },
