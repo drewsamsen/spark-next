@@ -31,7 +31,7 @@ const AirtableIntegration = dynamic(() => import('@/components/integrations/Airt
 });
 
 // Import ScheduledTasksTable with dynamic loading
-const ScheduledTasksTable = dynamic(() => import('@/components/ScheduledTasksTable'), {
+const ScheduledTasksTable = dynamic(() => import('@/components/ScheduledTasks').then(mod => ({ default: mod.ScheduledTasksTable })), {
   ssr: false,
   loading: () => (
     <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
@@ -42,7 +42,7 @@ const ScheduledTasksTable = dynamic(() => import('@/components/ScheduledTasksTab
 });
 
 // Import FunctionLogsTable with dynamic loading as well
-const FunctionLogsTable = dynamic(() => import('@/components/FunctionLogsTable'), {
+const FunctionLogsTable = dynamic(() => import('@/components/FunctionLogs').then(mod => ({ default: mod.FunctionLogsTable })), {
   ssr: false,
   loading: () => (
     <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">

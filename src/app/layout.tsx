@@ -2,7 +2,7 @@ import React from "react";
 import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import { Metadata } from "next";
-import ClientProvider from "@/components/ClientProvider";
+import { ClientProvider } from "@/components/Providers";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ThemeAwareToast } from "@/components/theme/ThemeAwareToast";
 import { UISettingsProvider } from '@/contexts/ui-settings-context';

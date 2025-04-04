@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { SidebarItem } from "@/lib/types";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
-import SparkPreviewPanel from "./spark-preview-panel";
+import { SparkPreviewPanel } from "@/components/SparkPreview";
 import { EnhancedSparkItem } from "@/lib/types";
 import { SortField, SortState } from "@/services/sidebar.service";
 import { services } from "@/services";
@@ -14,7 +14,7 @@ import {
   SidebarItemList, 
   SidebarResizeHandle,
   useSidebarResize
-} from './Sidebar';
+} from '@/components/Sidebar';
 
 interface NestedSidebarProps {
   isOpen: boolean;

@@ -1,10 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import Header from "@/components/header";
-import LeftSidebar from "@/components/left-sidebar";
-import RightSidebar from "@/components/right-sidebar";
-import NestedSidebar from "@/components/nested-sidebar";
+import { Header, LeftSidebar, RightSidebar, NestedSidebar } from "@/components/Layout";
 import { Book, Sparkles, FolderIcon, HashIcon, Flame, TagsIcon, Highlighter } from "lucide-react";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
 import { SidebarItem } from "@/lib/types";

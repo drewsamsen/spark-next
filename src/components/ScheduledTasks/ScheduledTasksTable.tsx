@@ -11,7 +11,7 @@ import {
   availableTasks,
   ScheduledTask,
   TaskRunningState
-} from "./ScheduledTasks";
+} from ".";
 
 /**
  * Component for displaying a table of scheduled tasks that can be run manually

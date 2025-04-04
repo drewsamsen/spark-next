@@ -4,18 +4,25 @@
  * This file makes it easier to import UI components from a single location
  */
 
-// Tables
-export * from './Table';
-export * from './Pagination';
-
-// Forms
+// Form components
 export * from './button';
 export { Input, type InputProps } from './input';
 export * from './dropdown-menu';
+export * from './badge';
+export * from './tooltip';
+export { Skeleton } from './skeleton';
+
+// Table components
+export * from './Table';
+export * from './Pagination';
+
+// Form components
 export * from './FormComponents';
 
-// Feedback
+// Notification components
 export * from './Toast';
+
+// Loading components
 export {
   Spinner,
   LoadingPlaceholder,
@@ -23,9 +30,6 @@ export {
   CardSkeleton,
   TableSkeleton
 } from './Loading';
-export * from './ErrorState';
-export * from './badge';
 
-// Misc
-export * from './tooltip';
-export { Skeleton } from './skeleton'; 
+// Error components
+export * from './ErrorState'; 

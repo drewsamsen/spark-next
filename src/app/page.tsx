@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthSession } from "@/hooks";
-import MainContent from "@/components/main-content";
+import { MainContent } from "@/components/Layout";
 
 export default function HomePage() {
   const router = useRouter();

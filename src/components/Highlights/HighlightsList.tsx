@@ -14,7 +14,7 @@ import {
   getTagCounts,
   filterHighlights,
   formatDate
-} from './Highlights';
+} from '.';
 
 interface HighlightsListProps {
   highlights: HighlightDomain[];

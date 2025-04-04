@@ -12,7 +12,7 @@ import {
   SparkTags,
   adjustPanelPosition,
   formatDate
-} from "./SparkPreview";
+} from ".";
 
 interface SparkPreviewPanelProps {
   sparkId: string | null;

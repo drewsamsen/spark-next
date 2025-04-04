@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useBooksService } from '@/hooks';
 import { BookDomain, HighlightDomain } from '@/lib/types'; 
-import HighlightsList from '@/components/highlights-list';
+import { HighlightsList } from '@/components/Highlights';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ExternalLink, Calendar, Book, Hash } from 'lucide-react';
 import Image from 'next/image';

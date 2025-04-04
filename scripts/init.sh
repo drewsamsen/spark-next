@@ -150,7 +150,7 @@ EOF
 # Main page
 cat > src/app/page.tsx <<EOF
 import React from "react";
-import ClientProvider from "@/components/ClientProvider";
+import { ClientProvider } from "@/components/Providers";
 
 export default function Page() {
   return (

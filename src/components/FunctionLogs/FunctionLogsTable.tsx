@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useFunctionLogs, useAuthSession } from "@/hooks";
 import { FunctionLogsFilter } from "@/lib/types";
-import { TableHeader, TableBody, Pagination } from "./FunctionLogs";
+import { TableHeader, TableBody, Pagination } from ".";
 
 interface FunctionLogsTableProps {
   className?: string;
