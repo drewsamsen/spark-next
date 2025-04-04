@@ -1,5 +1,5 @@
 ---
-description: Guidelines for Supabase database access, auth, and migrations
+description: Guidelines for database access, auth, and migrations
 globs: 
 alwaysApply: false
 ---
