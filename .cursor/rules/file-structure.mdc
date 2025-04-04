@@ -45,10 +45,11 @@ Follow Next.js App Router conventions:
 ```
 src/app/
 ├── layout.tsx             # Root layout
+├── app-layout.tsx         # Main application layout
 ├── page.tsx               # Home page
 ├── dashboard/
-│   ├── layout.tsx         # Dashboard layout
-│   ├── page.tsx           # Dashboard main page
+│   └── page.tsx           # Dashboard main page
+├── (routes)/
 │   └── settings/
 │       └── page.tsx       # Settings page
 └── api/

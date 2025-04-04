@@ -40,8 +40,8 @@ function loadStringFromStorage(key: string, defaultValue: string | null): string
   return defaultValue;
 }
 
-// Dashboard layout component to be used by all app pages
-export default function DashboardLayout({
+// Main application layout component used by all authenticated pages
+export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;

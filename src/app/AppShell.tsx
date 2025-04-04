@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from './dashboard-layout';
+import AppLayout from './app-layout';
 import { usePathname } from 'next/navigation';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -17,11 +17,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return null;
   }
   
-  // Skip the dashboard layout for specific pages like login
+  // Skip the app layout for specific pages like login
   if (pathname === '/login') {
     return <>{children}</>;
   }
   
-  // For all other pages, use the dashboard layout
-  return <DashboardLayout>{children}</DashboardLayout>;
+  // For all other pages, use the app layout
+  return <AppLayout>{children}</AppLayout>;
 } 
