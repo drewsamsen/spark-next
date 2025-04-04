@@ -28,10 +28,14 @@ export function getDbClient(serverSide: boolean = false, adminAccess: boolean = 
  * @throws AuthError if the user is not authenticated
  */
 export async function getCurrentUserId(supabase: DbClient): Promise<string> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  if (error) {
+    throw new AuthError('Failed to get session: ' + error.message);
+  }
   
   if (!session) {
-    throw new AuthError();
+    throw new AuthError('No active session found');
   }
   
   return session.user.id;

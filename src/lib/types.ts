@@ -109,6 +109,32 @@ export type Database = {
           updated_at?: string;
         };
       };
+      notes: {
+        Row: {
+          id: string;
+          user_id: string;
+          content: string;
+          title: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          content: string;
+          title?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          content?: string;
+          title?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       sparks: {
         Row: {
           id: string;
@@ -840,4 +866,42 @@ export interface FunctionLogsApiResponse {
     limit: number;
     offset: number;
   };
+}
+
+/**
+ * Note database model
+ */
+export interface NoteModel {
+  id: string;
+  user_id: string;
+  content: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Note with related entities
+ */
+export interface NoteWithRelations extends NoteModel {
+  // Currently no relations, but this can be extended in the future
+}
+
+/**
+ * Note domain model
+ */
+export interface NoteDomain {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Input for creating a new note
+ */
+export interface CreateNoteInput {
+  title?: string;
+  content: string;
 }

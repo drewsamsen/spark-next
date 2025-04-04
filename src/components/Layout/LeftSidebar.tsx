@@ -12,7 +12,8 @@ import {
   HashIcon,
   Workflow,
   Flame,
-  Highlighter
+  Highlighter,
+  StickyNote
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -143,6 +144,12 @@ export default function LeftSidebar({
       name: "Sparks",
       icon: <Flame className="h-5 w-5" />,
       tooltip: "Sparks",
+      hasSubmenu: true
+    },
+    {
+      name: "Notes",
+      icon: <StickyNote className="h-5 w-5" />,
+      tooltip: "Notes",
       hasSubmenu: true
     },
     {

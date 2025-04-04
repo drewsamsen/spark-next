@@ -19,6 +19,7 @@ export { sidebarService } from './sidebar.service';
 export { headerService } from './header.service';
 export { userSettingsService } from './user-settings.service';
 export { airtableService } from './airtable.service';
+export { notesService } from './notes.service';
 
 // Re-export type interfaces from services for convenience
 export type { EnhancedSparkItem } from './sparks.service';

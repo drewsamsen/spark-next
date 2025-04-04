@@ -10,7 +10,8 @@ import { FunctionLogsRepository } from './function-logs.repository';
 import { UserSettingsRepository } from './user-settings.repository';
 import { CategorizationRepository } from './categorization.repository';
 import { JobsRepository } from './jobs.repository';
-import type { SparkDomain } from './sparks.repository'; 
+import { NotesRepository } from './notes.repository';
+import type { SparkDomain } from './sparks.repository';
 import type { BookDomain } from './books.repository';
 import type { HighlightDomain } from './highlights.repository';
 import type { CategoryDomain } from './categories.repository';
@@ -35,6 +36,7 @@ class RepositoriesRegistry {
   private userSettingsRepo: UserSettingsRepository | null = null;
   private categorizationRepo: CategorizationRepository | null = null;
   private jobsRepo: JobsRepository | null = null;
+  private notesRepo: NotesRepository | null = null;
   
   constructor(serverSide: boolean = false) {
     this.client = getDbClient(serverSide);
@@ -151,6 +153,16 @@ class RepositoriesRegistry {
   }
   
   /**
+   * Get the Notes repository
+   */
+  get notes(): NotesRepository {
+    if (!this.notesRepo) {
+      this.notesRepo = new NotesRepository(this.client);
+    }
+    return this.notesRepo;
+  }
+  
+  /**
    * Reset all repositories (useful for testing)
    */
   reset(): void {
@@ -165,6 +177,7 @@ class RepositoriesRegistry {
     this.userSettingsRepo = null;
     this.categorizationRepo = null;
     this.jobsRepo = null;
+    this.notesRepo = null;
   }
 }
 

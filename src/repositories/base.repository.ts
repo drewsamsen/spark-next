@@ -14,7 +14,7 @@ export abstract class BaseRepository<T extends Record<string, any>> {
   }
   
   /**
-   * Get the current user ID from session
+   * Get the current authenticated user ID from the session
    */
   protected async getUserId(): Promise<string> {
     return getCurrentUserId(this.client);

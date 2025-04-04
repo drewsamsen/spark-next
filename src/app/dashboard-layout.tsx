@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header, LeftSidebar, RightSidebar, NestedSidebar } from "@/components/Layout";
-import { Book, Sparkles, FolderIcon, HashIcon, Flame, TagsIcon, Highlighter } from "lucide-react";
+import { Book, Sparkles, FolderIcon, HashIcon, Flame, TagsIcon, Highlighter, StickyNote } from "lucide-react";
 import { useUISettings, UI_SETTINGS } from "@/contexts/ui-settings-context";
 import { SidebarItem } from "@/lib/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRouter, usePathname } from "next/navigation";
-import { useBooksService, useSparksService, useCategories, useTags } from "@/hooks";
+import { useBooksService, useSparksService, useCategories, useTags, useNotesService } from "@/hooks";
 import { EnhancedSparkItem } from "@/services";
 
 /**
@@ -53,6 +53,7 @@ export default function DashboardLayout({
   // Get services from hooks
   const booksService = useBooksService();
   const sparksService = useSparksService();
+  const notesService = useNotesService();
   const { categories: categoriesData, categoriesWithUsage, isLoading: loadingCategoriesData } = useCategories();
   const { tags: tagsData, tagsWithUsage, isLoading: loadingTagsData } = useTags();
   
@@ -68,6 +69,7 @@ export default function DashboardLayout({
   const [sparksSidebarOpen, setSparksSidebarOpen] = useState(false);
   const [categoriesSidebarOpen, setCategoriesSidebarOpen] = useState(false);
   const [tagsSidebarOpen, setTagsSidebarOpen] = useState(false);
+  const [notesSidebarOpen, setNotesSidebarOpen] = useState(false);
   
   // Active item states
   const [activeSidebarItem, setActiveSidebarItem] = useState<string | null>(null);
@@ -75,18 +77,40 @@ export default function DashboardLayout({
   const [activeSpark, setActiveSpark] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeNote, setActiveNote] = useState<string | null>(null);
   
   // Data states
   const [books, setBooks] = useState<SidebarItem[]>([]);
   const [sparks, setSparks] = useState<EnhancedSparkItem[]>([]);
   const [categories, setCategories] = useState<SidebarItem[]>([]);
   const [tags, setTags] = useState<SidebarItem[]>([]);
+  const [notes, setNotes] = useState<SidebarItem[]>([]);
   
   // Loading states
   const [loadingBooks, setLoadingBooks] = useState(false);
   const [loadingSparks, setLoadingSparks] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingTags, setLoadingTags] = useState(false);
+  const [loadingNotes, setLoadingNotes] = useState(false);
+
+  // Track loading states using refs to prevent duplicate requests
+  const isLoadingNotesRef = useRef(false);
+
+  // Store services in refs to avoid dependency changes
+  const servicesRef = useRef({
+    books: booksService,
+    sparks: sparksService,
+    notes: notesService
+  });
+  
+  // Update refs when services change (but don't trigger effects)
+  useEffect(() => {
+    servicesRef.current = {
+      books: booksService,
+      sparks: sparksService,
+      notes: notesService
+    };
+  }, [booksService, sparksService, notesService]);
 
   // Save sidebar states to localStorage
   useEffect(() => {
@@ -125,8 +149,8 @@ export default function DashboardLayout({
       const loadBooks = async () => {
         setLoadingBooks(true);
         try {
-          // Use the books service through our hook
-          const data = await booksService.getBooks();
+          // Use the books service through our ref
+          const data = await servicesRef.current.books.getBooks();
           setBooks(data);
         } catch (error) {
           console.error("Failed to load books:", error);
@@ -139,13 +163,35 @@ export default function DashboardLayout({
       const loadSparks = async () => {
         setLoadingSparks(true);
         try {
-          // Use the sparks service through our hook
-          const data = await sparksService.getSparks();
+          // Use the sparks service through our ref
+          const data = await servicesRef.current.sparks.getSparks();
           setSparks(data);
         } catch (error) {
           console.error("Failed to load sparks:", error);
         } finally {
           setLoadingSparks(false);
+        }
+      };
+
+      // Fetch notes data
+      const loadNotes = async () => {
+        setLoadingNotes(true);
+        try {
+          // Use the notes service through our ref
+          const data = await servicesRef.current.notes.getNotes();
+          const noteItems: SidebarItem[] = data.map((note) => ({
+            id: note.id,
+            name: note.title || 'Untitled Note',
+            date: new Date(note.updatedAt).toLocaleDateString('en-US', {
+              month: 'short',
+              year: '2-digit'
+            })
+          }));
+          setNotes(noteItems);
+        } catch (error) {
+          console.error("Failed to load notes:", error);
+        } finally {
+          setLoadingNotes(false);
         }
       };
       
@@ -157,8 +203,12 @@ export default function DashboardLayout({
       if (sparksSidebarOpen) {
         loadSparks();
       }
+
+      if (notesSidebarOpen) {
+        loadNotes();
+      }
     }
-  }, [hasMounted, booksSidebarOpen, sparksSidebarOpen, booksService, sparksService]);
+  }, [hasMounted, booksSidebarOpen, sparksSidebarOpen, notesSidebarOpen]);
 
   // Add debug logging for categories data
   useEffect(() => {
@@ -243,6 +293,7 @@ export default function DashboardLayout({
         setSparksSidebarOpen(false);
         setCategoriesSidebarOpen(false);
         setTagsSidebarOpen(false);
+        setNotesSidebarOpen(false);
         // Then open Books sidebar
         setBooksSidebarOpen(true);
         setActiveSidebarItem("Highlights");
@@ -257,9 +308,25 @@ export default function DashboardLayout({
         setBooksSidebarOpen(false);
         setCategoriesSidebarOpen(false);
         setTagsSidebarOpen(false);
+        setNotesSidebarOpen(false);
         // Then open Sparks sidebar
         setSparksSidebarOpen(true);
         setActiveSidebarItem("Sparks");
+      }
+    } else if (item === "Notes") {
+      // If already open, close it
+      if (notesSidebarOpen) {
+        setNotesSidebarOpen(false);
+        setActiveSidebarItem(null);
+      } else {
+        // Close any other open sidebar first
+        setBooksSidebarOpen(false);
+        setSparksSidebarOpen(false);
+        setCategoriesSidebarOpen(false);
+        setTagsSidebarOpen(false);
+        // Then open Notes sidebar
+        setNotesSidebarOpen(true);
+        setActiveSidebarItem("Notes");
       }
     } else if (item === "Categories") {
       // If already open, close it
@@ -271,6 +338,7 @@ export default function DashboardLayout({
         setBooksSidebarOpen(false);
         setSparksSidebarOpen(false);
         setTagsSidebarOpen(false);
+        setNotesSidebarOpen(false);
         // Then open Categories sidebar
         setCategoriesSidebarOpen(true);
         setActiveSidebarItem("Categories");
@@ -285,6 +353,7 @@ export default function DashboardLayout({
         setBooksSidebarOpen(false);
         setSparksSidebarOpen(false);
         setCategoriesSidebarOpen(false);
+        setNotesSidebarOpen(false);
         // Then open Tags sidebar
         setTagsSidebarOpen(true);
         setActiveSidebarItem("Tags");
@@ -296,6 +365,7 @@ export default function DashboardLayout({
       if (sparksSidebarOpen) setSparksSidebarOpen(false);
       if (categoriesSidebarOpen) setCategoriesSidebarOpen(false);
       if (tagsSidebarOpen) setTagsSidebarOpen(false);
+      if (notesSidebarOpen) setNotesSidebarOpen(false);
       
       // Set the active item
       setActiveSidebarItem(activeSidebarItem === item ? null : item);
@@ -359,11 +429,17 @@ export default function DashboardLayout({
     }
   };
 
+  // Handle note selection
+  const handleNoteSelect = (noteId: string) => {
+    setActiveNote(noteId);
+    router.push(`/notes/${noteId}`);
+  };
+
   // Width of icons-only part of the left sidebar when projects sidebar is open
   const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
 
   // Calculate if any nested sidebar is open
-  const isNestedSidebarOpen = booksSidebarOpen || sparksSidebarOpen || categoriesSidebarOpen || tagsSidebarOpen;
+  const isNestedSidebarOpen = booksSidebarOpen || sparksSidebarOpen || categoriesSidebarOpen || tagsSidebarOpen || notesSidebarOpen;
 
   return (
     <TooltipProvider delayDuration={0} skipDelayDuration={0}>
@@ -426,6 +502,27 @@ export default function DashboardLayout({
                     setActiveItemId={handleSparkSelect}
                     onClose={() => setSparksSidebarOpen(false)}
                     isLoading={loadingSparks}
+                  />
+                </div>
+              )}
+              
+              {/* Notes sidebar */}
+              {notesSidebarOpen && (
+                <div 
+                  className="absolute top-0 h-full z-[25]"
+                  style={{ 
+                    left: `${iconWidth}px`
+                  }}
+                >
+                  <NestedSidebar
+                    isOpen={notesSidebarOpen}
+                    title="Notes"
+                    icon={<StickyNote className="h-5 w-5" />}
+                    items={notes}
+                    activeItemId={activeNote}
+                    setActiveItemId={handleNoteSelect}
+                    onClose={() => setNotesSidebarOpen(false)}
+                    isLoading={loadingNotes}
                   />
                 </div>
               )}

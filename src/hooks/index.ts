@@ -31,4 +31,6 @@ export {
 } from './use-categorization';
 
 // Export enhanced resource hooks
-export { useSparks } from './use-sparks'; 
+export { useSparks } from './use-sparks';
+
+export { useNotesService } from './use-notes-service'; 
