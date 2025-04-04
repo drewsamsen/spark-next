@@ -40,6 +40,9 @@ function loadStringFromStorage(key: string, defaultValue: string | null): string
   return defaultValue;
 }
 
+// Types for sidebar content
+type SidebarType = 'highlights' | 'sparks' | 'categories' | 'tags' | 'notes' | null;
+
 // Main application layout component used by all authenticated pages
 export default function AppLayout({
   children,
@@ -64,37 +67,24 @@ export default function AppLayout({
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
   
-  // Sidebar visibility states
-  const [booksSidebarOpen, setBooksSidebarOpen] = useState(false);
-  const [sparksSidebarOpen, setSparksSidebarOpen] = useState(false);
-  const [categoriesSidebarOpen, setCategoriesSidebarOpen] = useState(false);
-  const [tagsSidebarOpen, setTagsSidebarOpen] = useState(false);
-  const [notesSidebarOpen, setNotesSidebarOpen] = useState(false);
+  // Unified sidebar state - refactored from multiple boolean states
+  const [nestedSidebarOpen, setNestedSidebarOpen] = useState(false);
+  const [activeSidebarType, setActiveSidebarType] = useState<SidebarType>(null);
   
-  // Active item states
+  // Active state - unified selected item and loading state
   const [activeSidebarItem, setActiveSidebarItem] = useState<string | null>(null);
-  const [activeBook, setActiveBook] = useState<string | null>(null);
-  const [activeSpark, setActiveSpark] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [activeNote, setActiveNote] = useState<string | null>(null);
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Data states
+  // Data states - keeping these separate as they represent different data models
   const [books, setBooks] = useState<SidebarItem[]>([]);
   const [sparks, setSparks] = useState<EnhancedSparkItem[]>([]);
   const [categories, setCategories] = useState<SidebarItem[]>([]);
   const [tags, setTags] = useState<SidebarItem[]>([]);
   const [notes, setNotes] = useState<SidebarItem[]>([]);
-  
-  // Loading states
-  const [loadingBooks, setLoadingBooks] = useState(false);
-  const [loadingSparks, setLoadingSparks] = useState(false);
-  const [loadingCategories, setLoadingCategories] = useState(false);
-  const [loadingTags, setLoadingTags] = useState(false);
-  const [loadingNotes, setLoadingNotes] = useState(false);
 
   // Track loading states using refs to prevent duplicate requests
-  const isLoadingNotesRef = useRef(false);
+  const isLoadingRef = useRef(false);
 
   // Store services in refs to avoid dependency changes
   const servicesRef = useRef({
@@ -143,11 +133,12 @@ export default function AppLayout({
     }
   }, []);
 
+  // Load data when sidebar type changes
   useEffect(() => {
     if (hasMounted) {
       // Fetch books data from the real database
       const loadBooks = async () => {
-        setLoadingBooks(true);
+        setIsLoading(true);
         try {
           // Use the books service through our ref
           const data = await servicesRef.current.books.getBooks();
@@ -155,13 +146,13 @@ export default function AppLayout({
         } catch (error) {
           console.error("Failed to load books:", error);
         } finally {
-          setLoadingBooks(false);
+          setIsLoading(false);
         }
       };
       
       // Fetch sparks data
       const loadSparks = async () => {
-        setLoadingSparks(true);
+        setIsLoading(true);
         try {
           // Use the sparks service through our ref
           const data = await servicesRef.current.sparks.getSparks();
@@ -169,13 +160,13 @@ export default function AppLayout({
         } catch (error) {
           console.error("Failed to load sparks:", error);
         } finally {
-          setLoadingSparks(false);
+          setIsLoading(false);
         }
       };
 
       // Fetch notes data
       const loadNotes = async () => {
-        setLoadingNotes(true);
+        setIsLoading(true);
         try {
           // Use the notes service through our ref
           const data = await servicesRef.current.notes.getNotes();
@@ -191,31 +182,36 @@ export default function AppLayout({
         } catch (error) {
           console.error("Failed to load notes:", error);
         } finally {
-          setLoadingNotes(false);
+          setIsLoading(false);
         }
       };
       
-      // Load data for any active sidebar
-      if (booksSidebarOpen) {
-        loadBooks();
-      }
+      // Reset active item when changing sidebar types
+      setActiveItemId(null);
       
-      if (sparksSidebarOpen) {
+      // Load data based on active sidebar type
+      if (activeSidebarType === 'highlights') {
+        loadBooks();
+      } else if (activeSidebarType === 'sparks') {
         loadSparks();
-      }
-
-      if (notesSidebarOpen) {
+      } else if (activeSidebarType === 'notes') {
         loadNotes();
+      } else if (activeSidebarType === 'categories') {
+        // Categories are loaded via the useCategories hook
+        setIsLoading(loadingCategoriesData);
+      } else if (activeSidebarType === 'tags') {
+        // Tags are loaded via the useTags hook
+        setIsLoading(loadingTagsData);
       }
     }
-  }, [hasMounted, booksSidebarOpen, sparksSidebarOpen, notesSidebarOpen]);
+  }, [hasMounted, activeSidebarType, loadingCategoriesData, loadingTagsData]);
 
   // Add debug logging for categories data
   useEffect(() => {
-    if (categoriesSidebarOpen) {
+    if (activeSidebarType === 'categories') {
       console.log('Categories hook data:', categoriesData);
     }
-  }, [categoriesData, categoriesSidebarOpen]);
+  }, [categoriesData, activeSidebarType]);
 
   // Handle categories data changes
   useEffect(() => {
@@ -232,9 +228,8 @@ export default function AppLayout({
       
       console.log('Mapped categories to sidebar items with usage counts:', categoryItems);
       setCategories(categoryItems);
-      setLoadingCategories(loadingCategoriesData);
     }
-  }, [hasMounted, categoriesWithUsage, loadingCategoriesData]);
+  }, [hasMounted, categoriesWithUsage]);
 
   // Handle tags data changes
   useEffect(() => {
@@ -251,9 +246,8 @@ export default function AppLayout({
       
       console.log('Mapped tags to sidebar items with usage counts:', tagItems);
       setTags(tagItems);
-      setLoadingTags(loadingTagsData);
     }
-  }, [hasMounted, tagsWithUsage, loadingTagsData]);
+  }, [hasMounted, tagsWithUsage]);
 
   // Toggle left sidebar visibility
   const toggleLeftSidebar = () => {
@@ -270,12 +264,19 @@ export default function AppLayout({
     e.preventDefault();
     
     // Close any open nested sidebars when navigating to pages that aren't related to them
-    // This ensures nested sidebars close when clicking things like Settings
-    if (booksSidebarOpen && !path.includes("/highlights/")) {
-      setBooksSidebarOpen(false);
-    }
-    if (sparksSidebarOpen && !path.includes("/spark/")) {
-      setSparksSidebarOpen(false);
+    if (nestedSidebarOpen) {
+      // Check if path is related to current sidebar type
+      const shouldCloseSidebar = (
+        (activeSidebarType === 'highlights' && !path.includes("/highlights/")) ||
+        (activeSidebarType === 'sparks' && !path.includes("/spark/")) ||
+        // Add other sidebar type checks as needed
+        true // Default to closing for any other navigation
+      );
+      
+      if (shouldCloseSidebar) {
+        setNestedSidebarOpen(false);
+        setActiveSidebarType(null);
+      }
     }
     
     router.push(path);
@@ -283,163 +284,118 @@ export default function AppLayout({
 
   // Toggle nested sidebar visibility based on the clicked item
   const toggleSidebar = (item: string) => {
-    if (item === "Highlights") {
-      // If already open, close it
-      if (booksSidebarOpen) {
-        setBooksSidebarOpen(false);
-        setActiveSidebarItem(null);
-      } else {
-        // Close any other open sidebar first
-        setSparksSidebarOpen(false);
-        setCategoriesSidebarOpen(false);
-        setTagsSidebarOpen(false);
-        setNotesSidebarOpen(false);
-        // Then open Books sidebar
-        setBooksSidebarOpen(true);
-        setActiveSidebarItem("Highlights");
-      }
-    } else if (item === "Sparks") {
-      // If already open, close it
-      if (sparksSidebarOpen) {
-        setSparksSidebarOpen(false);
-        setActiveSidebarItem(null);
-      } else {
-        // Close any other open sidebar first
-        setBooksSidebarOpen(false);
-        setCategoriesSidebarOpen(false);
-        setTagsSidebarOpen(false);
-        setNotesSidebarOpen(false);
-        // Then open Sparks sidebar
-        setSparksSidebarOpen(true);
-        setActiveSidebarItem("Sparks");
-      }
-    } else if (item === "Notes") {
-      // If already open, close it
-      if (notesSidebarOpen) {
-        setNotesSidebarOpen(false);
-        setActiveSidebarItem(null);
-      } else {
-        // Close any other open sidebar first
-        setBooksSidebarOpen(false);
-        setSparksSidebarOpen(false);
-        setCategoriesSidebarOpen(false);
-        setTagsSidebarOpen(false);
-        // Then open Notes sidebar
-        setNotesSidebarOpen(true);
-        setActiveSidebarItem("Notes");
-      }
-    } else if (item === "Categories") {
-      // If already open, close it
-      if (categoriesSidebarOpen) {
-        setCategoriesSidebarOpen(false);
-        setActiveSidebarItem(null);
-      } else {
-        // Close any other open sidebar first
-        setBooksSidebarOpen(false);
-        setSparksSidebarOpen(false);
-        setTagsSidebarOpen(false);
-        setNotesSidebarOpen(false);
-        // Then open Categories sidebar
-        setCategoriesSidebarOpen(true);
-        setActiveSidebarItem("Categories");
-      }
-    } else if (item === "Tags") {
-      // If already open, close it
-      if (tagsSidebarOpen) {
-        setTagsSidebarOpen(false);
-        setActiveSidebarItem(null);
-      } else {
-        // Close any other open sidebar first
-        setBooksSidebarOpen(false);
-        setSparksSidebarOpen(false);
-        setCategoriesSidebarOpen(false);
-        setNotesSidebarOpen(false);
-        // Then open Tags sidebar
-        setTagsSidebarOpen(true);
-        setActiveSidebarItem("Tags");
-      }
+    // Map menu item names to sidebar types
+    let sidebarType: SidebarType = null;
+    
+    if (item === "Highlights") sidebarType = 'highlights';
+    else if (item === "Sparks") sidebarType = 'sparks';
+    else if (item === "Notes") sidebarType = 'notes';
+    else if (item === "Categories") sidebarType = 'categories';
+    else if (item === "Tags") sidebarType = 'tags';
+    
+    // If the current sidebar is already open, close it
+    if (nestedSidebarOpen && activeSidebarType === sidebarType) {
+      setNestedSidebarOpen(false);
+      setActiveSidebarType(null);
+      setActiveSidebarItem(null);
+    } else if (sidebarType) {
+      // Close current sidebar and open the requested one
+      setNestedSidebarOpen(true);
+      setActiveSidebarType(sidebarType);
+      setActiveSidebarItem(item);
     } else {
       // For other items without nested sidebars
-      // Close any open nested sidebars
-      if (booksSidebarOpen) setBooksSidebarOpen(false);
-      if (sparksSidebarOpen) setSparksSidebarOpen(false);
-      if (categoriesSidebarOpen) setCategoriesSidebarOpen(false);
-      if (tagsSidebarOpen) setTagsSidebarOpen(false);
-      if (notesSidebarOpen) setNotesSidebarOpen(false);
+      // Close any open nested sidebar
+      setNestedSidebarOpen(false);
+      setActiveSidebarType(null);
       
       // Set the active item
       setActiveSidebarItem(activeSidebarItem === item ? null : item);
     }
   };
 
-  // Handle book selection
-  const handleBookSelect = (bookId: string, rwId?: number) => {
-    setActiveBook(bookId); // Still set activeBook to the UUID for sidebar highlighting
+  // Unified item selection handler
+  const handleItemSelect = (itemId: string, extraData?: any) => {
+    setActiveItemId(itemId);
     
-    // If rwId is directly provided, use it for navigation
-    if (rwId) {
-      router.push(`/highlights/${rwId}`);
-      return;
+    // Handle navigation based on the sidebar type
+    if (activeSidebarType === 'highlights') {
+      // For books/highlights, rwId might be provided directly or in the item
+      const rwId = extraData as number | undefined;
+      if (rwId) {
+        router.push(`/highlights/${rwId}`);
+        return;
+      }
+      
+      // Try to find the Readwise ID in the selected book
+      const selectedBook = books.find(book => book.id === itemId);
+      if (selectedBook?.rwId) {
+        router.push(`/highlights/${selectedBook.rwId}`);
+      }
     }
-    
-    // Fallback: find the selected book to get its rwId
-    const selectedBook = books.find(book => book.id === bookId);
-    
-    if (selectedBook && selectedBook.rwId) {
-      // Navigate using the Readwise ID
-      router.push(`/highlights/${selectedBook.rwId}`);
+    else if (activeSidebarType === 'sparks') {
+      // Spark selection logic here
+      // Currently a placeholder in the original code
     }
-  };
-
-  // Update setActiveSpark to handle the rwId parameter
-  const handleSparkSelect = (sparkId: string, rwId?: number) => {
-    setActiveSpark(sparkId);
-    // Additional navigation logic for sparks can be added here
-  };
-
-  // Handle category selection
-  const handleCategorySelect = (categoryId: string) => {
-    setActiveCategory(categoryId);
-    
-    // Find the category to get its slug using categoriesData (which contains the slug)
-    // instead of the SidebarItem array which doesn't have the slug property
-    const selectedCategory = categoriesData.find(category => category.id === categoryId);
-    if (selectedCategory) {
-      // Navigate to the category details page using slug
-      router.push(`/category/${selectedCategory.slug}`);
-    } else {
-      // Log error if category not found
-      console.error(`Category with ID ${categoryId} not found`);
+    else if (activeSidebarType === 'categories') {
+      // Find the category to get its slug
+      const selectedCategory = categoriesData.find(category => category.id === itemId);
+      if (selectedCategory) {
+        router.push(`/category/${selectedCategory.slug}`);
+      } else {
+        console.error(`Category with ID ${itemId} not found`);
+      }
     }
-  };
-
-  // Handle tag selection
-  const handleTagSelect = (tagId: string) => {
-    setActiveTag(tagId);
-    
-    // Find the tag to get its name
-    const selectedTag = tags.find(tag => tag.id === tagId);
-    if (selectedTag) {
-      // Use the tag name in the URL instead of the ID
-      // The tag name is already standardized (lowercase with dashes)
-      router.push(`/tag/${selectedTag.name}`);
-    } else {
-      // Fallback to ID if tag not found
-      router.push(`/tag/${tagId}`);
+    else if (activeSidebarType === 'tags') {
+      // Find the tag to get its name
+      const selectedTag = tags.find(tag => tag.id === itemId);
+      if (selectedTag) {
+        router.push(`/tag/${selectedTag.name}`);
+      } else {
+        router.push(`/tag/${itemId}`);
+      }
+    }
+    else if (activeSidebarType === 'notes') {
+      router.push(`/notes/${itemId}`);
     }
   };
 
-  // Handle note selection
-  const handleNoteSelect = (noteId: string) => {
-    setActiveNote(noteId);
-    router.push(`/notes/${noteId}`);
+  // Helper functions for nested sidebar rendering
+  const getSidebarTitle = (type: SidebarType): string => {
+    switch (type) {
+      case 'highlights': return 'Highlights';
+      case 'sparks': return 'Sparks';
+      case 'categories': return 'Categories';
+      case 'tags': return 'Tags';
+      case 'notes': return 'Notes';
+      default: return '';
+    }
+  };
+
+  const getSidebarIcon = (type: SidebarType) => {
+    switch (type) {
+      case 'highlights': return <Highlighter className="h-5 w-5" />;
+      case 'sparks': return <Flame className="h-5 w-5" />;
+      case 'categories': return <FolderIcon className="h-5 w-5" />;
+      case 'tags': return <TagsIcon className="h-5 w-5" />;
+      case 'notes': return <StickyNote className="h-5 w-5" />;
+      default: return null;
+    }
+  };
+
+  const getSidebarItems = (type: SidebarType) => {
+    switch (type) {
+      case 'highlights': return books;
+      case 'sparks': return sparks;
+      case 'categories': return categories;
+      case 'tags': return tags;
+      case 'notes': return notes;
+      default: return [];
+    }
   };
 
   // Width of icons-only part of the left sidebar when projects sidebar is open
   const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
-
-  // Calculate if any nested sidebar is open
-  const isNestedSidebarOpen = booksSidebarOpen || sparksSidebarOpen || categoriesSidebarOpen || tagsSidebarOpen || notesSidebarOpen;
 
   return (
     <TooltipProvider delayDuration={0} skipDelayDuration={0}>
@@ -459,13 +415,13 @@ export default function AppLayout({
                 setIsOpen={setLeftSidebarOpen}
                 activeSidebarItem={activeSidebarItem}
                 toggleProjectsSidebar={toggleSidebar}
-                isProjectsSidebarOpen={isNestedSidebarOpen}
+                isProjectsSidebarOpen={nestedSidebarOpen}
                 navigateTo={navigateTo}
                 currentPath={pathname}
               />
 
-              {/* Highlights sidebar */}
-              {booksSidebarOpen && (
+              {/* Nested sidebar - only rendered when needed with dynamic content */}
+              {nestedSidebarOpen && activeSidebarType && (
                 <div 
                   className="absolute top-0 h-full z-[25]"
                   style={{ 
@@ -473,98 +429,17 @@ export default function AppLayout({
                   }}
                 >
                   <NestedSidebar
-                    isOpen={booksSidebarOpen}
-                    title="Highlights"
-                    icon={<Highlighter className="h-5 w-5" />}
-                    items={books}
-                    activeItemId={activeBook}
-                    setActiveItemId={handleBookSelect}
-                    onClose={() => setBooksSidebarOpen(false)}
-                    isLoading={loadingBooks}
-                  />
-                </div>
-              )}
-              
-              {/* Sparks sidebar */}
-              {sparksSidebarOpen && (
-                <div 
-                  className="absolute top-0 h-full z-[25]"
-                  style={{ 
-                    left: `${iconWidth}px`
-                  }}
-                >
-                  <NestedSidebar
-                    isOpen={sparksSidebarOpen}
-                    title="Sparks"
-                    icon={<Flame className="h-5 w-5" />}
-                    items={sparks}
-                    activeItemId={activeSpark}
-                    setActiveItemId={handleSparkSelect}
-                    onClose={() => setSparksSidebarOpen(false)}
-                    isLoading={loadingSparks}
-                  />
-                </div>
-              )}
-              
-              {/* Notes sidebar */}
-              {notesSidebarOpen && (
-                <div 
-                  className="absolute top-0 h-full z-[25]"
-                  style={{ 
-                    left: `${iconWidth}px`
-                  }}
-                >
-                  <NestedSidebar
-                    isOpen={notesSidebarOpen}
-                    title="Notes"
-                    icon={<StickyNote className="h-5 w-5" />}
-                    items={notes}
-                    activeItemId={activeNote}
-                    setActiveItemId={handleNoteSelect}
-                    onClose={() => setNotesSidebarOpen(false)}
-                    isLoading={loadingNotes}
-                  />
-                </div>
-              )}
-              
-              {/* Categories sidebar */}
-              {categoriesSidebarOpen && (
-                <div 
-                  className="absolute top-0 h-full z-[25]"
-                  style={{ 
-                    left: `${iconWidth}px`
-                  }}
-                >
-                  <NestedSidebar
-                    isOpen={categoriesSidebarOpen}
-                    title="Categories"
-                    icon={<FolderIcon className="h-5 w-5" />}
-                    items={categories}
-                    activeItemId={activeCategory}
-                    setActiveItemId={handleCategorySelect}
-                    onClose={() => setCategoriesSidebarOpen(false)}
-                    isLoading={loadingCategories}
-                  />
-                </div>
-              )}
-              
-              {/* Tags sidebar */}
-              {tagsSidebarOpen && (
-                <div 
-                  className="absolute top-0 h-full z-[25]"
-                  style={{ 
-                    left: `${iconWidth}px`
-                  }}
-                >
-                  <NestedSidebar
-                    isOpen={tagsSidebarOpen}
-                    title="Tags"
-                    icon={<TagsIcon className="h-5 w-5" />}
-                    items={tags}
-                    activeItemId={activeTag}
-                    setActiveItemId={handleTagSelect}
-                    onClose={() => setTagsSidebarOpen(false)}
-                    isLoading={loadingTags}
+                    isOpen={nestedSidebarOpen}
+                    title={getSidebarTitle(activeSidebarType)}
+                    icon={getSidebarIcon(activeSidebarType)}
+                    items={getSidebarItems(activeSidebarType)}
+                    activeItemId={activeItemId}
+                    setActiveItemId={handleItemSelect}
+                    onClose={() => {
+                      setNestedSidebarOpen(false);
+                      setActiveSidebarType(null);
+                    }}
+                    isLoading={isLoading}
                   />
                 </div>
               )}
