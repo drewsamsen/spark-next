@@ -17,11 +17,16 @@ export const sidebarService = {
   /**
    * Get saved search term from localStorage
    */
-  getSavedSearch(title: string): string {
+  getSavedSearch(title: string, instanceId?: string): string {
     if (typeof window === 'undefined') return '';
     
     try {
-      const savedSearch = localStorage.getItem(`${title.toLowerCase()}-search`);
+      // Create a more specific key format to avoid collisions
+      const key = instanceId 
+        ? `sidebar-search-${title.toLowerCase()}-${instanceId}`
+        : `sidebar-search-${title.toLowerCase()}`;
+      
+      const savedSearch = localStorage.getItem(key);
       if (savedSearch) {
         return savedSearch;
       }
@@ -34,11 +39,16 @@ export const sidebarService = {
   /**
    * Save search term to localStorage
    */
-  saveSearch(title: string, searchTerm: string): void {
+  saveSearch(title: string, searchTerm: string, instanceId?: string): void {
     if (typeof window === 'undefined') return;
     
     try {
-      localStorage.setItem(`${title.toLowerCase()}-search`, searchTerm);
+      // Use the same key format as in getSavedSearch
+      const key = instanceId 
+        ? `sidebar-search-${title.toLowerCase()}-${instanceId}`
+        : `sidebar-search-${title.toLowerCase()}`;
+      
+      localStorage.setItem(key, searchTerm);
     } catch (error) {
       console.error('Error saving search to localStorage:', error);
     }
@@ -47,13 +57,18 @@ export const sidebarService = {
   /**
    * Get saved sort preferences from localStorage
    */
-  getSavedSort(title: string): SortState {
+  getSavedSort(title: string, instanceId?: string): SortState {
     if (typeof window === 'undefined') {
       return { field: 'name', direction: 'asc' };
     }
     
     try {
-      const savedSort = localStorage.getItem(`${title.toLowerCase()}-sort`);
+      // Create a more specific key format to avoid collisions
+      const key = instanceId 
+        ? `sidebar-sort-${title.toLowerCase()}-${instanceId}`
+        : `sidebar-sort-${title.toLowerCase()}`;
+      
+      const savedSort = localStorage.getItem(key);
       if (savedSort) {
         return JSON.parse(savedSort);
       }
@@ -67,11 +82,16 @@ export const sidebarService = {
   /**
    * Save sort preferences to localStorage
    */
-  saveSort(title: string, sort: SortState): void {
+  saveSort(title: string, sort: SortState, instanceId?: string): void {
     if (typeof window === 'undefined') return;
     
     try {
-      localStorage.setItem(`${title.toLowerCase()}-sort`, JSON.stringify(sort));
+      // Use the same key format as in getSavedSort
+      const key = instanceId 
+        ? `sidebar-sort-${title.toLowerCase()}-${instanceId}`
+        : `sidebar-sort-${title.toLowerCase()}`;
+      
+      localStorage.setItem(key, JSON.stringify(sort));
     } catch (error) {
       console.error('Error saving sort settings to localStorage:', error);
     }

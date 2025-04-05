@@ -13,7 +13,8 @@ import {
   Workflow,
   Flame,
   Highlighter,
-  StickyNote
+  StickyNote,
+  Bug
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -164,11 +165,27 @@ export default function LeftSidebar({
       tooltip: "Tags",
       hasSubmenu: true
     },
+  ];
+
+  // Utility sidebar items
+  const utilitySidebarItems: NavItem[] = [
     {
       name: "Context Jobs",
       icon: <Workflow className="h-5 w-5" />,
       tooltip: "Context Jobs",
       href: "/context-jobs"
+    },
+    {
+      name: "Debug",
+      icon: <Bug className="h-5 w-5" />,
+      tooltip: "Debug",
+      href: "/debug"
+    },
+    {
+      name: "Settings",
+      icon: <Settings className="h-5 w-5" />,
+      tooltip: "Settings",
+      href: "/settings"
     },
   ];
 
@@ -236,45 +253,46 @@ export default function LeftSidebar({
               )
             ))}
           </nav>
-          <div className="mt-auto" />
-          <div className="mt-4 grid gap-1 px-2">
-            {isProjectsSidebarOpen ? (
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
+          
+          {/* Utility Section */}
+          <div className="mt-6">
+            <div className="px-3 mb-2">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Utility</p>
+            </div>
+            <nav className="grid gap-1 px-2">
+              {utilitySidebarItems.map((item) => (
+                isProjectsSidebarOpen ? (
+                  <Tooltip key={item.name} delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <a
+                        href={item.href || "#"}
+                        onClick={(e) => handleNavItemClick(item, e)}
+                        className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
+                        aria-label={item.tooltip}
+                      >
+                        {item.icon}
+                      </a>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={-10} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
+                      {item.tooltip}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
                   <a
-                    href="/settings"
-                    onClick={(e) => {
-                      if (navigateTo) {
-                        e.preventDefault();
-                        navigateTo("/settings", e);
-                      }
-                    }}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary pl-3 pr-0 justify-start w-[60px] h-[40px] relative z-[150]"
-                    aria-label="Settings"
+                    key={item.name}
+                    href={item.href || "#"}
+                    onClick={(e) => handleNavItemClick(item, e)}
+                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
                   >
-                    <Settings className="h-5 w-5" />
+                    {item.icon}
+                    <span>{item.name}</span>
                   </a>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={-10} className="z-[200] dark:bg-spark-dark-surface dark:border-spark-dark-neutral/20">
-                  Settings
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <a
-                href="/settings"
-                onClick={(e) => {
-                  if (navigateTo) {
-                    e.preventDefault();
-                    navigateTo("/settings", e);
-                  }
-                }}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-spark-neutral/20 hover:text-spark-primary dark:hover:bg-spark-dark-neutral/20 dark:hover:text-spark-dark-primary"
-              >
-                <Settings className="h-5 w-5" />
-                <span>Settings</span>
-              </a>
-            )}
+                )
+              ))}
+            </nav>
           </div>
+          
+          <div className="mt-auto" />
         </div>
       </div>
       

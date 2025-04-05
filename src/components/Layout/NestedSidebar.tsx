@@ -25,6 +25,7 @@ interface NestedSidebarProps {
   setActiveItemId: (id: string, rwId?: number) => void;
   onClose: () => void;
   isLoading?: boolean;
+  instanceId?: string;
 }
 
 export default function NestedSidebar({ 
@@ -35,13 +36,14 @@ export default function NestedSidebar({
   activeItemId, 
   setActiveItemId,
   onClose,
-  isLoading = false
+  isLoading = false,
+  instanceId
 }: NestedSidebarProps) {
   const uiService = services.sidebar;
   
-  // Initialize search and sort from UI service (which uses localStorage)
-  const [searchTerm, setSearchTerm] = useState(() => uiService.getSavedSearch(title));
-  const [sort, setSort] = useState(() => uiService.getSavedSort(title));
+  // Initialize search and sort from UI service
+  const [searchTerm, setSearchTerm] = useState(() => uiService.getSavedSearch(title, instanceId));
+  const [sort, setSort] = useState(() => uiService.getSavedSort(title, instanceId));
   
   const { settings, updateLeftSidebarWidth } = useUISettings();
   const iconWidth = UI_SETTINGS.LEFT_SIDEBAR.ICON_WIDTH;
@@ -58,13 +60,13 @@ export default function NestedSidebar({
   
   // Save search term to localStorage via UI service
   useEffect(() => {
-    uiService.saveSearch(title, searchTerm);
-  }, [searchTerm, title, uiService]);
+    uiService.saveSearch(title, searchTerm, instanceId);
+  }, [searchTerm, title, uiService, instanceId]);
   
   // Save sort preferences to localStorage via UI service
   useEffect(() => {
-    uiService.saveSort(title, sort);
-  }, [sort, title, uiService]);
+    uiService.saveSort(title, sort, instanceId);
+  }, [sort, title, uiService, instanceId]);
 
   // Force sort to be reapplied when items change (e.g., when data loads)
   useEffect(() => {

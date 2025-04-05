@@ -351,6 +351,7 @@ export default function AppLayout({
                   }}
                 >
                   <NestedSidebar
+                    key={`nested-sidebar-${activeSidebarType}`}
                     isOpen={nestedSidebarOpen}
                     title={getSidebarTitle(activeSidebarType)}
                     icon={getSidebarIcon(activeSidebarType)}
@@ -362,6 +363,7 @@ export default function AppLayout({
                       setActiveSidebarType(null);
                     }}
                     isLoading={isLoading}
+                    instanceId={`sidebar-instance-${activeSidebarType}`}
                   />
                 </div>
               )}
