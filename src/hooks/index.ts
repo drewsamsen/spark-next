@@ -2,6 +2,8 @@
  * Export all hooks for easy imports
  */
 
+// Service hooks
+export { useContentService } from './use-content-service';
 export { 
   useServices,
   useSparksService,
@@ -17,13 +19,11 @@ export {
 } from './use-services';
 
 export { useFunctionLogsService } from './use-function-logs-service';
-export { useFunctionLogs } from './use-function-logs';
 
 export { useUserSettings } from './use-user-settings-service';
-
 export { useAuthSession } from './use-auth-session';
 
-// Export new categorization hooks
+// Export categorization hooks
 export { 
   useCategories, 
   useTags, 
@@ -32,5 +32,12 @@ export {
 
 // Export enhanced resource hooks
 export { useSparks } from './use-sparks';
+export { useNotesService } from './use-notes-service';
 
-export { useNotesService } from './use-notes-service'; 
+// Export new sidebar hooks
+export * from './useSidebarVisibility';
+export * from './useSidebarSelection';
+export * from './useActiveItemTracking';
+export * from './useSidebarSearch';
+
+// Add additional hooks as needed 
