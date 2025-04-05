@@ -98,7 +98,7 @@ export default function RightSidebar({ isOpen, setIsOpen }: RightSidebarProps) {
 
   return (
     <div 
-      className="h-full border-l border-sidebar bg-neutral-50 dark:bg-sidebar overflow-hidden flex-shrink-0 relative"
+      className="h-screen border-l border-sidebar bg-neutral-50 dark:bg-sidebar overflow-hidden flex-shrink-0 relative"
       style={sidebarStyle}
     >
       {/* Resize handle */}

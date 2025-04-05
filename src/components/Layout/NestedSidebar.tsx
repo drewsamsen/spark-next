@@ -145,7 +145,7 @@ export default function NestedSidebar({
 
   return (
     <div 
-      className="h-full border-l border-r bg-neutral-50 dark:bg-sidebar animate-fade-in overflow-hidden relative"
+      className="h-screen border-l border-r bg-neutral-50 dark:bg-sidebar animate-fade-in overflow-hidden relative"
       style={{
         ...nestedSidebarStyle,
         zIndex: 20 // Ensure sidebar has a stacking context with explicit z-index
