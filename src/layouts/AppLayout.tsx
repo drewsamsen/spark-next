@@ -26,6 +26,7 @@ import {
   shouldKeepSidebarOpen, 
   getNavigationPath 
 } from "@/lib/sidebar-utils";
+import { cn } from "@/lib/utils";
 
 // Main application layout component used by all authenticated pages
 export default function AppLayout({
@@ -48,6 +49,9 @@ export default function AppLayout({
   // Initialize state from localStorage on client-side only
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
+  
+  // Focus mode state
+  const [focusMode, setFocusMode] = useState(false);
   
   // Unified sidebar state - refactored from multiple boolean states
   const [nestedSidebarOpen, setNestedSidebarOpen] = useState(false);
@@ -241,6 +245,20 @@ export default function AppLayout({
     setRightSidebarOpen(!rightSidebarOpen);
   };
 
+  // Toggle focus mode function
+  const toggleFocusMode = () => {
+    setFocusMode(!focusMode);
+    if (!focusMode) {
+      // Entering focus mode - hide sidebars
+      setLeftSidebarOpen(false);
+      setRightSidebarOpen(false);
+    } else {
+      // Exiting focus mode - restore sidebars
+      setLeftSidebarOpen(true);
+      setRightSidebarOpen(true);
+    }
+  };
+
   // Client-side navigation function
   const navigateTo = (path: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -326,62 +344,76 @@ export default function AppLayout({
           toggleRightSidebar={toggleRightSidebar}
           navigateTo={navigateTo}
           currentPath={pathname}
+          isFocusMode={focusMode}
+          toggleFocusMode={toggleFocusMode}
         />
         <div className="flex flex-1 overflow-hidden">
-          {/* Left sidebar container */}
-          {leftSidebarOpen && (
-            <div className="relative h-full">
-              {/* Main sidebar component handles its own width and resizing */}
-              <LeftSidebar 
-                isOpen={leftSidebarOpen} 
-                setIsOpen={setLeftSidebarOpen}
-                activeSidebarItem={activeSidebarItem}
-                toggleProjectsSidebar={toggleSidebar}
-                isProjectsSidebarOpen={nestedSidebarOpen}
-                navigateTo={navigateTo}
-                currentPath={pathname}
-              />
+          {/* Left sidebar container - use CSS to hide/show instead of removing from DOM */}
+          <div className={cn(
+            "relative h-full transition-none",
+            !leftSidebarOpen && "hidden"
+          )}>
+            {/* Main sidebar component handles its own width and resizing */}
+            <LeftSidebar 
+              isOpen={leftSidebarOpen} 
+              setIsOpen={setLeftSidebarOpen}
+              activeSidebarItem={activeSidebarItem}
+              toggleProjectsSidebar={toggleSidebar}
+              isProjectsSidebarOpen={nestedSidebarOpen}
+              navigateTo={navigateTo}
+              currentPath={pathname}
+            />
 
-              {/* Nested sidebar - only rendered when needed with dynamic content */}
-              {nestedSidebarOpen && activeSidebarType && (
-                <div 
-                  className="absolute top-0 h-full z-[25]"
-                  style={{ 
-                    left: `${iconWidth}px`
+            {/* Nested sidebar - only rendered when needed with dynamic content */}
+            {nestedSidebarOpen && activeSidebarType && (
+              <div 
+                className="absolute top-0 h-full z-[25]"
+                style={{ 
+                  left: `${iconWidth}px`
+                }}
+              >
+                <NestedSidebar
+                  key={`nested-sidebar-${activeSidebarType}`}
+                  isOpen={nestedSidebarOpen}
+                  title={getSidebarTitle(activeSidebarType)}
+                  icon={getSidebarIcon(activeSidebarType)}
+                  items={getSidebarItems(activeSidebarType)}
+                  activeItemId={activeItemId}
+                  setActiveItemId={handleItemSelect}
+                  onClose={() => {
+                    setNestedSidebarOpen(false);
+                    setActiveSidebarType(null);
                   }}
-                >
-                  <NestedSidebar
-                    key={`nested-sidebar-${activeSidebarType}`}
-                    isOpen={nestedSidebarOpen}
-                    title={getSidebarTitle(activeSidebarType)}
-                    icon={getSidebarIcon(activeSidebarType)}
-                    items={getSidebarItems(activeSidebarType)}
-                    activeItemId={activeItemId}
-                    setActiveItemId={handleItemSelect}
-                    onClose={() => {
-                      setNestedSidebarOpen(false);
-                      setActiveSidebarType(null);
-                    }}
-                    isLoading={isLoading}
-                    instanceId={`sidebar-instance-${activeSidebarType}`}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+                  isLoading={isLoading}
+                  instanceId={`sidebar-instance-${activeSidebarType}`}
+                />
+              </div>
+            )}
+          </div>
           
           {/* Main content area */}
-          <main className="flex-1 overflow-auto">
-            {children}
+          <main className={cn(
+            "flex-1 overflow-auto transition-none",
+            focusMode && "flex justify-center" // Center content in focus mode
+          )}>
+            <div 
+              className="w-full transition-none"
+              style={focusMode ? { maxWidth: '1200px', padding: '0 1rem' } : {}}
+            >
+              {children}
+            </div>
           </main>
           
-          {/* Right sidebar */}
-          {rightSidebarOpen && (
+          {/* Right sidebar - use CSS to hide/show instead of removing from DOM */}
+          <div className={cn(
+            "transition-none", 
+            !rightSidebarOpen && "hidden"
+          )}>
             <RightSidebar 
               isOpen={rightSidebarOpen} 
               setIsOpen={setRightSidebarOpen}
             />
-          )}
+          </div>
         </div>
       </div>
     </TooltipProvider>

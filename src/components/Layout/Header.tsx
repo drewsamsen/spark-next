@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import {
   PanelRightOpen,
   Search,
-  Settings
+  Settings,
+  Maximize,
+  Minimize
 } from "lucide-react";
 import { ModeToggle } from "@/components/theme/ModeToggle";
 import { LogoutButton } from "@/components/auth/LogoutButton";
@@ -19,12 +21,16 @@ interface HeaderProps {
   toggleRightSidebar: () => void;
   navigateTo?: (path: string, e: React.MouseEvent) => void;
   currentPath?: string;
+  isFocusMode?: boolean;
+  toggleFocusMode?: () => void;
 }
 
 export default function Header({ 
   toggleRightSidebar,
   navigateTo,
-  currentPath = "/"
+  currentPath = "/",
+  isFocusMode = false,
+  toggleFocusMode
 }: HeaderProps) {
   const pathname = usePathname();
   const headerService = useHeaderService();
@@ -87,6 +93,19 @@ export default function Header({
         
         {/* Right section */}
         <div className="flex items-center gap-2">
+          {toggleFocusMode && (
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={toggleFocusMode}
+              className="h-8 w-8"
+              title={isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
+            >
+              {isFocusMode ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+              <span className="sr-only">{isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode"}</span>
+            </Button>
+          )}
+          
           <ModeToggle />
           
           <Button variant="ghost" size="icon" onClick={toggleRightSidebar} className="h-8 w-8">
