@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ReactNode } from 'react';
+import { ReactNode, useRef, useEffect, useState } from 'react';
 import { Tag } from '@/lib/books-service';
 
 interface HighlightCardProps {
@@ -36,130 +36,125 @@ export function HighlightCard({
   onUserNoteChange,
   isSavingNote = false
 }: HighlightCardProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [note, setNote] = useState(highlight.userNote || "");
+  
+  // Auto-resize textarea based on content
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set the height to scrollHeight to expand to content
+      textarea.style.height = `${Math.max(textarea.scrollHeight, 200)}px`;
+    }
+  };
+  
+  // Adjust height initially and when note changes
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [note]);
+  
+  // Also adjust when component mounts
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, []);
+
   return (
-    <div className="flex gap-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 flex-1">
-        <div className="flex flex-col space-y-4">
-          {/* Highlight text with stylized quote marks and highlighted search matches */}
-          <div className="relative font-serif">
-            <div className="absolute -top-4 -left-2 text-4xl text-gray-200 dark:text-gray-700">"</div>
-            <div className="relative z-10">
-              <p className="text-lg leading-relaxed pl-3 py-1">
-                {highlightMatches(highlight.text)}
-              </p>
-            </div>
-            <div className="absolute -bottom-6 -right-2 text-4xl text-gray-200 dark:text-gray-700">"</div>
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden">
+      <div className="flex flex-col md:flex-row">
+        {/* Highlight side */}
+        <div className="flex-1 p-6 border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-800">
+          {/* Highlight text with subtle styling */}
+          <div className="mb-6">
+            <p className="text-lg font-serif leading-relaxed text-gray-800 dark:text-gray-200">
+              {highlightMatches(highlight.text)}
+            </p>
           </div>
           
-          {/* Note if present - with highlighted search matches */}
+          {/* Original note if present */}
           {highlight.note && (
-            <div className="bg-muted/40 p-3 rounded-md mt-2 border-l-4 border-blue-400">
-              <p className="text-sm whitespace-pre-line">
+            <div className="mb-5 pl-3 border-l-2 border-blue-200 dark:border-blue-800">
+              <p className="text-sm italic text-gray-600 dark:text-gray-400 whitespace-pre-line">
                 {highlightMatches(highlight.note)}
               </p>
             </div>
           )}
           
-          {/* Metadata section */}
-          <div className="flex flex-wrap gap-3 pt-3 text-sm text-muted-foreground border-t">
+          {/* Metadata section - minimal styling */}
+          <div className="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400 pt-3 mt-auto">
             {/* Location */}
             {highlight.location && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1">
-                      <BookOpen className="h-3.5 w-3.5" />
-                      <span>{highlight.location}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Location in book</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div className="flex items-center gap-1">
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>{highlight.location}</span>
+              </div>
             )}
             
             {/* Date highlighted */}
             {highlight.highlightedAt && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1">
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      <span>{formatDate(highlight.highlightedAt)}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Date highlighted</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div className="flex items-center gap-1">
+                <CalendarDays className="h-3.5 w-3.5" />
+                <span>{formatDate(highlight.highlightedAt)}</span>
+              </div>
+            )}
+            
+            {/* Tags - simplified */}
+            {highlight.rwTags && highlight.rwTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 items-center">
+                <TagIcon className="h-3.5 w-3.5" />
+                {highlight.rwTags.map((tag, index) => (
+                  <span 
+                    key={index}
+                    className={`text-xs cursor-pointer hover:text-blue-600 ${filterTag === renderTag(tag) ? 'text-blue-500 font-medium' : ''}`}
+                    onClick={() => onTagSelect(filterTag === renderTag(tag) ? null : renderTag(tag))}
+                  >
+                    {renderTag(tag)}
+                    {index < (highlight.rwTags?.length ?? 0) - 1 && ","}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
-          
-          {/* Readwise Tags */}
-          {highlight.rwTags && highlight.rwTags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              <div className="flex items-center gap-1">
-                <TagIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Readwise tags:</span>
-              </div>
-              {highlight.rwTags.map((tag, index) => (
-                <Badge 
-                  key={index} 
-                  variant="outline" 
-                  className={`text-xs cursor-pointer hover:bg-muted ${filterTag === renderTag(tag) ? 'bg-primary/10 border-primary' : ''}`}
-                  onClick={() => onTagSelect(filterTag === renderTag(tag) ? null : renderTag(tag))}
-                >
-                  {renderTag(tag)}
-                </Badge>
-              ))}
-            </div>
-          )}
-          
-          {/* Spark Tags */}
-          {highlight.tags && highlight.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              <div className="flex items-center gap-1">
-                <TagIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Spark tags:</span>
-              </div>
-              {highlight.tags.map((tag, index) => (
-                <Badge 
-                  key={index} 
-                  variant="outline"
-                  className={`text-xs cursor-pointer hover:bg-muted bg-primary/5 ${filterTag === tag.name ? 'bg-primary/10 border-primary' : ''}`}
-                  onClick={() => onTagSelect(filterTag === tag.name ? null : tag.name)}
-                >
-                  {tag.name}
-                </Badge>
-              ))}
-            </div>
-          )}
         </div>
-      </div>
-      
-      {/* Personal Notes Text Area */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 flex-1">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-300">Personal Notes</h3>
-          {isSavingNote && (
-            <div className="flex items-center text-xs text-blue-500">
-              <Save className="h-3 w-3 mr-1 animate-pulse" />
-              Saving...
-            </div>
-          )}
+        
+        {/* Notes side - styled like notebook paper */}
+        <div className="flex-1 bg-[#fffffe] dark:bg-gray-850 relative">
+          {/* Subtle lined paper effect - extends with content */}
+          <div className="absolute inset-0 pointer-events-none notes-lines">
+            {Array.from({ length: 50 }).map((_, i) => (
+              <div 
+                key={i} 
+                className="w-full h-px bg-blue-50 dark:bg-gray-800"
+                style={{ top: `${(i + 1) * 24}px`, position: 'absolute' }}
+              />
+            ))}
+          </div>
+          
+          {/* Notes textarea with minimal styling */}
+          <div className="p-6 relative z-10 min-h-full">
+            {/* Absolutely positioned saving indicator */}
+            {isSavingNote && (
+              <div className="absolute top-2 right-6 z-20 flex items-center text-blue-500 text-xs">
+                <Save className="h-3 w-3 mr-1 animate-pulse" />
+                Saving...
+              </div>
+            )}
+            <textarea 
+              ref={textareaRef}
+              className="w-full bg-transparent resize-none border-0 p-0 focus:outline-none focus:ring-0 text-gray-700 dark:text-gray-300 font-light overflow-hidden"
+              placeholder=""
+              value={note}
+              onChange={(e) => {
+                setNote(e.target.value);
+                if (onUserNoteChange) {
+                  onUserNoteChange(highlight.id, e.target.value);
+                }
+              }}
+              style={{ lineHeight: '24px', minHeight: '200px' }}
+            />
+          </div>
         </div>
-        <textarea 
-          className="w-full h-56 p-3 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-          placeholder="Add your personal notes here..."
-          defaultValue={highlight.userNote || ""}
-          onChange={(e) => {
-            if (onUserNoteChange) {
-              onUserNoteChange(highlight.id, e.target.value);
-            }
-          }}
-        />
       </div>
     </div>
   );
