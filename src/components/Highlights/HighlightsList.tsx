@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Quote } from 'lucide-react';
 import { HighlightDomain } from '@/lib/types';
+import { highlightsService } from '@/services/highlights.service';
 import {
   SearchBar,
   TagFilter,
@@ -23,6 +24,8 @@ interface HighlightsListProps {
 export default function HighlightsList({ highlights }: HighlightsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTag, setFilterTag] = useState<string | null>(null);
+  const [userNotes, setUserNotes] = useState<Record<string, string>>({});
+  const [savingNotes, setSavingNotes] = useState<Set<string>>(new Set());
   
   // Extract unique tags from highlights
   const uniqueTags = extractUniqueTags(highlights);
@@ -46,6 +49,45 @@ export default function HighlightsList({ highlights }: HighlightsListProps) {
   // Create highlight text match renderer
   const highlightMatches = (text: string) => {
     return <HighlightTextWithMatches text={text} searchTerm={searchTerm} />;
+  };
+
+  // Debounce helper to avoid too many database writes
+  const debounce = (func: Function, wait: number) => {
+    let timeout: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
+
+  // Save note to database with debounce
+  const saveUserNote = useCallback(
+    debounce(async (highlightId: string, note: string) => {
+      try {
+        setSavingNotes(prev => new Set(prev).add(highlightId));
+        await highlightsService.updateUserNote(highlightId, note);
+      } catch (error) {
+        console.error('Error saving user note:', error);
+      } finally {
+        setSavingNotes(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(highlightId);
+          return newSet;
+        });
+      }
+    }, 500),
+    []
+  );
+
+  // Handle user note changes
+  const handleUserNoteChange = (highlightId: string, note: string) => {
+    setUserNotes(prev => ({
+      ...prev,
+      [highlightId]: note
+    }));
+    
+    // Save note to database with debounce
+    saveUserNote(highlightId, note);
   };
 
   return (
@@ -91,12 +133,19 @@ export default function HighlightsList({ highlights }: HighlightsListProps) {
           {filteredHighlights.map((highlight) => (
             <HighlightCard
               key={highlight.id}
-              highlight={highlight}
+              highlight={{
+                ...highlight,
+                userNote: userNotes[highlight.id] !== undefined 
+                  ? userNotes[highlight.id] 
+                  : highlight.userNote
+              }}
               renderTag={renderTag}
               formatDate={formatDate}
               highlightMatches={highlightMatches}
               filterTag={filterTag}
               onTagSelect={handleTagSelect}
+              onUserNoteChange={handleUserNoteChange}
+              isSavingNote={savingNotes.has(highlight.id)}
             />
           ))}
         </div>

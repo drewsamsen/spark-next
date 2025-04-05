@@ -541,6 +541,12 @@ export interface HighlightWithRelations extends HighlightModel {
       name: string;
     };
   }[];
+  highlight_notes?: {
+    note_id: string;
+    notes?: {
+      content: string;
+    };
+  }[];
 }
 
 /**
@@ -560,6 +566,7 @@ export interface HighlightDomain {
   rwTags: (string | { id: string; name: string })[] | null;
   categories: HighlightCategory[];
   tags: HighlightTag[];
+  userNote: string | null;
   createdAt: string;
   updatedAt: string;
 }

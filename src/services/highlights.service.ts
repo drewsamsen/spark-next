@@ -147,6 +147,21 @@ export const highlightsService = {
   },
 
   /**
+   * Update user note for a highlight
+   */
+  async updateUserNote(highlightId: string, note: string): Promise<boolean> {
+    try {
+      const repo = getRepositories().highlights;
+      
+      await repo.updateUserNote(highlightId, note);
+      return true;
+    } catch (error) {
+      console.error(`Error in highlightsService.updateUserNote for highlight ${highlightId}:`, error);
+      return false;
+    }
+  },
+
+  /**
    * Extract tags from Readwise tags
    * This converts the Readwise tags format to our internal format
    */
