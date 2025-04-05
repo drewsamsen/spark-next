@@ -910,3 +910,168 @@ export interface CreateNoteInput {
   title?: string;
   content: string;
 }
+
+/**
+ * Props interface for the AppLayout component
+ */
+export interface AppLayoutProps {
+  /** The content to render inside the layout */
+  children: React.ReactNode;
+}
+
+/**
+ * Props for sub-components within AppLayout
+ */
+export interface SidebarComponentProps {
+  /** Whether the sidebar is currently open */
+  isOpen: boolean;
+  /** Function to set the sidebar's open state */
+  setIsOpen: (value: boolean) => void;
+}
+
+/**
+ * Props for navigation-capable components
+ */
+export interface NavigationProps {
+  /** Function to handle navigation with client-side routing */
+  navigateTo: (path: string, e: React.MouseEvent) => void;
+  /** The current path in the application */
+  currentPath: string;
+}
+
+/**
+ * Props for the nested sidebar
+ */
+export interface NestedSidebarProps {
+  /** Whether the nested sidebar is open */
+  isOpen: boolean;
+  /** The title to display in the sidebar */
+  title: string;
+  /** The icon to display in the sidebar */
+  icon: React.ReactNode;
+  /** The list of items to display in the sidebar */
+  items: SidebarItem[] | EnhancedSparkItem[];
+  /** The ID of the currently active item */
+  activeItemId: string | null;
+  /** Function to set the active item */
+  setActiveItemId: (id: string, extraData?: any) => void;
+  /** Function to close the sidebar */
+  onClose: () => void;
+  /** Whether the items are currently loading */
+  isLoading?: boolean;
+}
+
+/**
+ * Type definitions for URL parameters in route paths
+ */
+
+/**
+ * Parameters for highlight routes
+ */
+export interface HighlightRouteParams {
+  /** The Readwise ID of the book */
+  rwId: string;
+  /** The ID of the highlight (optional) */
+  highlightId?: string;
+}
+
+/**
+ * Parameters for spark routes
+ */
+export interface SparkRouteParams {
+  /** The ID of the spark */
+  sparkId: string;
+}
+
+/**
+ * Parameters for category routes
+ */
+export interface CategoryRouteParams {
+  /** The slug of the category */
+  slug: string;
+}
+
+/**
+ * Parameters for tag routes
+ */
+export interface TagRouteParams {
+  /** The name of the tag */
+  name: string;
+}
+
+/**
+ * Parameters for note routes
+ */
+export interface NoteRouteParams {
+  /** The ID of the note */
+  noteId: string;
+}
+
+/**
+ * Helper functions for extracting route parameters
+ */
+
+/**
+ * Parses a highlight route path and extracts parameters
+ * @param path The route path
+ * @returns The extracted parameters
+ */
+export function parseHighlightRoute(path: string): HighlightRouteParams | null {
+  const highlightRegex = /\/highlights\/(\d+)(?:\/(\w+))?/;
+  const match = path.match(highlightRegex);
+  
+  if (!match) return null;
+  
+  return {
+    rwId: match[1],
+    ...(match[2] ? { highlightId: match[2] } : {})
+  };
+}
+
+/**
+ * Parses a category route path and extracts parameters
+ * @param path The route path
+ * @returns The extracted parameters
+ */
+export function parseCategoryRoute(path: string): CategoryRouteParams | null {
+  const categoryRegex = /\/category\/([^\/]+)/;
+  const match = path.match(categoryRegex);
+  
+  if (!match) return null;
+  
+  return {
+    slug: match[1]
+  };
+}
+
+/**
+ * Parses a tag route path and extracts parameters
+ * @param path The route path
+ * @returns The extracted parameters
+ */
+export function parseTagRoute(path: string): TagRouteParams | null {
+  const tagRegex = /\/tag\/([^\/]+)/;
+  const match = path.match(tagRegex);
+  
+  if (!match) return null;
+  
+  return {
+    name: match[1]
+  };
+}
+
+/**
+ * Parses a note route path and extracts parameters
+ * @param path The route path
+ * @returns The extracted parameters
+ */
+export function parseNoteRoute(path: string): NoteRouteParams | null {
+  const noteRegex = /\/notes\/([^\/]+)/;
+  const match = path.match(noteRegex);
+  
+  if (!match) return null;
+  
+  return {
+    noteId: match[1]
+  };
+}
