@@ -64,15 +64,15 @@ The tasks below are arranged in optimal sequential order for implementation:
 
 ### 3. Utility Functions
 
-- [ ] **Extract local storage utility functions**
+- [x] **Extract local storage utility functions**
   - Create or update `/src/lib/utils.ts` to include the storage functions
   - Ensure functions are properly typed and exported
   - Replace direct calls in app-layout.tsx with imports
   - Add type safety and error handling
   - Support additional storage options (sessionStorage, IndexedDB)
 
-- [ ] **Extract sidebar helper functions to a utility file**
-  - Create `/src/lib/sidebar-utils.ts`
+- [x] **Extract sidebar helper functions to a utility file**
+  - Create `/src/lib/sidebar-utils.tsx`
   - Move getSidebarTitle, getSidebarIcon, getSidebarItems functions
   - Ensure proper typing and exports
 

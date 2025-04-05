@@ -18,36 +18,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRouter, usePathname } from "next/navigation";
 import { useBooksService, useSparksService, useCategories, useTags, useNotesService } from "@/hooks";
 import { EnhancedSparkItem } from "@/services";
-
-/**
- * Load a boolean value from localStorage with fallback
- */
-function loadBooleanFromStorage(key: string, defaultValue: boolean): boolean {
-  try {
-    const value = localStorage.getItem(key);
-    if (value !== null) {
-      return value === 'true';
-    }
-  } catch (error) {
-    console.error(`Error loading ${key} from localStorage:`, error);
-  }
-  return defaultValue;
-}
-
-/**
- * Load a string value from localStorage with fallback
- */
-function loadStringFromStorage(key: string, defaultValue: string | null): string | null {
-  try {
-    const value = localStorage.getItem(key);
-    if (value !== null) {
-      return value;
-    }
-  } catch (error) {
-    console.error(`Error loading ${key} from localStorage:`, error);
-  }
-  return defaultValue;
-}
+import { loadBooleanFromStorage, saveToStorage } from "@/lib/utils";
+import { 
+  getSidebarTitle, 
+  getSidebarIcon, 
+  getSidebarTypeFromItem, 
+  shouldKeepSidebarOpen, 
+  getNavigationPath 
+} from "@/lib/sidebar-utils";
 
 // Main application layout component used by all authenticated pages
 export default function AppLayout({
@@ -110,8 +88,8 @@ export default function AppLayout({
   useEffect(() => {
     if (hasMounted) {
       // Save main sidebar visibility states only
-      localStorage.setItem('leftSidebarOpen', leftSidebarOpen.toString());
-      localStorage.setItem('rightSidebarOpen', rightSidebarOpen.toString());
+      saveToStorage('leftSidebarOpen', leftSidebarOpen);
+      saveToStorage('rightSidebarOpen', rightSidebarOpen);
       
       // No longer persisting nested sidebar states or active selections
       // Everything except main sidebar visibility will reset on page refresh
@@ -268,14 +246,9 @@ export default function AppLayout({
     e.preventDefault();
     
     // Close any open nested sidebars when navigating to pages that aren't related to them
-    if (nestedSidebarOpen) {
+    if (nestedSidebarOpen && activeSidebarType) {
       // Check if path is related to current sidebar type
-      const shouldCloseSidebar = (
-        (activeSidebarType === 'highlights' && !path.includes("/highlights/")) ||
-        (activeSidebarType === 'sparks' && !path.includes("/spark/")) ||
-        // Add other sidebar type checks as needed
-        true // Default to closing for any other navigation
-      );
+      const shouldCloseSidebar = !shouldKeepSidebarOpen(activeSidebarType, path);
       
       if (shouldCloseSidebar) {
         setNestedSidebarOpen(false);
@@ -289,13 +262,7 @@ export default function AppLayout({
   // Toggle nested sidebar visibility based on the clicked item
   const toggleSidebar = (item: string) => {
     // Map menu item names to sidebar types
-    let sidebarType: SidebarType = null;
-    
-    if (item === "Highlights") sidebarType = 'highlights';
-    else if (item === "Sparks") sidebarType = 'sparks';
-    else if (item === "Notes") sidebarType = 'notes';
-    else if (item === "Categories") sidebarType = 'categories';
-    else if (item === "Tags") sidebarType = 'tags';
+    const sidebarType = getSidebarTypeFromItem(item);
     
     // If the current sidebar is already open, close it
     if (nestedSidebarOpen && activeSidebarType === sidebarType) {
@@ -322,68 +289,19 @@ export default function AppLayout({
   const handleItemSelect = (itemId: string, extraData?: any) => {
     setActiveItemId(itemId);
     
-    // Handle navigation based on the sidebar type
-    if (activeSidebarType === 'highlights') {
-      // For books/highlights, rwId might be provided directly or in the item
-      const rwId = extraData as number | undefined;
-      if (rwId) {
-        router.push(`/highlights/${rwId}`);
-        return;
-      }
+    if (activeSidebarType) {
+      // Get the navigation path using the utility function
+      const path = getNavigationPath(
+        activeSidebarType,
+        itemId,
+        getSidebarItems(activeSidebarType),
+        categoriesData,
+        extraData
+      );
       
-      // Try to find the Readwise ID in the selected book
-      const selectedBook = books.find(book => book.id === itemId);
-      if (selectedBook?.rwId) {
-        router.push(`/highlights/${selectedBook.rwId}`);
+      if (path) {
+        router.push(path);
       }
-    }
-    else if (activeSidebarType === 'sparks') {
-      // Spark selection logic here
-      // Currently a placeholder in the original code
-    }
-    else if (activeSidebarType === 'categories') {
-      // Find the category to get its slug
-      const selectedCategory = categoriesData.find(category => category.id === itemId);
-      if (selectedCategory) {
-        router.push(`/category/${selectedCategory.slug}`);
-      } else {
-        console.error(`Category with ID ${itemId} not found`);
-      }
-    }
-    else if (activeSidebarType === 'tags') {
-      // Find the tag to get its name
-      const selectedTag = tags.find(tag => tag.id === itemId);
-      if (selectedTag) {
-        router.push(`/tag/${selectedTag.name}`);
-      } else {
-        router.push(`/tag/${itemId}`);
-      }
-    }
-    else if (activeSidebarType === 'notes') {
-      router.push(`/notes/${itemId}`);
-    }
-  };
-
-  // Helper functions for nested sidebar rendering
-  const getSidebarTitle = (type: SidebarType): string => {
-    switch (type) {
-      case 'highlights': return 'Highlights';
-      case 'sparks': return 'Sparks';
-      case 'categories': return 'Categories';
-      case 'tags': return 'Tags';
-      case 'notes': return 'Notes';
-      default: return '';
-    }
-  };
-
-  const getSidebarIcon = (type: SidebarType) => {
-    switch (type) {
-      case 'highlights': return <Highlighter className="h-5 w-5" />;
-      case 'sparks': return <Flame className="h-5 w-5" />;
-      case 'categories': return <FolderIcon className="h-5 w-5" />;
-      case 'tags': return <TagsIcon className="h-5 w-5" />;
-      case 'notes': return <StickyNote className="h-5 w-5" />;
-      default: return null;
     }
   };
 
