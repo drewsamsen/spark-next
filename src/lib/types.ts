@@ -563,7 +563,6 @@ export interface HighlightDomain {
   highlightedAt: string | null;
   url: string | null;
   color: string | null;
-  rwTags: (string | { id: string; name: string })[] | null;
   categories: HighlightCategory[];
   tags: HighlightTag[];
   userNote: string | null;

@@ -75,7 +75,9 @@ function mapToLegacyDetails(book: BookDomain): BookDetails {
   };
 }
 
-// Helper function to map HighlightDomain to Highlight
+/**
+ * Map a domain highlight to a legacy highlight object for backwards compatibility
+ */
 function mapToLegacyHighlight(highlight: HighlightDomain): Highlight {
   return {
     id: highlight.id,
@@ -86,7 +88,7 @@ function mapToLegacyHighlight(highlight: HighlightDomain): Highlight {
     highlightedAt: highlight.highlightedAt,
     url: highlight.url,
     color: highlight.color,
-    tags: highlight.rwTags,
+    tags: highlight.tags.map(tag => tag.name),
     sparkTags: highlight.tags
   };
 }

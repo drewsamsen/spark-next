@@ -320,7 +320,6 @@ export class HighlightsRepository extends BaseRepository {
       highlightedAt: highlight.rw_highlighted_at,
       url: highlight.rw_url,
       color: highlight.rw_color,
-      rwTags: highlight.rw_tags,
       categories,
       tags,
       userNote,

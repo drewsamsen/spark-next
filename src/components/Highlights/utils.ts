@@ -24,17 +24,10 @@ export const renderTag = (tag: Tag): string => {
 };
 
 /**
- * Extract all unique tags from highlights (both Readwise and Spark tags)
+ * Extract all unique tags from highlights (using only Spark tags)
  */
 export const extractUniqueTags = (highlights: HighlightDomain[]): string[] => {
   const allTags = highlights.reduce((acc: Set<string>, highlight) => {
-    // Add Readwise tags
-    if (highlight.rwTags && highlight.rwTags.length > 0) {
-      highlight.rwTags.forEach(tag => {
-        acc.add(renderTag(tag));
-      });
-    }
-    
     // Add Spark tags
     if (highlight.tags && highlight.tags.length > 0) {
       highlight.tags.forEach(tag => {
@@ -54,14 +47,6 @@ export const extractUniqueTags = (highlights: HighlightDomain[]): string[] => {
  */
 export const getTagCounts = (highlights: HighlightDomain[]): Map<string, number> => {
   return highlights.reduce((acc: Map<string, number>, highlight) => {
-    // Count Readwise tags
-    if (highlight.rwTags && highlight.rwTags.length > 0) {
-      highlight.rwTags.forEach(tag => {
-        const tagName = renderTag(tag);
-        acc.set(tagName, (acc.get(tagName) || 0) + 1);
-      });
-    }
-    
     // Count Spark tags
     if (highlight.tags && highlight.tags.length > 0) {
       highlight.tags.forEach(tag => {
@@ -109,7 +94,6 @@ export const filterHighlights = (
         (highlight.note && highlight.note.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesTag = !filterTag || 
-        (highlight.rwTags && highlight.rwTags.some(tag => renderTag(tag) === filterTag)) ||
         (highlight.tags && highlight.tags.some(tag => tag.name === filterTag));
       
       return matchesSearch && matchesTag;

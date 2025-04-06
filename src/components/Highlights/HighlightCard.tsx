@@ -100,17 +100,17 @@ export function HighlightCard({
             )}
             
             {/* Tags - simplified */}
-            {highlight.rwTags && highlight.rwTags.length > 0 && (
+            {highlight.tags && highlight.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 items-center">
                 <TagIcon className="h-3.5 w-3.5" />
-                {highlight.rwTags.map((tag, index) => (
+                {highlight.tags.map((tag, index) => (
                   <span 
                     key={index}
-                    className={`text-xs cursor-pointer hover:text-blue-600 ${filterTag === renderTag(tag) ? 'text-blue-500 font-medium' : ''}`}
-                    onClick={() => onTagSelect(filterTag === renderTag(tag) ? null : renderTag(tag))}
+                    className={`text-xs cursor-pointer hover:text-blue-600 ${filterTag === tag.name ? 'text-blue-500 font-medium' : ''}`}
+                    onClick={() => onTagSelect(filterTag === tag.name ? null : tag.name)}
                   >
-                    {renderTag(tag)}
-                    {index < (highlight.rwTags?.length ?? 0) - 1 && ","}
+                    {tag.name}
+                    {index < (highlight.tags?.length ?? 0) - 1 && ","}
                   </span>
                 ))}
               </div>
