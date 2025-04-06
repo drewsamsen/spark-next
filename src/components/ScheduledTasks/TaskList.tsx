@@ -48,5 +48,13 @@ export const availableTasks: ScheduledTask[] = [
     requiresApiKey: true,
     apiKeySource: "airtable"
   },
+  {
+    id: "tag-random-highlights",
+    name: "Tag Random Highlights",
+    description: "Select 3 random highlights and create a context job to tag them with 'job-test'",
+    isSchedulable: false,
+    triggerEndpoint: "/api/inngest/trigger-tag-random-highlights",
+    requiresApiKey: false
+  },
   // More tasks will be added in the future
 ]; 

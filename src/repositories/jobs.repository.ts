@@ -29,7 +29,10 @@ export interface JobActionModel {
   tag_id?: string;
   category_name?: string;
   tag_name?: string;
+  status: string;
+  executed_at?: string;
   created_at: string;
+  updated_at: string;
 }
 
 /**
@@ -67,9 +70,9 @@ export interface CreateJobActionInput {
 /**
  * Repository for categorization jobs
  */
-export class JobsRepository extends BaseRepository {
+export class JobsRepository extends BaseRepository<JobModel> {
   constructor(client: DbClient) {
-    super(client);
+    super(client, 'categorization_jobs');
   }
 
   /**
@@ -151,10 +154,29 @@ export class JobsRepository extends BaseRepository {
     const { data, error } = await this.client
       .from('categorization_job_actions')
       .select('*')
-      .eq('job_id', jobId);
+      .eq('job_id', jobId)
+      .order('created_at', { ascending: true });
     
     if (error) {
       throw new DatabaseError(`Error fetching actions for job ${jobId}`, error);
+    }
+    
+    return data;
+  }
+
+  /**
+   * Get executed job actions for a job
+   */
+  async getExecutedJobActions(jobId: string): Promise<JobActionModel[]> {
+    const { data, error } = await this.client
+      .from('categorization_job_actions')
+      .select('*')
+      .eq('job_id', jobId)
+      .eq('status', 'executed')
+      .order('executed_at', { ascending: true });
+    
+    if (error) {
+      throw new DatabaseError(`Error fetching executed actions for job ${jobId}`, error);
     }
     
     return data;
@@ -383,5 +405,137 @@ export class JobsRepository extends BaseRepository {
       spark: 'spark_id'
     };
     return idColumns[resourceType];
+  }
+
+  /**
+   * Execute a specific job action
+   */
+  async executeJobAction(actionId: string): Promise<boolean> {
+    const { data, error } = await this.client.rpc('execute_job_action', {
+      action_id_param: actionId
+    });
+    
+    if (error) {
+      throw new DatabaseError(`Error executing job action ${actionId}`, error);
+    }
+    
+    return data;
+  }
+
+  /**
+   * Revert a specific job action
+   */
+  async revertJobAction(actionId: string): Promise<boolean> {
+    const { data, error } = await this.client.rpc('revert_job_action', {
+      action_id_param: actionId
+    });
+    
+    if (error) {
+      throw new DatabaseError(`Error reverting job action ${actionId}`, error);
+    }
+    
+    return data;
+  }
+
+  /**
+   * Revert an entire job
+   */
+  async revertJob(jobId: string): Promise<void> {
+    const { error } = await this.client.rpc('revert_categorization_job', {
+      job_id_param: jobId
+    });
+    
+    if (error) {
+      throw new DatabaseError(`Error reverting job ${jobId}`, error);
+    }
+  }
+
+  /**
+   * Update a job's status
+   */
+  async updateJobStatus(jobId: string, status: 'pending' | 'approved' | 'rejected'): Promise<void> {
+    const { error } = await this.client
+      .from('categorization_jobs')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', jobId);
+    
+    if (error) {
+      throw new DatabaseError(`Error updating job status for job ${jobId}`, error);
+    }
+  }
+
+  /**
+   * Update an action's status
+   */
+  async updateActionStatus(
+    actionId: string, 
+    status: 'pending' | 'executing' | 'executed' | 'failed' | 'rejected' | 'reverted',
+    executedAt?: Date
+  ): Promise<void> {
+    const updateData: Record<string, any> = { 
+      status,
+      updated_at: new Date().toISOString()
+    };
+    
+    if (status === 'executed' || executedAt) {
+      updateData.executed_at = executedAt || new Date().toISOString();
+    }
+    
+    const { error } = await this.client
+      .from('categorization_job_actions')
+      .update(updateData)
+      .eq('id', actionId);
+    
+    if (error) {
+      throw new DatabaseError(`Error updating action status for action ${actionId}`, error);
+    }
+  }
+
+  /**
+   * Update all actions for a job to a specific status
+   */
+  async updateAllActionStatusForJob(
+    jobId: string, 
+    status: 'pending' | 'executing' | 'executed' | 'failed' | 'rejected' | 'reverted',
+    filter?: { currentStatus?: string }
+  ): Promise<void> {
+    let query = this.client
+      .from('categorization_job_actions')
+      .update({ 
+        status,
+        updated_at: new Date().toISOString(),
+        ...(status === 'executed' ? { executed_at: new Date().toISOString() } : {})
+      })
+      .eq('job_id', jobId);
+    
+    if (filter?.currentStatus) {
+      query = query.eq('status', filter.currentStatus);
+    }
+    
+    const { error } = await query;
+    
+    if (error) {
+      throw new DatabaseError(`Error updating action statuses for job ${jobId}`, error);
+    }
+  }
+
+  /**
+   * Get a job action by ID
+   */
+  async getJobActionById(actionId: string): Promise<JobActionModel | null> {
+    const { data, error } = await this.client
+      .from('categorization_job_actions')
+      .select('*')
+      .eq('id', actionId)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw new DatabaseError(`Error fetching job action with ID ${actionId}`, error);
+    }
+    
+    return data;
   }
 } 

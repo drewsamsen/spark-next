@@ -110,6 +110,11 @@ export interface JobService {
   rejectJob(jobId: string): Promise<CategorizationResult>;
   
   /**
+   * Revert an approved job
+   */
+  revertJob(jobId: string): Promise<CategorizationResult>;
+  
+  /**
    * Find which job added a category/tag to a resource
    */
   findOriginatingJob(resource: Resource, categoryId?: string, tagId?: string): Promise<CategorizationJob | null>;

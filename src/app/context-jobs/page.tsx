@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useCategorization } from "@/lib/categorization";
 import { CategorizationJob } from "@/lib/categorization/types";
 import { toast } from "react-toastify";
-import { Check, X, Info, Search } from "lucide-react";
+import { Check, X, Info, Search, RotateCcw } from "lucide-react";
 import { 
   Table, 
   TableColumn, 
@@ -185,6 +185,30 @@ export default function ContextJobsPage() {
     }
   };
   
+  // Revert an approved job
+  const handleRevertJob = async (jobId: string) => {
+    setActionLoading(true);
+    try {
+      const result = await categorization.jobs.revertJob(jobId);
+      if (result.success) {
+        toast.success("Job reverted successfully");
+        fetchJobs();
+        if (selectedJob?.id === jobId) {
+          // Reload the selected job to reflect changes
+          const updatedJob = await categorization.jobs.getJob(jobId);
+          setSelectedJob(updatedJob);
+        }
+      } else {
+        toast.error(`Failed to revert job: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error reverting job:", error);
+      toast.error("Failed to revert job");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+  
   // Get status badge styles based on job status
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -196,6 +220,25 @@ export default function ContextJobsPage() {
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    }
+  };
+  
+  // Get action status class based on action status
+  const getActionStatusClass = (status?: string) => {
+    switch (status) {
+      case 'executing':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'executed':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'failed':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+      case 'rejected':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      case 'reverted':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      case 'pending':
+      default:
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
     }
   };
   
@@ -286,6 +329,19 @@ export default function ContextJobsPage() {
                 <X className="h-4 w-4" />
               </Button>
             </>
+          )}
+          
+          {job.status === 'approved' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 dark:text-orange-400 dark:border-orange-800 dark:hover:bg-orange-900/30 px-2 h-8"
+              onClick={() => job.id && handleRevertJob(job.id)}
+              disabled={actionLoading}
+              title="Revert"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
           )}
         </div>
       )
@@ -464,6 +520,7 @@ export default function ContextJobsPage() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action Type</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Resource</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Details</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-900 dark:divide-gray-700">
@@ -491,6 +548,16 @@ export default function ContextJobsPage() {
                             )}
                             {action.actionType === 'add_tag' && (
                               <span>Added tag ID: {action.tagId}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getActionStatusClass(action.status)}`}>
+                              {action.status || 'pending'}
+                            </span>
+                            {action.executedAt && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {new Date(action.executedAt).toLocaleString()}
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -537,6 +604,21 @@ export default function ContextJobsPage() {
                     <Check className="h-4 w-4 mr-1" /> Approve
                   </Button>
                 </>
+              )}
+              
+              {selectedJob.status === 'approved' && (
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (selectedJob.id) {
+                      handleRevertJob(selectedJob.id);
+                      setShowModal(false);
+                    }
+                  }}
+                  disabled={actionLoading}
+                >
+                  <RotateCcw className="h-4 w-4 mr-1" /> Revert
+                </Button>
               )}
             </div>
           </div>

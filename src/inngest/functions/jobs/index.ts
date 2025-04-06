@@ -1,0 +1,1 @@
+export { tagRandomHighlightsFn } from './tag-random-highlights'; 

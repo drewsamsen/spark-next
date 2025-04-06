@@ -6,7 +6,8 @@ import {
   readwiseSyncBooksFn,
   readwiseSyncHighlightsFn,
   migrateHighlightTagsFn,
-  airtableImportDataFn
+  airtableImportDataFn,
+  tagRandomHighlightsFn
 } from "@/inngest";
 
 // Export the API routes for Inngest communication
@@ -23,7 +24,10 @@ export const { GET, POST, PUT } = serve({
     migrateHighlightTagsFn,
     
     // Airtable functions
-    airtableImportDataFn
+    airtableImportDataFn,
+    
+    // Jobs functions
+    tagRandomHighlightsFn
   ],
 });
 

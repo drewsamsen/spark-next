@@ -50,16 +50,20 @@ export interface CategorizationJob {
   createdAt?: Date;
 }
 
-// Individual action within a job
+/**
+ * Action to categorize a resource
+ */
 export interface CategorizationAction {
   id?: string;
   actionType: 'add_category' | 'add_tag' | 'create_category' | 'create_tag';
-  resource?: Resource;  // Optional for creation actions
-  categoryId?: string;  // Used for add_category
-  tagId?: string;       // Used for add_tag
-  categoryName?: string; // Used for create_category
-  tagName?: string;     // Used for create_tag
-  createdResourceId?: string; // Populated after creation
+  resource?: Resource;
+  categoryId?: string;
+  tagId?: string;
+  categoryName?: string;
+  tagName?: string;
+  createdResourceId?: string;
+  status?: 'pending' | 'executed' | 'rejected' | 'reverted';
+  executedAt?: Date;
 }
 
 // Result of a categorization operation

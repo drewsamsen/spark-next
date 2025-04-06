@@ -11,4 +11,7 @@ export * from './functions/readwise';
 export * from './functions/tags';
 
 // Export airtable functions
-export * from './functions/airtable'; 
+export * from './functions/airtable';
+
+// Export jobs functions
+export * from './functions/jobs'; 
