@@ -1,13 +1,14 @@
 ---
-description: General guidelines to success
+description: Cursor rules to apply to every request
 globs: 
 alwaysApply: true
 ---
 
-- Before you start each task, look in `.cursor/rules` for useful guidelines. 
-- Find and read the mdc files that are relevant to the task at hand.
+- Always check `.cursor/rules` for guidelines. 
+- Find and read any mdc files that are relevant to the task at hand.
 - never try to run databse migrations
 - When implementing new features, we do not need to maintain backwards compatibility unless specifically mentioned in the request
 - Always clean up code and files that are no longer needed
 - to copy a file, always use `cp`
 - to move a file, always use `mv`
+- never try to run the app

@@ -21,6 +21,7 @@ export * from './FormComponents';
 
 // Notification components
 export * from './Toast';
+export * from './Modal';
 
 // Loading components
 export {
