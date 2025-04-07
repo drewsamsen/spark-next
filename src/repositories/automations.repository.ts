@@ -693,8 +693,145 @@ export class AutomationsRepository extends BaseRepository<AutomationModel> {
           throw err;
         }
       }
-      // For now, we don't attempt to undo category/tag creation
-      // This could be implemented in the future if needed
+      else if (actionData.action === 'create_tag') {
+        const { tag_name } = actionData as CreateTagActionData;
+        
+        try {
+          console.log(`Removing tag "${tag_name}" created by automation action ${action.id}`);
+          
+          // First try to find the tag by its link to the automation
+          let tagData: { id: string } | null = null;
+          let tagError: any = null;
+          
+          // Try to find by created_by_automation_id (the proper way)
+          const { data: linkedTag, error: linkedError } = await this.client
+            .from('tags')
+            .select('id')
+            .eq('created_by_automation_id', automationId)
+            .eq('name', tag_name)
+            .single();
+            
+          if (linkedTag) {
+            tagData = linkedTag;
+          } else {
+            // Fallback: try to find by name only if created_by_automation_id is not set
+            // This is for backward compatibility with existing data
+            console.log(`Tag "${tag_name}" not linked to automation by ID, falling back to name match`);
+            const { data: unlinkedTag, error: unlinkedError } = await this.client
+              .from('tags')
+              .select('id')
+              .eq('name', tag_name)
+              .is('created_by_automation_id', null)
+              .single();
+              
+            if (unlinkedTag) {
+              tagData = unlinkedTag;
+              // Try to update the tag to link it to the automation for future reference
+              await this.client
+                .from('tags')
+                .update({ created_by_automation_id: automationId })
+                .eq('id', unlinkedTag.id);
+            } else {
+              tagError = unlinkedError;
+            }
+          }
+          
+          if (tagError) {
+            console.error(`Error finding tag to delete:`, tagError);
+            continue; // Skip to next action if tag not found
+          }
+          
+          if (tagData?.id) {
+            // Before deleting the tag, we need to delete all relationships in junction tables
+            const junctionTables = ['book_tags', 'highlight_tags', 'spark_tags'];
+            
+            for (const table of junctionTables) {
+              const { error: junctionError } = await this.client
+                .from(table)
+                .delete()
+                .eq('tag_id', tagData.id);
+              
+              if (junctionError) {
+                console.error(`Error cleaning up ${table} for tag ${tagData.id}:`, junctionError);
+                // Continue anyway, as the tag itself might still be deletable
+              }
+            }
+            
+            // Now delete the tag itself
+            const { error: deleteError } = await this.client
+              .from('tags')
+              .delete()
+              .eq('id', tagData.id);
+            
+            if (deleteError) {
+              console.error(`Failed to delete tag:`, deleteError);
+              throw deleteError;
+            }
+            
+            console.log(`Successfully deleted tag "${tag_name}" (${tagData.id})`);
+          } else {
+            console.log(`Tag "${tag_name}" not found or not created by this automation`);
+          }
+        } catch (err) {
+          console.error(`Error during tag deletion:`, err);
+          throw err;
+        }
+      }
+      else if (actionData.action === 'create_category') {
+        const { category_name } = actionData as CreateCategoryActionData;
+        
+        try {
+          console.log(`Removing category "${category_name}" created by automation action ${action.id}`);
+          
+          // First get the category ID using its name
+          const { data: categoryData, error: categoryError } = await this.client
+            .from('categories')
+            .select('id')
+            .eq('name', category_name)
+            .eq('created_by_automation_id', automationId)
+            .single();
+          
+          if (categoryError) {
+            console.error(`Error finding category to delete:`, categoryError);
+            continue; // Skip to next action if category not found
+          }
+          
+          if (categoryData?.id) {
+            // Before deleting the category, we need to delete all relationships in junction tables
+            const junctionTables = ['book_categories', 'highlight_categories', 'spark_categories'];
+            
+            for (const table of junctionTables) {
+              const { error: junctionError } = await this.client
+                .from(table)
+                .delete()
+                .eq('category_id', categoryData.id);
+              
+              if (junctionError) {
+                console.error(`Error cleaning up ${table} for category ${categoryData.id}:`, junctionError);
+                // Continue anyway, as the category itself might still be deletable
+              }
+            }
+            
+            // Now delete the category itself
+            const { error: deleteError } = await this.client
+              .from('categories')
+              .delete()
+              .eq('id', categoryData.id);
+            
+            if (deleteError) {
+              console.error(`Failed to delete category:`, deleteError);
+              throw deleteError;
+            }
+            
+            console.log(`Successfully deleted category "${category_name}" (${categoryData.id})`);
+          } else {
+            console.log(`Category "${category_name}" not found or not created by this automation`);
+          }
+        } catch (err) {
+          console.error(`Error during category deletion:`, err);
+          throw err;
+        }
+      }
     }
   }
 } 

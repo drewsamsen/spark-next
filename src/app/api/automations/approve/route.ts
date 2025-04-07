@@ -206,12 +206,15 @@ export async function POST(request: NextRequest) {
               name: existingTag.name
             });
           } else {
-            // Create the tag with explicit user_id
+            // Create the tag with explicit user_id and link to automation
+            const automation = await repos.automations.getAutomationByActionId(action.id);
+            
             const { data: newTag, error } = await supabase
               .from('tags')
               .insert({ 
                 name: data.tag_name,
-                user_id: userId
+                user_id: userId,
+                created_by_automation_id: automation?.id // Link tag to the automation
               })
               .select()
               .single();
@@ -303,12 +306,16 @@ export async function POST(request: NextRequest) {
             if (existingTag) {
               tagId = existingTag.id;
             } else {
+              // Get the automation to link the tag
+              const automation = await repos.automations.getAutomationByActionId(action.id);
+              
               // Create the tag with service role permissions
               const { data: newTag, error } = await supabase
                 .from('tags')
                 .insert({ 
                   name: data.tag_name,
-                  user_id: userId
+                  user_id: userId,
+                  created_by_automation_id: automation?.id // Link tag to the automation
                 })
                 .select()
                 .single();
