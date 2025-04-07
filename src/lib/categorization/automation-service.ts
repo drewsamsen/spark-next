@@ -1,6 +1,6 @@
 import { Category, CategorizationAction, CategorizationAutomation, CategorizationResult, Resource, ResourceType, Tag, ActionData, AddCategoryActionData, AddTagActionData } from "./types";
 import { AutomationService } from "./services";
-import { getRepositories } from "@/repositories";
+import { getRepositories, getServerRepositories } from "@/repositories";
 import { generateSlug } from "@/lib/utils";
 import { createClient } from "@supabase/supabase-js";
 
@@ -9,7 +9,7 @@ export class AutomationServiceImpl implements AutomationService {
    * Create a new categorization automation
    */
   async createAutomation(automation: CategorizationAutomation): Promise<CategorizationResult> {
-    const repos = getRepositories();
+    const repos = getServerRepositories();
     const createdResources = {
       categories: [] as Category[],
       tags: [] as Tag[]
@@ -187,7 +187,7 @@ export class AutomationServiceImpl implements AutomationService {
    * Get a specific automation by ID
    */
   async getAutomation(automationId: string): Promise<CategorizationAutomation | null> {
-    const repos = getRepositories();
+    const repos = getServerRepositories();
     
     try {
       // Get the automation
@@ -232,7 +232,7 @@ export class AutomationServiceImpl implements AutomationService {
    * Get all automations for the current user with optional filtering
    */
   async getAutomations(filters?: { status?: string, source?: string }): Promise<CategorizationAutomation[]> {
-    const repos = getRepositories();
+    const repos = getServerRepositories();
     
     try {
       const automations = await repos.automations.getAutomations(filters);
@@ -257,7 +257,7 @@ export class AutomationServiceImpl implements AutomationService {
    * Approve a pending automation
    */
   async approveAutomation(automationId: string): Promise<CategorizationResult> {
-    const repos = getRepositories();
+    const repos = getServerRepositories();
     
     try {
       // Get the full automation with actions
@@ -324,7 +324,7 @@ export class AutomationServiceImpl implements AutomationService {
    * Reject a pending automation and mark all actions as rejected
    */
   async rejectAutomation(automationId: string): Promise<CategorizationResult> {
-    const repos = getRepositories();
+    const repos = getServerRepositories();
     
     try {
       // Get the automation
@@ -364,7 +364,7 @@ export class AutomationServiceImpl implements AutomationService {
    * Revert an approved automation
    */
   async revertAutomation(automationId: string): Promise<CategorizationResult> {
-    const repos = getRepositories();
+    const repos = getServerRepositories();
     
     try {
       // Get the automation with actions
@@ -431,7 +431,7 @@ export class AutomationServiceImpl implements AutomationService {
     } else if (actionData.action === 'add_tag') {
       await this.executeAddTagAction(
         action.id, 
-        actionData as { action: 'add_tag', target: ResourceType, target_id: string, tag_id: string }
+        actionData as { action: 'add_tag', target: ResourceType, target_id: string, tag_id: string, tag_name?: string }
       );
     }
   }
@@ -441,7 +441,7 @@ export class AutomationServiceImpl implements AutomationService {
     data: { action: 'create_category', category_name: string },
     createdResources: { categories: Category[], tags: Tag[] }
   ): Promise<void> {
-    const repos = getRepositories();
+    const repos = getServerRepositories();
     
     const newCategory = await repos.categories.createCategory({
       name: data.category_name
@@ -461,7 +461,7 @@ export class AutomationServiceImpl implements AutomationService {
     data: { action: 'create_tag', tag_name: string },
     createdResources: { categories: Category[], tags: Tag[] }
   ): Promise<void> {
-    const repos = getRepositories();
+    const repos = getServerRepositories();
     
     const newTagResult = await repos.categorization.createTag(data.tag_name);
     const newTag = newTagResult.data;
@@ -482,7 +482,7 @@ export class AutomationServiceImpl implements AutomationService {
     actionId: string, 
     data: { action: 'add_category', target: ResourceType, target_id: string, category_id: string }
   ): Promise<void> {
-    const repos = getRepositories();
+    const repos = getServerRepositories();
     
     const automationAction = await repos.automations.getAutomationActionById(actionId);
     if (!automationAction) {
@@ -506,9 +506,9 @@ export class AutomationServiceImpl implements AutomationService {
   
   private async executeAddTagAction(
     actionId: string, 
-    data: { action: 'add_tag', target: ResourceType, target_id: string, tag_id: string }
+    data: { action: 'add_tag', target: ResourceType, target_id: string, tag_id: string, tag_name?: string }
   ): Promise<void> {
-    const repos = getRepositories();
+    const repos = getServerRepositories();
     
     const automationAction = await repos.automations.getAutomationActionById(actionId);
     if (!automationAction) {
@@ -526,7 +526,25 @@ export class AutomationServiceImpl implements AutomationService {
       userId: automation.user_id
     };
     
-    await repos.automations.addTagToResource(resource, data.tag_id, actionId);
+    // If tag_id is empty and tag_name is provided, find or create the tag
+    let tagId = data.tag_id;
+    if ((!tagId || tagId.trim() === '') && data.tag_name) {
+      // Try to find an existing tag with this name
+      const { data: existingTag } = await repos.categorization.findTagByName(data.tag_name);
+      if (existingTag) {
+        tagId = existingTag.id;
+      } else {
+        // Create the tag if it doesn't exist
+        const { data: newTag, error } = await repos.categorization.createTag(data.tag_name);
+        if (newTag) {
+          tagId = newTag.id;
+        } else {
+          throw new Error(`Failed to create tag '${data.tag_name}': ${error?.message || 'Unknown error'}`);
+        }
+      }
+    }
+    
+    await repos.automations.addTagToResource(resource, tagId, actionId);
     await repos.automations.markActionAsExecuted(actionId);
   }
   
@@ -568,7 +586,7 @@ export class AutomationServiceImpl implements AutomationService {
       return null; // Must provide either categoryId or tagId
     }
     
-    const repos = getRepositories();
+    const repos = getServerRepositories();
     let actionId: string | null = null;
     
     if (categoryId) {

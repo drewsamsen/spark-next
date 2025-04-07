@@ -64,6 +64,7 @@ export interface AddTagActionData {
   target: ResourceType;
   target_id: string;
   tag_id: string;
+  tag_name?: string;
 }
 
 export interface AddCategoryActionData {

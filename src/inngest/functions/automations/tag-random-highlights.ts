@@ -50,6 +50,7 @@ interface AddTagAction {
   target: ResourceType;
   target_id: string;
   tag_id: string;
+  tag_name?: string;
 }
 
 // Function to ensure type safety when accessing highlightsResult.error
@@ -191,14 +192,29 @@ export const tagRandomHighlights = inngest.createFunction(
           for (const highlight of selectedHighlights) {
             if (!highlight || !highlight.id) continue;
             
-            actions.push({
-              action_data: {
-                action: 'add_tag',
-                target: 'highlight',
-                target_id: highlight.id,
-                tag_id: getTagId(tagCheckResult) // Safely get tag ID with type checking
-              }
-            });
+            if (tagCheckResult.tagExists && tagCheckResult.tagId) {
+              // If tag exists, use its ID
+              actions.push({
+                action_data: {
+                  action: 'add_tag',
+                  target: 'highlight',
+                  target_id: highlight.id,
+                  tag_id: tagCheckResult.tagId
+                }
+              });
+            } else {
+              // If tag doesn't exist yet, use its name instead
+              // We still need to provide tag_id for type compatibility, but we'll use tag_name for processing
+              actions.push({
+                action_data: {
+                  action: 'add_tag',
+                  target: 'highlight',
+                  target_id: highlight.id,
+                  tag_id: '', // Empty string for compatibility
+                  tag_name: 'automation-test'
+                }
+              });
+            }
           }
           
           // Create the automation using the repository
