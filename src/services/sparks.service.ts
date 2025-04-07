@@ -5,6 +5,9 @@ import { handleServiceError, handleServiceItemError } from '@/lib/errors';
 import { BaseService } from './base.service';
 import { SparksRepository } from '@/repositories/sparks.repository';
 
+// Re-export the EnhancedSparkItem type
+export type { EnhancedSparkItem };
+
 /**
  * Service for handling sparks-related operations
  */

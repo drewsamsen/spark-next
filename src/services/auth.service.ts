@@ -3,6 +3,9 @@ import { handleServiceItemError } from '@/lib/errors';
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { AuthUser, AuthSession } from '@/lib/types';
 
+// Re-export the types
+export type { AuthUser, AuthSession };
+
 /**
  * Type for auth change callback
  */
