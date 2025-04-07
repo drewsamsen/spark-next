@@ -302,35 +302,39 @@ export class AutomationServiceImpl implements AutomationService {
    * Reject a pending automation and mark all actions as rejected
    */
   async rejectAutomation(automationId: string): Promise<CategorizationResult> {
-    const repos = getRepositories();
-    
     try {
-      // Get the automation
-      const automation = await this.getAutomation(automationId);
-      if (!automation) {
+      // Get the Supabase client to access the session
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
         return {
           success: false,
-          error: 'Automation not found'
+          error: 'Not authenticated'
         };
       }
       
-      // Verify the automation is in pending status
-      if (automation.status !== 'pending') {
+      // Call the server-side API endpoint
+      const response = await fetch('/api/automations/reject', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ automationId })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
         return {
           success: false,
-          error: `Automation is already ${automation.status}`
+          error: errorData.error || `Server returned status ${response.status}`
         };
       }
       
-      // Update automation status to rejected
-      await repos.automations.updateAutomationStatus(automationId, 'rejected');
-      
-      // Mark all pending actions as rejected
-      await repos.automations.updateAllActionStatusForAutomation(automationId, 'rejected', { currentStatus: 'pending' });
-      
-      return { success: true, automationId };
+      return await response.json();
     } catch (error) {
-      console.error('Error rejecting automation:', error);
+      console.error('Error in rejectAutomation:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
