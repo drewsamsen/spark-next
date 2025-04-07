@@ -357,16 +357,26 @@ export class AutomationsRepository extends BaseRepository<AutomationModel> {
     const junctionTable = this.getTagJunctionTable(resource.type);
     const resourceIdColumn = this.getResourceIdColumn(resource.type);
     
+    // Log the parameters for debugging
+    console.log('Adding tag to resource:', {
+      junctionTable,
+      resourceIdColumn,
+      resourceId: resource.id,
+      tagId,
+      automationActionId
+    });
+
     const { error } = await this.client
       .from(junctionTable)
       .upsert({
         [resourceIdColumn]: resource.id,
         tag_id: tagId,
-        automation_action_id: automationActionId,
+        automation_action_id: automationActionId, // This matches the column name in the database after renaming
         created_by: 'automation'
       });
     
     if (error) {
+      console.error(`Error adding tag to resource (${junctionTable}):`, error);
       throw new DatabaseError(`Error adding tag to resource`, error);
     }
   }
@@ -392,11 +402,18 @@ export class AutomationsRepository extends BaseRepository<AutomationModel> {
       highlight: 'highlight_tags',
       spark: 'spark_tags'
     };
-    return junctionTables[resourceType];
+    
+    const tableName = junctionTables[resourceType];
+    if (!tableName) {
+      console.error(`Invalid resource type: ${resourceType}`);
+      throw new Error(`Invalid resource type: ${resourceType}`);
+    }
+    
+    return tableName;
   }
 
   /**
-   * Get the appropriate resource ID column for a resource type in junction tables
+   * Get the appropriate resource ID column for a resource type
    */
   private getResourceIdColumn(resourceType: ResourceType): string {
     const idColumns: Record<ResourceType, string> = {
@@ -404,7 +421,14 @@ export class AutomationsRepository extends BaseRepository<AutomationModel> {
       highlight: 'highlight_id',
       spark: 'spark_id'
     };
-    return idColumns[resourceType];
+    
+    const columnName = idColumns[resourceType];
+    if (!columnName) {
+      console.error(`Invalid resource type: ${resourceType}`);
+      throw new Error(`Invalid resource type: ${resourceType}`);
+    }
+    
+    return columnName;
   }
 
   /**

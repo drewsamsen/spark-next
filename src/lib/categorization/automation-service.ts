@@ -1,15 +1,16 @@
 import { Category, CategorizationAction, CategorizationAutomation, CategorizationResult, Resource, ResourceType, Tag, ActionData, AddCategoryActionData, AddTagActionData } from "./types";
 import { AutomationService } from "./services";
-import { getRepositories, getServerRepositories } from "@/repositories";
+import { getRepositories } from "@/repositories";
 import { generateSlug } from "@/lib/utils";
 import { createClient } from "@supabase/supabase-js";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export class AutomationServiceImpl implements AutomationService {
   /**
    * Create a new categorization automation
    */
   async createAutomation(automation: CategorizationAutomation): Promise<CategorizationResult> {
-    const repos = getServerRepositories();
+    const repos = getRepositories();
     const createdResources = {
       categories: [] as Category[],
       tags: [] as Tag[]
@@ -187,7 +188,7 @@ export class AutomationServiceImpl implements AutomationService {
    * Get a specific automation by ID
    */
   async getAutomation(automationId: string): Promise<CategorizationAutomation | null> {
-    const repos = getServerRepositories();
+    const repos = getRepositories();
     
     try {
       // Get the automation
@@ -232,7 +233,7 @@ export class AutomationServiceImpl implements AutomationService {
    * Get all automations for the current user with optional filtering
    */
   async getAutomations(filters?: { status?: string, source?: string }): Promise<CategorizationAutomation[]> {
-    const repos = getServerRepositories();
+    const repos = getRepositories();
     
     try {
       const automations = await repos.automations.getAutomations(filters);
@@ -257,62 +258,39 @@ export class AutomationServiceImpl implements AutomationService {
    * Approve a pending automation
    */
   async approveAutomation(automationId: string): Promise<CategorizationResult> {
-    const repos = getServerRepositories();
-    
     try {
-      // Get the full automation with actions
-      const automation = await this.getAutomation(automationId);
-      if (!automation) {
+      // Get the Supabase client to access the session
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
         return {
           success: false,
-          error: 'Automation not found'
+          error: 'Not authenticated'
         };
       }
       
-      // Verify the automation is in pending status
-      if (automation.status !== 'pending') {
+      // Call the server-side API endpoint
+      const response = await fetch('/api/automations/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ automationId })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
         return {
           success: false,
-          error: `Automation is already ${automation.status}`
+          error: errorData.error || `Server returned status ${response.status}`
         };
       }
       
-      // Update automation status to approved
-      await repos.automations.updateAutomationStatus(automationId, 'approved');
-      
-      // Separate create and add actions to ensure proper ordering
-      const createActions = automation.actions.filter(a => 
-        a.actionData.action === 'create_category' || a.actionData.action === 'create_tag');
-      
-      const addActions = automation.actions.filter(a => 
-        a.actionData.action === 'add_category' || a.actionData.action === 'add_tag');
-      
-      const createdResources = {
-        categories: [] as Category[],
-        tags: [] as Tag[]
-      };
-      
-      // First execute all create actions
-      for (const action of createActions) {
-        if (!action.id) continue;
-        await this.executeAction(action, createdResources);
-      }
-      
-      // Then execute all add actions
-      for (const action of addActions) {
-        if (!action.id) continue;
-        await this.executeAction(action, createdResources);
-      }
-      
-      return {
-        success: true,
-        automationId,
-        createdResources: (createdResources.categories.length > 0 || createdResources.tags.length > 0)
-          ? createdResources
-          : undefined
-      };
+      return await response.json();
     } catch (error) {
-      console.error('Error approving automation:', error);
+      console.error('Error in approveAutomation:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -324,7 +302,7 @@ export class AutomationServiceImpl implements AutomationService {
    * Reject a pending automation and mark all actions as rejected
    */
   async rejectAutomation(automationId: string): Promise<CategorizationResult> {
-    const repos = getServerRepositories();
+    const repos = getRepositories();
     
     try {
       // Get the automation
@@ -364,35 +342,39 @@ export class AutomationServiceImpl implements AutomationService {
    * Revert an approved automation
    */
   async revertAutomation(automationId: string): Promise<CategorizationResult> {
-    const repos = getServerRepositories();
-    
     try {
-      // Get the automation with actions
-      const automation = await this.getAutomation(automationId);
-      if (!automation) {
+      // Get the Supabase client to access the session
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
         return {
           success: false,
-          error: 'Automation not found'
+          error: 'Not authenticated'
         };
       }
       
-      // Verify the automation is in approved status
-      if (automation.status !== 'approved') {
+      // Call the server-side API endpoint
+      const response = await fetch('/api/automations/revert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ automationId })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
         return {
           success: false,
-          error: `Can only revert approved automations, current status: ${automation.status}`
+          error: errorData.error || `Server returned status ${response.status}`
         };
       }
       
-      // First mark the automation and actions as reverted in the database
-      await repos.automations.revertAutomation(automationId);
-      
-      // Then let the application layer handle the actual reversion
-      await repos.automations.revertAutomationActions(automationId);
-      
-      return { success: true, automationId };
+      return await response.json();
     } catch (error) {
-      console.error('Error reverting automation:', error);
+      console.error('Error in revertAutomation:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -441,7 +423,7 @@ export class AutomationServiceImpl implements AutomationService {
     data: { action: 'create_category', category_name: string },
     createdResources: { categories: Category[], tags: Tag[] }
   ): Promise<void> {
-    const repos = getServerRepositories();
+    const repos = getRepositories();
     
     const newCategory = await repos.categories.createCategory({
       name: data.category_name
@@ -461,7 +443,7 @@ export class AutomationServiceImpl implements AutomationService {
     data: { action: 'create_tag', tag_name: string },
     createdResources: { categories: Category[], tags: Tag[] }
   ): Promise<void> {
-    const repos = getServerRepositories();
+    const repos = getRepositories();
     
     const newTagResult = await repos.categorization.createTag(data.tag_name);
     const newTag = newTagResult.data;
@@ -482,7 +464,7 @@ export class AutomationServiceImpl implements AutomationService {
     actionId: string, 
     data: { action: 'add_category', target: ResourceType, target_id: string, category_id: string }
   ): Promise<void> {
-    const repos = getServerRepositories();
+    const repos = getRepositories();
     
     const automationAction = await repos.automations.getAutomationActionById(actionId);
     if (!automationAction) {
@@ -508,7 +490,7 @@ export class AutomationServiceImpl implements AutomationService {
     actionId: string, 
     data: { action: 'add_tag', target: ResourceType, target_id: string, tag_id: string, tag_name?: string }
   ): Promise<void> {
-    const repos = getServerRepositories();
+    const repos = getRepositories();
     
     const automationAction = await repos.automations.getAutomationActionById(actionId);
     if (!automationAction) {
@@ -586,7 +568,7 @@ export class AutomationServiceImpl implements AutomationService {
       return null; // Must provide either categoryId or tagId
     }
     
-    const repos = getServerRepositories();
+    const repos = getRepositories();
     let actionId: string | null = null;
     
     if (categoryId) {
