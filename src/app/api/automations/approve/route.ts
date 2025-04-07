@@ -179,16 +179,53 @@ export async function POST(request: NextRequest) {
           // Create the category using service role
           const data = actionData as { action: 'create_category', category_name: string };
           
-          // Create category with user_id
-          const newCategory = await repos.categories.createCategory({
-            name: data.category_name
-          });
+          // First check if the category already exists by slug
+          const slug = data.category_name.toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^\w\-]+/g, '')
+            .replace(/\-\-+/g, '-')
+            .replace(/^-+/, '')
+            .replace(/-+$/, '');
           
-          createdResources.categories.push({
-            id: newCategory.id,
-            name: newCategory.name,
-            slug: newCategory.slug
-          });
+          const { data: existingCategory } = await supabase
+            .from('categories')
+            .select('*')
+            .eq('slug', slug)
+            .eq('user_id', userId)
+            .single();
+          
+          if (existingCategory) {
+            // Category already exists, use it
+            createdResources.categories.push({
+              id: existingCategory.id,
+              name: existingCategory.name,
+              slug: existingCategory.slug
+            });
+          } else {
+            // Create the category with explicit user_id and link to automation
+            const automation = await repos.automations.getAutomationByActionId(action.id);
+            
+            const { data: newCategory, error } = await supabase
+              .from('categories')
+              .insert({ 
+                name: data.category_name,
+                slug: slug,
+                user_id: userId,
+                created_by_automation_id: automation?.id // Link category to the automation
+              })
+              .select()
+              .single();
+            
+            if (error || !newCategory) {
+              throw new Error(`Failed to create category: ${error?.message || 'Unknown error'}`);
+            }
+            
+            createdResources.categories.push({
+              id: newCategory.id,
+              name: newCategory.name,
+              slug: newCategory.slug
+            });
+          }
           
           await repos.automations.markActionAsExecuted(action.id);
         } 
@@ -236,8 +273,58 @@ export async function POST(request: NextRequest) {
             action: 'add_category', 
             target: string, 
             target_id: string, 
-            category_id: string 
+            category_id: string,
+            category_name?: string
           };
+          
+          // Handle category_name if provided and category_id is empty
+          let categoryId = data.category_id;
+          if ((!categoryId || categoryId.trim() === '') && data.category_name) {
+            console.log(`Category ID is empty, using category_name: ${data.category_name}`);
+            
+            // Try to find existing category by name
+            const slug = data.category_name.toLowerCase()
+              .replace(/\s+/g, '-')
+              .replace(/[^\w\-]+/g, '')
+              .replace(/\-\-+/g, '-')
+              .replace(/^-+/, '')
+              .replace(/-+$/, '');
+            
+            // First check if the category already exists
+            const { data: existingCategory } = await supabase
+              .from('categories')
+              .select('*')
+              .eq('slug', slug)
+              .eq('user_id', userId)
+              .single();
+            
+            if (existingCategory) {
+              console.log(`Found existing category: ${existingCategory.name} (${existingCategory.id})`);
+              categoryId = existingCategory.id;
+            } else {
+              // Get the automation to link the category
+              const automation = await repos.automations.getAutomationByActionId(action.id);
+              
+              // Create the category with service role permissions
+              const { data: newCategory, error } = await supabase
+                .from('categories')
+                .insert({ 
+                  name: data.category_name,
+                  slug: slug,
+                  user_id: userId,
+                  created_by_automation_id: automation?.id // Link category to the automation
+                })
+                .select()
+                .single();
+              
+              if (error || !newCategory) {
+                throw new Error(`Failed to create category: ${error?.message || 'Unknown error'}`);
+              }
+              
+              console.log(`Created new category: ${newCategory.name} (${newCategory.id})`);
+              categoryId = newCategory.id;
+            }
+          }
           
           // Add category to resource using service role
           const resource = {
@@ -248,7 +335,7 @@ export async function POST(request: NextRequest) {
           
           console.log('Adding category to resource with action:', {
             resource,
-            categoryId: data.category_id,
+            categoryId,
             actionId: action.id
           });
 
@@ -266,7 +353,7 @@ export async function POST(request: NextRequest) {
               .from(junctionTable)
               .upsert({
                 [resourceIdColumn]: resource.id,
-                category_id: data.category_id,
+                category_id: categoryId,
                 automation_action_id: action.id, // Use the new column name
                 created_by: 'automation'
               });

@@ -7,7 +7,8 @@ import {
   readwiseSyncHighlightsFn,
   migrateHighlightTagsFn,
   airtableImportDataFn,
-  tagRandomHighlights
+  tagRandomHighlights,
+  categorizeRandomHighlights
 } from "@/inngest";
 
 // Export the API routes for Inngest communication
@@ -27,7 +28,8 @@ export const { GET, POST, PUT } = serve({
     airtableImportDataFn,
     
     // Automation functions
-    tagRandomHighlights
+    tagRandomHighlights,
+    categorizeRandomHighlights
   ],
 });
 

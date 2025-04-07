@@ -45,6 +45,24 @@ export class CategoriesRepository extends BaseRepository<CategoryModel> {
   }
 
   /**
+   * Find a category by name and userId (for use in Inngest functions)
+   * @param name The category name to search for
+   * @param userId The user ID to filter by
+   */
+  async findCategoryByName(name: string, userId: string) {
+    const slug = this.generateSlug(name);
+    
+    const { data, error } = await this.client
+      .from('categories')
+      .select('*')
+      .eq('slug', slug)
+      .eq('user_id', userId)
+      .single();
+    
+    return { data, error };
+  }
+
+  /**
    * Get a category by ID
    */
   async getCategoryById(categoryId: string): Promise<CategoryModel | null> {

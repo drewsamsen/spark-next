@@ -56,5 +56,13 @@ export const availableTasks: ScheduledTask[] = [
     triggerEndpoint: "/api/inngest/trigger-tag-random-highlights",
     requiresApiKey: false
   },
+  {
+    id: "categorize-random-highlights",
+    name: "Categorize Random Highlights",
+    description: "Select 5 random highlights and create a context automation to categorize them with 'automation-test'",
+    isSchedulable: false,
+    triggerEndpoint: "/api/inngest/trigger-categorize-random-highlights",
+    requiresApiKey: false
+  },
   // More tasks will be added in the future
 ]; 

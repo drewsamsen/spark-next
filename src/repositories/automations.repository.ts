@@ -783,13 +783,42 @@ export class AutomationsRepository extends BaseRepository<AutomationModel> {
         try {
           console.log(`Removing category "${category_name}" created by automation action ${action.id}`);
           
-          // First get the category ID using its name
-          const { data: categoryData, error: categoryError } = await this.client
+          // First try to find the category by its link to the automation
+          let categoryData: { id: string } | null = null;
+          let categoryError: any = null;
+          
+          // Try to find by created_by_automation_id (the proper way)
+          const { data: linkedCategory, error: linkedError } = await this.client
             .from('categories')
             .select('id')
-            .eq('name', category_name)
             .eq('created_by_automation_id', automationId)
+            .eq('name', category_name)
             .single();
+            
+          if (linkedCategory) {
+            categoryData = linkedCategory;
+          } else {
+            // Fallback: try to find by name only if created_by_automation_id is not set
+            // This is for backward compatibility with existing data
+            console.log(`Category "${category_name}" not linked to automation by ID, falling back to name match`);
+            const { data: unlinkedCategory, error: unlinkedError } = await this.client
+              .from('categories')
+              .select('id')
+              .eq('name', category_name)
+              .is('created_by_automation_id', null)
+              .single();
+              
+            if (unlinkedCategory) {
+              categoryData = unlinkedCategory;
+              // Try to update the category to link it to the automation for future reference
+              await this.client
+                .from('categories')
+                .update({ created_by_automation_id: automationId })
+                .eq('id', unlinkedCategory.id);
+            } else {
+              categoryError = unlinkedError;
+            }
+          }
           
           if (categoryError) {
             console.error(`Error finding category to delete:`, categoryError);
