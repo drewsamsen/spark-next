@@ -770,10 +770,10 @@ export interface IntegrationModel {
 export type FunctionLogStatus = 'started' | 'completed' | 'failed';
 
 /**
- * Status type for categorization jobs
- * Represents the possible states of a categorization job
+ * Status type for categorization automations
+ * Represents the possible states of a categorization automation
  */
-export type CategorizationJobStatus = 'pending' | 'approved' | 'rejected';
+export type CategorizationAutomationStatus = 'pending' | 'approved' | 'rejected';
 
 /**
  * Status type for integration connection
@@ -783,15 +783,15 @@ export type ConnectionStatus = 'connected' | 'disconnected' | 'error';
 
 /**
  * Action type for categorization actions
- * Represents the possible actions that can be performed in a categorization job
+ * Represents the possible actions that can be performed in a categorization automation
  */
 export type CategorizationActionType = 'add_category' | 'add_tag' | 'create_category' | 'create_tag';
 
 /**
- * Source type for categorization jobs
- * Represents the origin of a categorization job
+ * Source type for categorization automations
+ * Represents the origin of a categorization automation
  */
-export type CategorizationJobSource = 'ai' | 'user' | 'system';
+export type CategorizationAutomationSource = 'ai' | 'user' | 'system';
 
 /**
  * Database model for a function log

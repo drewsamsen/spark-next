@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useCategorization } from "@/lib/categorization";
-import { CategorizationJob } from "@/lib/categorization/types";
+import { CategorizationAutomation } from "@/lib/categorization/types";
 import { toast } from "react-toastify";
 import { Check, X, Info, Search, RotateCcw } from "lucide-react";
 import { 
@@ -17,11 +17,11 @@ import {
   LoadingPlaceholder
 } from "@/components/ui";
 
-export default function ContextJobsPage() {
-  // State for jobs data and UI
-  const [jobs, setJobs] = useState<CategorizationJob[]>([]);
-  const [filteredJobs, setFilteredJobs] = useState<CategorizationJob[]>([]);
-  const [selectedJob, setSelectedJob] = useState<CategorizationJob | null>(null);
+export default function ContextAutomationsPage() {
+  // State for automations data and UI
+  const [automations, setAutomations] = useState<CategorizationAutomation[]>([]);
+  const [filteredAutomations, setFilteredAutomations] = useState<CategorizationAutomation[]>([]);
+  const [selectedAutomation, setSelectedAutomation] = useState<CategorizationAutomation | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -39,64 +39,64 @@ export default function ContextJobsPage() {
   
   const categorization = useCategorization();
 
-  // Fetch jobs on component mount
+  // Fetch automations on component mount
   useEffect(() => {
-    fetchJobs();
+    fetchAutomations();
   }, []);
   
-  // Filter and sort jobs when dependencies change
+  // Filter and sort automations when dependencies change
   useEffect(() => {
-    let result = [...jobs];
+    let result = [...automations];
     
     // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(job => 
-        job.name.toLowerCase().includes(term) || 
-        job.source.toLowerCase().includes(term)
+      result = result.filter(automation => 
+        automation.name.toLowerCase().includes(term) || 
+        automation.source.toLowerCase().includes(term)
       );
     }
     
     // Apply status filter
     if (statusFilter) {
-      result = result.filter(job => job.status === statusFilter);
+      result = result.filter(automation => automation.status === statusFilter);
     }
     
     // Apply source filter
     if (sourceFilter) {
-      result = result.filter(job => job.source === sourceFilter);
+      result = result.filter(automation => automation.source === sourceFilter);
     }
     
     // Sort the results
-    result = sortJobs(result, sortField, sortDirection);
+    result = sortAutomations(result, sortField, sortDirection);
     
-    setFilteredJobs(result);
+    setFilteredAutomations(result);
     // Reset to first page when filters change
     setCurrentPage(1);
-  }, [jobs, searchTerm, statusFilter, sourceFilter, sortField, sortDirection]);
+  }, [automations, searchTerm, statusFilter, sourceFilter, sortField, sortDirection]);
   
   // Calculate paginated data
-  const paginatedJobs = useMemo(() => {
+  const paginatedAutomations = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredJobs.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredJobs, currentPage, itemsPerPage]);
+    return filteredAutomations.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredAutomations, currentPage, itemsPerPage]);
   
   // Helper functions
-  const fetchJobs = async () => {
+  const fetchAutomations = async () => {
     setLoading(true);
     try {
-      const fetchedJobs = await categorization.jobs.getJobs();
-      setJobs(fetchedJobs);
+      const fetchedAutomations = await categorization.automations.getAutomations();
+      setAutomations(fetchedAutomations);
     } catch (error) {
-      console.error("Error fetching jobs:", error);
-      toast.error("Failed to load context jobs");
+      console.error("Error fetching automations:", error);
+      toast.error("Failed to load context automations");
     } finally {
       setLoading(false);
     }
   };
   
-  const sortJobs = (jobsToSort: CategorizationJob[], field: string, direction: SortDirection) => {
-    return [...jobsToSort].sort((a, b) => {
+  const sortAutomations = (automationsToSort: CategorizationAutomation[], field: string, direction: SortDirection) => {
+    return [...automationsToSort].sort((a, b) => {
       // Handle different field types
       if (field === "createdAt") {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -125,91 +125,91 @@ export default function ContextJobsPage() {
     setSortField(field);
   };
 
-  // View job details
-  const handleViewDetails = async (jobId: string) => {
+  // View automation details
+  const handleViewDetails = async (automationId: string) => {
     try {
-      const job = await categorization.jobs.getJob(jobId);
-      setSelectedJob(job);
+      const automation = await categorization.automations.getAutomation(automationId);
+      setSelectedAutomation(automation);
       setShowModal(true);
     } catch (error) {
-      console.error("Error fetching job details:", error);
-      toast.error("Failed to load job details");
+      console.error("Error fetching automation details:", error);
+      toast.error("Failed to load automation details");
     }
   };
 
-  // Approve a job
-  const handleApproveJob = async (jobId: string) => {
+  // Approve an automation
+  const handleApproveAutomation = async (automationId: string) => {
     setActionLoading(true);
     try {
-      const result = await categorization.jobs.approveJob(jobId);
+      const result = await categorization.automations.approveAutomation(automationId);
       if (result.success) {
-        toast.success("Job approved successfully");
-        fetchJobs();
-        if (selectedJob?.id === jobId) {
-          // Reload the selected job to reflect changes
-          const updatedJob = await categorization.jobs.getJob(jobId);
-          setSelectedJob(updatedJob);
+        toast.success("Automation approved successfully");
+        fetchAutomations();
+        if (selectedAutomation?.id === automationId) {
+          // Reload the selected automation to reflect changes
+          const updatedAutomation = await categorization.automations.getAutomation(automationId);
+          setSelectedAutomation(updatedAutomation);
         }
       } else {
-        toast.error(`Failed to approve job: ${result.error}`);
+        toast.error(`Failed to approve automation: ${result.error}`);
       }
     } catch (error) {
-      console.error("Error approving job:", error);
-      toast.error("Failed to approve job");
+      console.error("Error approving automation:", error);
+      toast.error("Failed to approve automation");
     } finally {
       setActionLoading(false);
     }
   };
 
-  // Reject a job
-  const handleRejectJob = async (jobId: string) => {
+  // Reject an automation
+  const handleRejectAutomation = async (automationId: string) => {
     setActionLoading(true);
     try {
-      const result = await categorization.jobs.rejectJob(jobId);
+      const result = await categorization.automations.rejectAutomation(automationId);
       if (result.success) {
-        toast.success("Job rejected and changes reverted");
-        fetchJobs();
-        if (selectedJob?.id === jobId) {
-          // Reload the selected job to reflect changes
-          const updatedJob = await categorization.jobs.getJob(jobId);
-          setSelectedJob(updatedJob);
+        toast.success("Automation rejected and changes reverted");
+        fetchAutomations();
+        if (selectedAutomation?.id === automationId) {
+          // Reload the selected automation to reflect changes
+          const updatedAutomation = await categorization.automations.getAutomation(automationId);
+          setSelectedAutomation(updatedAutomation);
         }
       } else {
-        toast.error(`Failed to reject job: ${result.error}`);
+        toast.error(`Failed to reject automation: ${result.error}`);
       }
     } catch (error) {
-      console.error("Error rejecting job:", error);
-      toast.error("Failed to reject job");
+      console.error("Error rejecting automation:", error);
+      toast.error("Failed to reject automation");
     } finally {
       setActionLoading(false);
     }
   };
   
-  // Revert an approved job
-  const handleRevertJob = async (jobId: string) => {
+  // Revert an approved automation
+  const handleRevertAutomation = async (automationId: string) => {
     setActionLoading(true);
     try {
-      const result = await categorization.jobs.revertJob(jobId);
+      const result = await categorization.automations.revertAutomation(automationId);
       if (result.success) {
-        toast.success("Job reverted successfully");
-        fetchJobs();
-        if (selectedJob?.id === jobId) {
-          // Reload the selected job to reflect changes
-          const updatedJob = await categorization.jobs.getJob(jobId);
-          setSelectedJob(updatedJob);
+        toast.success("Automation reverted successfully");
+        fetchAutomations();
+        if (selectedAutomation?.id === automationId) {
+          // Reload the selected automation to reflect changes
+          const updatedAutomation = await categorization.automations.getAutomation(automationId);
+          setSelectedAutomation(updatedAutomation);
         }
       } else {
-        toast.error(`Failed to revert job: ${result.error}`);
+        toast.error(`Failed to revert automation: ${result.error}`);
       }
     } catch (error) {
-      console.error("Error reverting job:", error);
-      toast.error("Failed to revert job");
+      console.error("Error reverting automation:", error);
+      toast.error("Failed to revert automation");
     } finally {
       setActionLoading(false);
     }
   };
   
-  // Get status badge styles based on job status
+  // Get status badge styles based on automation status
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'pending':
@@ -218,6 +218,8 @@ export default function ContextJobsPage() {
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'rejected':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      case 'reverted':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
     }
@@ -243,15 +245,15 @@ export default function ContextJobsPage() {
   };
   
   // Table columns definition
-  const columns: TableColumn<CategorizationJob>[] = [
+  const columns: TableColumn<CategorizationAutomation>[] = [
     {
       key: "name",
       header: "Name",
       sortable: true,
       className: "max-w-[30%]",
       headerClassName: "px-3 py-2",
-      cell: (job) => (
-        <div className="font-medium truncate px-3 py-2" title={job.name}>{job.name}</div>
+      cell: (automation) => (
+        <div className="font-medium truncate px-3 py-2" title={automation.name}>{automation.name}</div>
       )
     },
     {
@@ -260,8 +262,8 @@ export default function ContextJobsPage() {
       sortable: true,
       className: "w-24",
       headerClassName: "px-3 py-2",
-      cell: (job) => (
-        <div className="capitalize px-3 py-2">{job.source}</div>
+      cell: (automation) => (
+        <div className="capitalize px-3 py-2">{automation.source}</div>
       )
     },
     {
@@ -270,10 +272,10 @@ export default function ContextJobsPage() {
       sortable: true,
       className: "w-24",
       headerClassName: "px-3 py-2",
-      cell: (job) => (
+      cell: (automation) => (
         <div className="px-3 py-2">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(job.status || 'pending')}`}>
-            {job.status || 'pending'}
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(automation.status || 'pending')}`}>
+            {automation.status || 'pending'}
           </span>
         </div>
       )
@@ -284,8 +286,8 @@ export default function ContextJobsPage() {
       sortable: true,
       className: "w-28",
       headerClassName: "px-3 py-2",
-      cell: (job) => (
-        <div className="px-3 py-2">{job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "-"}</div>
+      cell: (automation) => (
+        <div className="px-3 py-2">{automation.createdAt ? new Date(automation.createdAt).toLocaleDateString() : "-"}</div>
       )
     },
     {
@@ -294,25 +296,25 @@ export default function ContextJobsPage() {
       sortable: false,
       className: "w-[110px]",
       headerClassName: "px-3 py-2 text-right",
-      cell: (job) => (
+      cell: (automation) => (
         <div className="flex justify-end gap-1 px-3 py-2">
           <Button 
             variant="secondary" 
             size="sm"
-            onClick={() => job.id && handleViewDetails(job.id)}
+            onClick={() => automation.id && handleViewDetails(automation.id)}
             className="px-2 h-8"
             title="View Details"
           >
             <Info className="h-4 w-4" />
           </Button>
           
-          {job.status === 'pending' && (
+          {automation.status === 'pending' && (
             <>
               <Button
                 variant="outline"
                 size="sm"
                 className="text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/30 px-2 h-8"
-                onClick={() => job.id && handleApproveJob(job.id)}
+                onClick={() => automation.id && handleApproveAutomation(automation.id)}
                 disabled={actionLoading}
                 title="Approve"
               >
@@ -322,7 +324,7 @@ export default function ContextJobsPage() {
                 variant="outline"
                 size="sm"
                 className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30 px-2 h-8"
-                onClick={() => job.id && handleRejectJob(job.id)}
+                onClick={() => automation.id && handleRejectAutomation(automation.id)}
                 disabled={actionLoading}
                 title="Reject"
               >
@@ -331,12 +333,12 @@ export default function ContextJobsPage() {
             </>
           )}
           
-          {job.status === 'approved' && (
+          {automation.status === 'approved' && (
             <Button
               variant="outline"
               size="sm"
               className="text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 dark:text-orange-400 dark:border-orange-800 dark:hover:bg-orange-900/30 px-2 h-8"
-              onClick={() => job.id && handleRevertJob(job.id)}
+              onClick={() => automation.id && handleRevertAutomation(automation.id)}
               disabled={actionLoading}
               title="Revert"
             >
@@ -351,9 +353,9 @@ export default function ContextJobsPage() {
   return (
     <div className="container mx-auto px-2 sm:px-4 py-6 max-w-screen-xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Context Jobs</h1>
+        <h1 className="text-2xl font-bold mb-2">Context Automations</h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Manage and review categorization jobs for your content
+          Manage and review categorization automations for your content
         </p>
       </div>
       
@@ -370,7 +372,7 @@ export default function ContextJobsPage() {
             <Input
               id="search"
               type="text"
-              placeholder="Search jobs"
+              placeholder="Search automations"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -392,6 +394,7 @@ export default function ContextJobsPage() {
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
+            <option value="reverted">Reverted</option>
           </select>
         </div>
         
@@ -425,13 +428,13 @@ export default function ContextJobsPage() {
         </Button>
       </div>
       
-      {/* Jobs Table */}
+      {/* Automations Table */}
       {loading ? (
-        <LoadingPlaceholder text="Loading jobs..." />
+        <LoadingPlaceholder text="Loading automations..." />
       ) : (
         <div className="mb-6 overflow-x-auto">
           <Table
-            data={paginatedJobs}
+            data={paginatedAutomations}
             columns={columns}
             sortField={sortField}
             sortDirection={sortDirection}
@@ -441,7 +444,7 @@ export default function ContextJobsPage() {
             bodyClassName="text-sm"
             emptyState={
               <div className="text-center py-8">
-                <p className="text-gray-500 dark:text-gray-400 mb-2">No jobs found</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-2">No automations found</p>
                 {(searchTerm || statusFilter || sourceFilter) && (
                   <p className="text-gray-400 dark:text-gray-500 text-sm">
                     Try adjusting your search filters
@@ -452,13 +455,13 @@ export default function ContextJobsPage() {
           />
           
           {/* Pagination */}
-          {filteredJobs.length > 0 && (
+          {filteredAutomations.length > 0 && (
             <div className="mt-4">
               <Pagination
                 currentPage={currentPage}
-                pageCount={Math.ceil(filteredJobs.length / itemsPerPage)}
+                pageCount={Math.ceil(filteredAutomations.length / itemsPerPage)}
                 onPageChange={setCurrentPage}
-                totalItems={filteredJobs.length}
+                totalItems={filteredAutomations.length}
                 limit={itemsPerPage}
                 offset={(currentPage - 1) * itemsPerPage}
               />
@@ -466,52 +469,52 @@ export default function ContextJobsPage() {
           )}
           
           <div className="mt-2 text-gray-500 dark:text-gray-400 text-sm">
-            Showing {Math.min(filteredJobs.length, paginatedJobs.length)} of {filteredJobs.length} jobs
+            Showing {Math.min(filteredAutomations.length, paginatedAutomations.length)} of {filteredAutomations.length} automations
           </div>
         </div>
       )}
       
-      {/* Job Details Modal */}
+      {/* Automation Details Modal */}
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={selectedJob?.name || "Job Details"}
+        title={selectedAutomation?.name || "Automation Details"}
         size="lg"
       >
-        {selectedJob ? (
+        {selectedAutomation ? (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Status</h3>
-                <p className="text-base font-medium">{selectedJob.status || "pending"}</p>
+                <p className="text-base font-medium">{selectedAutomation.status || "pending"}</p>
               </div>
               
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Source</h3>
-                <p className="text-base font-medium">{selectedJob.source}</p>
+                <p className="text-base font-medium">{selectedAutomation.source}</p>
               </div>
               
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Created</h3>
                 <p className="text-base font-medium">
-                  {selectedJob.createdAt 
-                    ? new Date(selectedJob.createdAt).toLocaleDateString() + " " + 
-                      new Date(selectedJob.createdAt).toLocaleTimeString()
+                  {selectedAutomation.createdAt 
+                    ? new Date(selectedAutomation.createdAt).toLocaleDateString() + " " + 
+                      new Date(selectedAutomation.createdAt).toLocaleTimeString()
                     : "-"}
                 </p>
               </div>
               
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Actions</h3>
-                <p className="text-base font-medium">{selectedJob.actions.length}</p>
+                <p className="text-base font-medium">{selectedAutomation.actions.length}</p>
               </div>
             </div>
             
             <div>
               <h3 className="text-base font-semibold mb-3">Actions</h3>
               
-              {selectedJob.actions.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400">No actions in this job</p>
+              {selectedAutomation.actions.length === 0 ? (
+                <p className="text-gray-500 dark:text-gray-400">No actions in this automation</p>
               ) : (
                 <ScrollArea className="h-[300px] border rounded-md dark:border-gray-700">
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -524,30 +527,30 @@ export default function ContextJobsPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-900 dark:divide-gray-700">
-                      {selectedJob.actions.map((action) => (
+                      {selectedAutomation.actions.map((action) => (
                         <tr key={action.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                           <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            {action.actionType}
+                            {action.actionData.action}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            {action.resource ? (
-                              <span>{action.resource.type}: {action.resource.id}</span>
+                            {(action.actionData.action === 'add_category' || action.actionData.action === 'add_tag') ? (
+                              <span>{action.actionData.target}: {action.actionData.target_id}</span>
                             ) : (
                               <span className="text-gray-400">N/A</span>
                             )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            {action.actionType === 'create_category' && (
-                              <span>Created category: {action.categoryName}</span>
+                            {action.actionData.action === 'create_category' && (
+                              <span>Created category: {action.actionData.category_name}</span>
                             )}
-                            {action.actionType === 'create_tag' && (
-                              <span>Created tag: {action.tagName}</span>
+                            {action.actionData.action === 'create_tag' && (
+                              <span>Created tag: {action.actionData.tag_name}</span>
                             )}
-                            {action.actionType === 'add_category' && (
-                              <span>Added category ID: {action.categoryId}</span>
+                            {action.actionData.action === 'add_category' && (
+                              <span>Added category ID: {action.actionData.category_id}</span>
                             )}
-                            {action.actionType === 'add_tag' && (
-                              <span>Added tag ID: {action.tagId}</span>
+                            {action.actionData.action === 'add_tag' && (
+                              <span>Added tag ID: {action.actionData.tag_id}</span>
                             )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">
@@ -577,13 +580,13 @@ export default function ContextJobsPage() {
                 Close
               </Button>
               
-              {selectedJob.status === 'pending' && (
+              {selectedAutomation.status === 'pending' && (
                 <>
                   <Button
                     variant="destructive"
                     onClick={() => {
-                      if (selectedJob.id) {
-                        handleRejectJob(selectedJob.id);
+                      if (selectedAutomation.id) {
+                        handleRejectAutomation(selectedAutomation.id);
                         setShowModal(false);
                       }
                     }}
@@ -594,8 +597,8 @@ export default function ContextJobsPage() {
                   <Button
                     variant="primary"
                     onClick={() => {
-                      if (selectedJob.id) {
-                        handleApproveJob(selectedJob.id);
+                      if (selectedAutomation.id) {
+                        handleApproveAutomation(selectedAutomation.id);
                         setShowModal(false);
                       }
                     }}
@@ -606,12 +609,12 @@ export default function ContextJobsPage() {
                 </>
               )}
               
-              {selectedJob.status === 'approved' && (
+              {selectedAutomation.status === 'approved' && (
                 <Button
                   variant="destructive"
                   onClick={() => {
-                    if (selectedJob.id) {
-                      handleRevertJob(selectedJob.id);
+                    if (selectedAutomation.id) {
+                      handleRevertAutomation(selectedAutomation.id);
                       setShowModal(false);
                     }
                   }}
@@ -623,7 +626,7 @@ export default function ContextJobsPage() {
             </div>
           </div>
         ) : (
-          <LoadingPlaceholder text="Loading job details..." />
+          <LoadingPlaceholder text="Loading automation details..." />
         )}
       </Modal>
     </div>

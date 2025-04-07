@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { authService, AuthSession } from '@/services/auth.service';
+import { authService } from '@/services/auth.service';
+import { AuthSession } from '@/lib/types';
 
 /**
  * Custom hook to manage authentication session

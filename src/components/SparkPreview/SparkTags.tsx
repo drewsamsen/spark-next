@@ -92,7 +92,7 @@ export function SparkTags({
           />
           <Button 
             type="submit" 
-            variant="default" 
+            variant="primary" 
             size="sm" 
             className="h-6 text-xs"
             disabled={!newTag.trim()}

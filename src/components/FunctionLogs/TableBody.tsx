@@ -119,7 +119,7 @@ export function TableBody({
               <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                 <div className="flex flex-col items-center">
                   <p className="mt-2 font-medium">No function logs found</p>
-                  <p className="mt-1 text-xs">Try changing your search filters or run a background job</p>
+                  <p className="mt-1 text-xs">Try changing your search filters or run a background automation</p>
                 </div>
               </td>
             </tr>

@@ -7,12 +7,12 @@ export * from './services';
 // Export service implementations
 import { CategoryServiceImpl } from './category-service';
 import { TagServiceImpl } from './tag-service';
-import { JobServiceImpl } from './job-service';
+import { AutomationServiceImpl } from './automation-service';
 
 // Singleton instances
 let categoryService: CategoryServiceImpl | null = null;
 let tagService: TagServiceImpl | null = null;
-let jobService: JobServiceImpl | null = null;
+let automationService: AutomationServiceImpl | null = null;
 
 /**
  * Get the singleton instance of the category service
@@ -35,13 +35,13 @@ export function getTagService(): TagServiceImpl {
 }
 
 /**
- * Get the singleton instance of the job service
+ * Get the singleton instance of the automation service
  */
-export function getJobService(): JobServiceImpl {
-  if (!jobService) {
-    jobService = new JobServiceImpl();
+export function getAutomationService(): AutomationServiceImpl {
+  if (!automationService) {
+    automationService = new AutomationServiceImpl();
   }
-  return jobService;
+  return automationService;
 }
 
 // Export a React hook for use in components
@@ -49,6 +49,6 @@ export function useCategorization() {
   return {
     categories: getCategoryService(),
     tags: getTagService(),
-    jobs: getJobService(),
+    automations: getAutomationService(),
   };
 } 

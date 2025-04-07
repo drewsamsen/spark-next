@@ -60,7 +60,7 @@ export default function SettingsPage() {
   // Tab navigation - changed to just two tabs
   const tabs = [
     { id: "integrations", label: "Integrations" },
-    { id: "background-jobs", label: "Background Jobs" },
+    { id: "background-jobs", label: "Automations" },
   ];
 
   return (
@@ -92,7 +92,7 @@ export default function SettingsPage() {
         </div>
       )}
       
-      {/* Background Jobs */}
+      {/* Automations */}
       {activeTab === "background-jobs" && (
         <div>          
           {/* Scheduled Tasks Table */}

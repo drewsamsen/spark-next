@@ -1,5 +1,5 @@
-import { SidebarItem } from "@/lib/types";
-import { EnhancedSparkItem as ServiceEnhancedSparkItem, sparksService as serviceImpl } from "@/services/sparks.service";
+import { SidebarItem, EnhancedSparkItem } from "@/lib/types";
+import { sparksService as serviceImpl } from "@/services/sparks.service";
 
 /**
  * Formats a date in "MMM 'YY" format (e.g., "Mar '23")
@@ -35,9 +35,6 @@ export interface SparkTag {
   id: string;
   name: string;
 }
-
-// Re-export EnhancedSparkItem for backward compatibility
-export type EnhancedSparkItem = ServiceEnhancedSparkItem;
 
 // Export the sparks service
 export const sparksService = {

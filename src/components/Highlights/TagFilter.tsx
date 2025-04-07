@@ -22,7 +22,7 @@ export function TagFilter({ tags, tagCounts, selectedTag, onTagSelect }: TagFilt
         {tags.map(tag => (
           <Button
             key={tag}
-            variant={selectedTag === tag ? "default" : "outline"}
+            variant={selectedTag === tag ? "primary" : "outline"}
             size="sm"
             className="h-8 gap-1"
             onClick={() => onTagSelect(selectedTag === tag ? null : tag)}

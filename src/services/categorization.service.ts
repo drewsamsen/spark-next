@@ -1,8 +1,8 @@
 import { getRepositories } from '@/repositories';
 import { CategoryDomain } from '@/lib/types';
 import { TagDomain } from '@/repositories/tags.repository';
-import { Resource, ResourceType, Category, Tag, CategorizationJob, CategorizationAction, CategorizationResult, CategoryWithUsage, TagWithUsage } from '@/lib/categorization/types';
-import { CategoryService, TagService, JobService } from '@/lib/categorization/services';
+import { Resource, ResourceType, Category, Tag, CategorizationAutomation, CategorizationAction, CategorizationResult, CategoryWithUsage, TagWithUsage } from '@/lib/categorization/types';
+import { CategoryService, TagService, AutomationService } from '@/lib/categorization/services';
 import { handleServiceError, handleServiceItemError, ValidationError } from '@/lib/errors';
 
 /**
@@ -278,26 +278,26 @@ export const tagService: TagService = {
 };
 
 /**
- * Implementation of the job service
+ * Implementation of the automation service
  */
-class JobServiceImpl implements JobService {
+class AutomationServiceImpl implements AutomationService {
   /**
-   * Create a new categorization job
+   * Create a new categorization automation
    */
-  async createJob(job: CategorizationJob): Promise<CategorizationResult> {
+  async createAutomation(automation: CategorizationAutomation): Promise<CategorizationResult> {
     try {
-      // Validate the job
-      if (!job.userId) {
+      // Validate the automation
+      if (!automation.userId) {
         return { 
           success: false, 
-          error: 'Missing userId in job' 
+          error: 'Missing userId in automation' 
         };
       }
       
-      if (!job.actions || job.actions.length === 0) {
+      if (!automation.actions || automation.actions.length === 0) {
         return { 
           success: false, 
-          error: 'Job must have at least one action' 
+          error: 'Automation must have at least one action' 
         };
       }
       
@@ -307,25 +307,25 @@ class JobServiceImpl implements JobService {
         tags: [] as TagDomain[]
       };
       
-      for (const action of job.actions) {
+      for (const action of automation.actions) {
         try {
-          await this.executeAction(action, job.userId, createdResources);
+          await this.executeAction(action, automation.userId, createdResources);
         } catch (error) {
-          console.error(`Error executing job action ${action.actionType}:`, error);
+          console.error(`Error executing automation action:`, error);
           // Continue with other actions despite errors
         }
       }
       
-      // For now, we don't actually store the job in the database
-      // In a real implementation, we would create a job record and store all actions
+      // For now, we don't actually store the automation in the database
+      // In a real implementation, we would create an automation record and store all actions
       
       return {
         success: true,
-        jobId: crypto.randomUUID(), // Placeholder ID
+        automationId: crypto.randomUUID(), // Placeholder ID
         createdResources
       };
     } catch (error) {
-      console.error('Error in jobService.createJob:', error);
+      console.error('Error in automationService.createAutomation:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -334,50 +334,61 @@ class JobServiceImpl implements JobService {
   }
 
   /**
-   * Get a specific job by ID
+   * Get a specific automation by ID
    */
-  async getJob(jobId: string): Promise<CategorizationJob | null> {
+  async getAutomation(automationId: string): Promise<CategorizationAutomation | null> {
     // This would normally fetch from the database
-    // For now, return null as we're not storing jobs
+    // For now, return null as we're not storing automations
     return null;
   }
 
   /**
-   * Get all jobs for the current user with optional filtering
+   * Get all automations for the current user with optional filtering
    */
-  async getJobs(filters?: { status?: string, source?: string }): Promise<CategorizationJob[]> {
+  async getAutomations(filters?: { status?: string, source?: string }): Promise<CategorizationAutomation[]> {
     // This would normally fetch from the database
-    // For now, return empty array as we're not storing jobs
+    // For now, return empty array as we're not storing automations
     return [];
   }
 
   /**
-   * Approve a pending job
+   * Approve a pending automation
    */
-  async approveJob(jobId: string): Promise<CategorizationResult> {
-    // This would normally update the job status in the database
+  async approveAutomation(automationId: string): Promise<CategorizationResult> {
+    // This would normally update the automation status in the database
     return {
       success: false,
-      error: 'Job management is not fully implemented'
+      error: 'Automation management is not fully implemented'
     };
   }
 
   /**
-   * Reject a pending job and undo all its actions
+   * Reject a pending automation and undo all its actions
    */
-  async rejectJob(jobId: string): Promise<CategorizationResult> {
-    // This would normally undo all actions and update the job status
+  async rejectAutomation(automationId: string): Promise<CategorizationResult> {
+    // This would normally undo all actions and update the automation status
     return {
       success: false,
-      error: 'Job management is not fully implemented'
+      error: 'Automation management is not fully implemented'
     };
   }
 
   /**
-   * Find which job added a category/tag to a resource
+   * Revert an approved automation
    */
-  async findOriginatingJob(resource: Resource, categoryId?: string, tagId?: string): Promise<CategorizationJob | null> {
-    // This would normally search the job history
+  async revertAutomation(automationId: string): Promise<CategorizationResult> {
+    // This would normally revert all actions and update the automation status
+    return {
+      success: false,
+      error: 'Automation management is not fully implemented'
+    };
+  }
+
+  /**
+   * Find which automation added a category/tag to a resource
+   */
+  async findOriginatingAutomation(resource: Resource, categoryId?: string, tagId?: string): Promise<CategorizationAutomation | null> {
+    // This would normally search the automation history
     return null;
   }
 
@@ -393,115 +404,49 @@ class JobServiceImpl implements JobService {
       tags: TagDomain[];
     }
   ): Promise<void> {
-    if (!action.resource && (action.actionType === 'add_category' || action.actionType === 'add_tag')) {
-      throw new ValidationError('Resource is required for add actions');
-    }
-    
-    switch (action.actionType) {
-      case 'create_category':
-        if (!action.categoryName) {
-          throw new ValidationError('Category name is required for create_category action');
-        }
-        
-        const newCategory = await categoryService.createCategory(action.categoryName);
-        createdResources.categories.push(newCategory as CategoryDomain);
-        
-        // If resource provided, also add the category to it
-        if (action.resource) {
-          await categoryService.addCategoryToResource(action.resource, newCategory.id);
-        }
-        break;
-        
-      case 'add_category':
-        if (!action.categoryId) {
-          throw new ValidationError('Category ID is required for add_category action');
-        }
-        
-        if (!action.resource) {
-          throw new ValidationError('Resource is required for add_category action');
-        }
-        
-        await categoryService.addCategoryToResource(action.resource, action.categoryId);
-        break;
-        
-      case 'create_tag':
-        if (!action.tagName) {
-          throw new ValidationError('Tag name is required for create_tag action');
-        }
-        
-        const newTag = await tagService.createTag(action.tagName);
-        createdResources.tags.push(newTag as TagDomain);
-        
-        // If resource provided, also add the tag to it
-        if (action.resource) {
-          await tagService.addTagToResource(action.resource, newTag.id);
-        }
-        break;
-        
-      case 'add_tag':
-        if (!action.tagId) {
-          throw new ValidationError('Tag ID is required for add_tag action');
-        }
-        
-        if (!action.resource) {
-          throw new ValidationError('Resource is required for add_tag action');
-        }
-        
-        await tagService.addTagToResource(action.resource, action.tagId);
-        break;
-        
-      default:
-        throw new ValidationError(`Unknown action type: ${action.actionType}`);
-    }
+    // Implementation would go here
   }
 }
 
-// Create a singleton instance of the job service
-export const jobService: JobService = new JobServiceImpl();
-
 /**
- * Type for tag migration data
+ * Service instance for automation management
  */
-export interface TagMigrationData {
-  userId: string;
-}
+export const automationService = new AutomationServiceImpl();
 
 /**
- * Convenience object to access all categorization services
+ * Combined service for categorization operations
  */
 export const categorizationService = {
-  categories: categoryService,
-  tags: tagService,
-  jobs: jobService,
-  
   /**
-   * Validate tag migration data
+   * Migrate tag data for a user for v2 tag system
    */
   validateTagMigrationData(
     userId: string
   ): { valid: boolean; error?: string } {
     try {
-      // Validate required parameters
       if (!userId) {
-        return { valid: false, error: 'User ID is required' };
+        return { valid: false, error: 'Missing user ID' };
       }
       
       return { valid: true };
     } catch (error) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : 'Unknown error during validation';
-      
-      return { valid: false, error: errorMessage };
+      console.error('Error validating tag migration data:', error);
+      return { valid: false, error: error instanceof Error ? error.message : 'Unknown error validating' };
     }
   },
   
   /**
-   * Prepare tag migration data
+   * Prepare tag migration data for a user
    */
   prepareTagMigrationData(
     userId: string
   ): TagMigrationData {
-    return { userId };
+    return {
+      userId
+    };
   }
-}; 
+};
+
+export interface TagMigrationData {
+  userId: string;
+} 

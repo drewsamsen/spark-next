@@ -51,7 +51,7 @@ export const availableTasks: ScheduledTask[] = [
   {
     id: "tag-random-highlights",
     name: "Tag Random Highlights",
-    description: "Select 3 random highlights and create a context job to tag them with 'job-test'",
+    description: "Select 3 random highlights and create a context automation to tag them with 'automation-test'",
     isSchedulable: false,
     triggerEndpoint: "/api/inngest/trigger-tag-random-highlights",
     requiresApiKey: false

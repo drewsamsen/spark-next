@@ -72,31 +72,31 @@ export function getResourceIdColumn(resourceType: ResourceType): string {
 /**
  * Prepare an insert object for a category junction table
  */
-export function prepareCategoryJunction(resource: Resource, categoryId: string, jobActionId?: string) {
+export function prepareCategoryJunction(resource: Resource, categoryId: string, automationActionId?: string) {
   const categorizationRepo = getRepositories().categorization;
-  return categorizationRepo.prepareCategoryJunction(resource, categoryId, jobActionId);
+  return categorizationRepo.prepareCategoryJunction(resource, categoryId, automationActionId);
 }
 
 /**
  * Prepare an insert object for a tag junction table
  */
-export function prepareTagJunction(resource: Resource, tagId: string, jobActionId?: string) {
+export function prepareTagJunction(resource: Resource, tagId: string, automationActionId?: string) {
   const categorizationRepo = getRepositories().categorization;
-  return categorizationRepo.prepareTagJunction(resource, tagId, jobActionId);
+  return categorizationRepo.prepareTagJunction(resource, tagId, automationActionId);
 }
 
 /**
- * Find job action ID for a category assigned to a resource
+ * Find automation action ID for a category assigned to a resource
  */
-export async function findCategoryJobAction(resource: Resource, categoryId: string): Promise<string | null> {
+export async function findCategoryAutomationAction(resource: Resource, categoryId: string): Promise<string | null> {
   const categorizationRepo = getRepositories().categorization;
-  return categorizationRepo.findCategoryJobAction(resource, categoryId);
+  return categorizationRepo.findCategoryAutomationAction(resource, categoryId);
 }
 
 /**
- * Find job action ID for a tag assigned to a resource
+ * Find automation action ID for a tag assigned to a resource
  */
-export async function findTagJobAction(resource: Resource, tagId: string): Promise<string | null> {
+export async function findTagAutomationAction(resource: Resource, tagId: string): Promise<string | null> {
   const categorizationRepo = getRepositories().categorization;
-  return categorizationRepo.findTagJobAction(resource, tagId);
+  return categorizationRepo.findTagAutomationAction(resource, tagId);
 } 

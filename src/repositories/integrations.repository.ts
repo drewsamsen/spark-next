@@ -5,9 +5,9 @@ import { DatabaseError, NotFoundError } from '@/lib/errors';
 /**
  * Repository for integration settings
  */
-export class IntegrationsRepository extends BaseRepository {
+export class IntegrationsRepository extends BaseRepository<Record<string, any>> {
   constructor(client: DbClient) {
-    super(client);
+    super(client, 'user_settings');
   }
 
   /**

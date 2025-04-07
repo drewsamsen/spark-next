@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { services } from '@/services';
+import { services, categoryService } from '@/services';
 import { Button } from '@/components/ui/button';
 import { Category, Resource } from '@/lib/categorization/types';
 import { ArrowLeft, BookIcon, SparklesIcon, HighlighterIcon } from 'lucide-react';
@@ -22,10 +22,7 @@ export default function CategoryPage() {
       setError(null);
       
       try {
-        // Get category service
-        const categoryService = services.categorization.categories;
-        
-        // Fetch categories to find the one with matching slug
+        // Use imported category service
         const categories = await categoryService.getCategories();
         const categoryData = categories.find(c => c.slug === slug);
         

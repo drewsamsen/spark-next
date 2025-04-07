@@ -14,7 +14,8 @@ import {
   Flame,
   Highlighter,
   StickyNote,
-  Bug
+  Bug,
+  FileCog2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -27,6 +28,7 @@ interface NavItem {
   tooltip: string;
   href?: string;
   hasSubmenu?: boolean;
+  count?: number;
 }
 
 interface LeftSidebarProps {
@@ -170,10 +172,11 @@ export default function LeftSidebar({
   // Utility sidebar items
   const utilitySidebarItems: NavItem[] = [
     {
-      name: "Context Jobs",
-      icon: <Workflow className="h-5 w-5" />,
-      tooltip: "Context Jobs",
-      href: "/context-jobs"
+      name: "Automations",
+      icon: <FileCog2 />,
+      count: 0,
+      tooltip: "Automations",
+      href: "/automations"
     },
     {
       name: "Debug",

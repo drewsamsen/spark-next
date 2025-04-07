@@ -1,4 +1,4 @@
-import { Category, CategorizationJob, CategorizationResult, Resource, ResourceType, Tag, CategoryWithUsage, TagWithUsage } from './types';
+import { Category, CategorizationAutomation, CategorizationResult, Resource, ResourceType, Tag, CategoryWithUsage, TagWithUsage } from './types';
 
 /**
  * Service for managing categories
@@ -81,41 +81,41 @@ export interface TagService {
 }
 
 /**
- * Service for managing categorization jobs
+ * Service for managing automation
  */
-export interface JobService {
+export interface AutomationService {
   /**
-   * Create a new categorization job
+   * Create a new categorization automation
    */
-  createJob(job: CategorizationJob): Promise<CategorizationResult>;
+  createAutomation(automation: CategorizationAutomation): Promise<CategorizationResult>;
   
   /**
-   * Get a specific job by ID
+   * Get a specific automation by ID
    */
-  getJob(jobId: string): Promise<CategorizationJob | null>;
+  getAutomation(automationId: string): Promise<CategorizationAutomation | null>;
   
   /**
-   * Get all jobs for the current user with optional filtering
+   * Get all automations for the current user with optional filtering
    */
-  getJobs(filters?: { status?: string, source?: string }): Promise<CategorizationJob[]>;
+  getAutomations(filters?: { status?: string, source?: string }): Promise<CategorizationAutomation[]>;
   
   /**
-   * Approve a pending job
+   * Approve a pending automation
    */
-  approveJob(jobId: string): Promise<CategorizationResult>;
+  approveAutomation(automationId: string): Promise<CategorizationResult>;
   
   /**
-   * Reject a pending job and undo all its actions
+   * Reject a pending automation and undo all its actions
    */
-  rejectJob(jobId: string): Promise<CategorizationResult>;
+  rejectAutomation(automationId: string): Promise<CategorizationResult>;
   
   /**
-   * Revert an approved job
+   * Revert an approved automation
    */
-  revertJob(jobId: string): Promise<CategorizationResult>;
+  revertAutomation(automationId: string): Promise<CategorizationResult>;
   
   /**
-   * Find which job added a category/tag to a resource
+   * Find which automation added a category/tag to a resource
    */
-  findOriginatingJob(resource: Resource, categoryId?: string, tagId?: string): Promise<CategorizationJob | null>;
+  findOriginatingAutomation(resource: Resource, categoryId?: string, tagId?: string): Promise<CategorizationAutomation | null>;
 } 

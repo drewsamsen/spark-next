@@ -2,11 +2,13 @@
  * Aggregated types from all repositories
  */
 
-import { SparkDomain } from './sparks.repository';
-import { BookDomain } from './books.repository';
-import { HighlightDomain } from './highlights.repository';
-import { CategoryDomain } from './categories.repository';
-import { TagDomain } from './tags.repository';
+import { 
+  SparkDomain,
+  BookDomain,
+  HighlightDomain,
+  CategoryDomain,
+  TagDomain 
+} from '@/lib/types';
 
 export type {
   SparkDomain,

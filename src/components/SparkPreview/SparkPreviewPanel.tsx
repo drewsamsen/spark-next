@@ -5,7 +5,8 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
 import { SparkDomain } from "@/lib/types";
-import { useSparksService, useCategorization, useResourceHelper } from "@/hooks";
+import { useSparksService, useResourceHelper } from "@/hooks";
+import { tagService } from "@/services";
 import {
   SparkContent,
   SparkCategories,
@@ -37,7 +38,6 @@ export default function SparkPreviewPanel({
   
   // Get services using hooks
   const { getSparkDetails } = useSparksService();
-  const { tags: tagService } = useCategorization();
   const { createSparkResource } = useResourceHelper();
 
   // Load spark details when ID changes

@@ -9,7 +9,7 @@ export { highlightsService } from './highlights.service';
 export { 
   categoryService,
   tagService, 
-  jobService,
+  automationService,
   categorizationService 
 } from './categorization.service';
 export { authService } from './auth.service';

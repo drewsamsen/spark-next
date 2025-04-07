@@ -11,9 +11,9 @@ export type AuthStateChangeCallback = (event: AuthChangeEvent, session: Session 
 /**
  * Repository for authentication operations
  */
-export class AuthRepository extends BaseRepository {
+export class AuthRepository extends BaseRepository<Record<string, any>> {
   constructor(client: DbClient) {
-    super(client);
+    super(client, '');
   }
 
   /**

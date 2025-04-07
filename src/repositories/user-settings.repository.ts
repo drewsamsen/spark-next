@@ -6,9 +6,9 @@ import { DbClient } from '@/lib/db';
 /**
  * Repository for handling user settings database access
  */
-export class UserSettingsRepository extends BaseRepository {
+export class UserSettingsRepository extends BaseRepository<Record<string, any>> {
   constructor(client: DbClient) {
-    super(client);
+    super(client, 'user_settings');
   }
 
   /**

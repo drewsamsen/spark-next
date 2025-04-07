@@ -20,16 +20,16 @@ export async function POST(request: NextRequest) {
 
     // Trigger the Inngest event
     await inngest.send({
-      name: "jobs/tag-random-highlights",
+      name: "automations/tag-random-highlights",
       data: { userId }
     });
     
     return createSuccessResponse(
       { triggered: true }, 
-      'Random highlight tagging job triggered successfully'
+      'Random highlight tagging automation triggered successfully'
     );
   } catch (error) {
-    console.error('Error triggering random highlight tagging job:', error);
+    console.error('Error triggering random highlight tagging automation:', error);
     return createErrorResponse(
       error instanceof Error ? error.message : 'Unknown error'
     );

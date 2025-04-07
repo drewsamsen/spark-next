@@ -28,7 +28,7 @@ export { useAuthSession } from './use-auth-session';
 export { 
   useCategories, 
   useTags, 
-  useCategorizationJobs 
+  useCategorizationAutomations 
 } from './use-categorization';
 
 // Export enhanced resource hooks

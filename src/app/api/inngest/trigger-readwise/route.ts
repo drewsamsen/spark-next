@@ -56,12 +56,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Readwise book count job triggered successfully'
+      message: 'Readwise book count automation triggered successfully'
     });
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to trigger Readwise book count job' },
+      { error: 'Failed to trigger Readwise book count automation' },
       { status: 500 }
     );
   }

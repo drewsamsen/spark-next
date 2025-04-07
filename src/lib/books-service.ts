@@ -1,8 +1,6 @@
 "use client";
 
-import { SidebarItem } from './types';
-import { BookDomain } from '@/repositories/books.repository';
-import { HighlightDomain } from '@/repositories/highlights.repository';
+import { SidebarItem, BookDomain, HighlightDomain } from './types';
 import { booksService as serviceImpl } from '@/services/books.service';
 
 /**

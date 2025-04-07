@@ -20,12 +20,12 @@ export async function POST(request: NextRequest) {
 
     return createSuccessResponse(
       { triggered: true }, 
-      'Readwise daily sync job triggered manually'
+      'Readwise daily sync automation triggered manually'
     );
   } catch (error) {
     console.error('API Error:', error);
     return createErrorResponse(
-      error instanceof Error ? error.message : 'Failed to trigger Readwise sync job'
+      error instanceof Error ? error.message : 'Failed to trigger Readwise sync automation'
     );
   }
 }

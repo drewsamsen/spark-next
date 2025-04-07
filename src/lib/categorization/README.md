@@ -8,9 +8,9 @@ This categorization system allows for:
 
 - Categories and tags to be applied to multiple resource types (books, highlights, etc.)
 - Creation and management of categories/tags through a type-safe API
-- Batch operations through categorization jobs
+- Batch operations through categorization automations
 - Full audit trails for AI-driven categorization
-- Undo functionality for categorization jobs
+- Undo functionality for categorization automations
 
 ## Architecture
 
@@ -27,7 +27,7 @@ The database includes:
 
 - Primary tables: `categories`, `tags`
 - Junction tables: `book_categories`, `highlight_categories`, `book_tags`, `highlight_tags`
-- Job tables: `categorization_jobs`, `categorization_job_actions`
+- Automation tables: `automations`, `automation_actions`
 
 Each category/tag can be applied to multiple resources, and each resource can have multiple categories/tags.
 
@@ -36,15 +36,15 @@ Each category/tag can be applied to multiple resources, and each resource can ha
 ### Getting Service Instances
 
 ```typescript
-import { getCategoryService, getTagService, getJobService, useCategorization } from '@/lib/categorization';
+import { getCategoryService, getTagService, getAutomationService, useCategorization } from '@/lib/categorization';
 
 // Option 1: Get individual services
 const categoryService = getCategoryService();
 const tagService = getTagService();
-const jobService = getJobService();
+const automationService = getAutomationService();
 
 // Option 2: Use the convenience hook (for components)
-const { categories, tags, jobs } = useCategorization();
+const { categories, tags, automations } = useCategorization();
 ```
 
 ### Working with Categories
@@ -106,13 +106,13 @@ const resourcesWithTag = await tagService.getResourcesForTag(newTag.id);
 await tagService.removeTagFromResource(highlightResource, newTag.id);
 ```
 
-### Categorization Jobs
+### Categorization Automations
 
-Jobs allow for batch operations and provide an audit trail:
+Automations allow for batch operations and provide an audit trail:
 
 ```typescript
-// Create a job with multiple actions
-const job = {
+// Create an automation with multiple actions
+const automation = {
   userId: 'user-uuid',
   name: 'AI Categorization Batch',
   source: 'ai',
@@ -138,30 +138,30 @@ const job = {
   ]
 };
 
-// Create the job (all actions are applied immediately)
-const result = await jobService.createJob(job);
+// Create the automation (all actions are applied immediately)
+const result = await automationService.createAutomation(automation);
 
 // Later, if needed:
-// Approve the job (marks it as approved)
-await jobService.approveJob(result.jobId);
+// Approve the automation (marks it as approved)
+await automationService.approveAutomation(result.automationId);
 
-// OR: Reject the job (undoes all actions and removes created categories/tags)
-await jobService.rejectJob(result.jobId);
+// OR: Reject the automation (undoes all actions and removes created categories/tags)
+await automationService.rejectAutomation(result.automationId);
 ```
 
 ### Finding Origin of Categories/Tags
 
-You can trace which job added a particular category or tag:
+You can trace which automation added a particular category or tag:
 
 ```typescript
-// Find which job added a category to a resource
-const originJob = await jobService.findOriginatingJob(
+// Find which automation added a category to a resource
+const originAutomation = await automationService.findOriginatingAutomation(
   bookResource, 
   categoryId // Optional: specify categoryId or tagId
 );
 
-if (originJob) {
-  console.log(`Added by "${originJob.name}" job from ${originJob.source}`);
+if (originAutomation) {
+  console.log(`Added by "${originAutomation.name}" automation from ${originAutomation.source}`);
 }
 ```
 
@@ -211,12 +211,12 @@ Here's a complete example of implementing AI-suggested categorization:
 
 ```typescript
 async function suggestCategoriesWithAI(book) {
-  const { categories, tags, jobs } = useCategorization();
+  const { categories, tags, automations } = useCategorization();
   
   // 1. Call your AI service to get suggestions
   const aiResponse = await callAIService(book.title, book.content);
   
-  // 2. Prepare job actions
+  // 2. Prepare automation actions
   const actions = [];
   const resource = { id: book.id, type: 'book', userId: book.userId };
   
@@ -238,8 +238,8 @@ async function suggestCategoriesWithAI(book) {
     });
   }
   
-  // 3. Create the job
-  const result = await jobs.createJob({
+  // 3. Create the automation
+  const result = await automations.createAutomation({
     userId: book.userId,
     name: `AI categorization for "${book.title}"`,
     source: 'ai',
@@ -250,7 +250,7 @@ async function suggestCategoriesWithAI(book) {
   if (result.success) {
     toast.success('AI categorization applied!');
     console.log('Created resources:', result.createdResources);
-    return result.jobId;
+    return result.automationId;
   } else {
     toast.error(`Failed to apply AI categorization: ${result.error}`);
     return null;
@@ -264,7 +264,7 @@ All service methods include proper error handling:
 
 - Service methods that retrieve data handle errors gracefully, typically returning empty arrays
 - Service methods that modify data throw descriptive errors
-- The job service includes detailed error information in the result object
+- The automation service includes detailed error information in the result object
 
 ## TypeScript Types
 
@@ -273,5 +273,5 @@ The system is fully typed for safety and developer experience. Key types include
 - `ResourceType`: Union of supported resource types
 - `Resource`: Generic interface for categorizable resources
 - `Category` and `Tag`: Core entity interfaces
-- `CategorizationJob` and `CategorizationAction`: Job-related interfaces
-- `CategoryService`, `TagService`, and `JobService`: Service interfaces 
+- `CategorizationAutomation` and `CategorizationAction`: Automation-related interfaces
+- `CategoryService`, `TagService`, and `AutomationService`: Service interfaces 

@@ -13,9 +13,9 @@ import {
 /**
  * Repository for highlights
  */
-export class HighlightsRepository extends BaseRepository {
+export class HighlightsRepository extends BaseRepository<HighlightModel> {
   constructor(client: DbClient) {
-    super(client);
+    super(client, 'highlights');
   }
 
   /**
@@ -352,6 +352,70 @@ export class HighlightsRepository extends BaseRepository {
       return null;
     }
     
-    return data.note.content;
+    // Handle the note data structure - it's an array with a single item
+    const noteArray = data.note as unknown as Array<{ content: string }>;
+    
+    if (noteArray.length === 0 || !noteArray[0]?.content) {
+      return null;
+    }
+    
+    return noteArray[0].content;
+  }
+
+  /**
+   * Get random highlights for a user
+   * @param count Number of random highlights to fetch
+   * @param overrideUserId Optional user ID to override the session user
+   * @returns Array of highlights with relations
+   */
+  async getRandomHighlights(count: number = 5, overrideUserId?: string): Promise<HighlightWithRelations[]> {
+    // Use provided user ID or fall back to session user ID
+    const userId = overrideUserId || await this.getUserId();
+    
+    // First fetch a larger sample of recent highlights (simple query, no joins)
+    const { data: recentHighlights, error: fetchError } = await this.client
+      .from('highlights')
+      .select('id')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(100);  // Sample size of recent highlights
+    
+    if (fetchError) {
+      throw new DatabaseError('Error fetching recent highlights for selection', fetchError);
+    }
+    
+    // If no highlights found, return empty array
+    if (!recentHighlights || recentHighlights.length === 0) {
+      return [];
+    }
+    
+    // Randomly select highlights from the recent set
+    const shuffled = [...recentHighlights].sort(() => 0.5 - Math.random());
+    const selectedIds = shuffled.slice(0, Math.min(count, shuffled.length)).map(h => h.id);
+    
+    // Now fetch the full highlight data with relations for just these selected IDs
+    const { data, error } = await this.client
+      .from('highlights')
+      .select(`
+        *,
+        categories:highlight_categories(
+          category:categories(id, name)
+        ),
+        tags:highlight_tags(
+          tag:tags(id, name)
+        ),
+        highlight_notes(
+          note_id,
+          notes:note_id(content)
+        )
+      `)
+      .in('id', selectedIds)
+      .eq('user_id', userId);
+    
+    if (error) {
+      throw new DatabaseError('Error fetching selected highlights details', error);
+    }
+    
+    return (data || []) as unknown as HighlightWithRelations[];
   }
 } 

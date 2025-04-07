@@ -39,15 +39,48 @@ export interface TagWithUsage extends Tag {
   usageCount: number;
 }
 
-// Categorization job
-export interface CategorizationJob {
+// Categorization automation
+export interface CategorizationAutomation {
   id?: string;
   userId: string;
   name: string;
   source: 'ai' | 'user' | 'system';
-  status?: 'pending' | 'approved' | 'rejected';
+  status?: 'pending' | 'approved' | 'rejected' | 'reverted';
   actions: CategorizationAction[];
   createdAt?: Date;
+}
+
+/**
+ * Action data types (JSONB)
+ */
+export type ActionData = 
+  | AddTagActionData
+  | AddCategoryActionData
+  | CreateTagActionData 
+  | CreateCategoryActionData;
+
+export interface AddTagActionData {
+  action: 'add_tag';
+  target: ResourceType;
+  target_id: string;
+  tag_id: string;
+}
+
+export interface AddCategoryActionData {
+  action: 'add_category';
+  target: ResourceType;
+  target_id: string;
+  category_id: string;
+}
+
+export interface CreateTagActionData {
+  action: 'create_tag';
+  tag_name: string;
+}
+
+export interface CreateCategoryActionData {
+  action: 'create_category';
+  category_name: string;
 }
 
 /**
@@ -55,21 +88,15 @@ export interface CategorizationJob {
  */
 export interface CategorizationAction {
   id?: string;
-  actionType: 'add_category' | 'add_tag' | 'create_category' | 'create_tag';
-  resource?: Resource;
-  categoryId?: string;
-  tagId?: string;
-  categoryName?: string;
-  tagName?: string;
-  createdResourceId?: string;
-  status?: 'pending' | 'executed' | 'rejected' | 'reverted';
+  actionData: ActionData;
+  status?: 'pending' | 'executing' | 'executed' | 'failed' | 'rejected' | 'reverted';
   executedAt?: Date;
 }
 
 // Result of a categorization operation
 export interface CategorizationResult {
   success: boolean;
-  jobId?: string;
+  automationId?: string;
   error?: string;
   createdResources?: {
     categories?: Category[];

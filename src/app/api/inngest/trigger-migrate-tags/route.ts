@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     
     return createSuccessResponse(
       { triggered: true }, 
-      'Highlight tag migration job triggered successfully'
+      'Highlight tag migration automation triggered successfully'
     );
   } catch (error) {
     console.error('Error triggering highlight tag migration:', error);

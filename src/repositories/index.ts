@@ -9,15 +9,17 @@ import { IntegrationsRepository } from './integrations.repository';
 import { FunctionLogsRepository } from './function-logs.repository';
 import { UserSettingsRepository } from './user-settings.repository';
 import { CategorizationRepository } from './categorization.repository';
-import { JobsRepository } from './jobs.repository';
+import { AutomationsRepository } from './automations.repository';
 import { NotesRepository } from './notes.repository';
-import type { SparkDomain } from './sparks.repository';
-import type { BookDomain } from './books.repository';
-import type { HighlightDomain } from './highlights.repository';
-import type { CategoryDomain } from './categories.repository';
-import type { TagDomain } from './tags.repository';
-import type { FunctionLogModel } from './function-logs.repository';
-import type { JobModel, JobActionModel } from './jobs.repository';
+import { 
+  SparkDomain,
+  BookDomain,
+  HighlightDomain,
+  CategoryDomain,
+  TagDomain,
+  FunctionLogModel
+} from '@/lib/types';
+import type { AutomationModel, AutomationActionModel } from './automations.repository';
 
 /**
  * Registry of repositories
@@ -35,7 +37,7 @@ class RepositoriesRegistry {
   private functionLogsRepo: FunctionLogsRepository | null = null;
   private userSettingsRepo: UserSettingsRepository | null = null;
   private categorizationRepo: CategorizationRepository | null = null;
-  private jobsRepo: JobsRepository | null = null;
+  private automationsRepo: AutomationsRepository | null = null;
   private notesRepo: NotesRepository | null = null;
   
   constructor(serverSide: boolean = false) {
@@ -143,13 +145,13 @@ class RepositoriesRegistry {
   }
   
   /**
-   * Get the Jobs repository
+   * Get the Automations repository
    */
-  get jobs(): JobsRepository {
-    if (!this.jobsRepo) {
-      this.jobsRepo = new JobsRepository(this.client);
+  get automations(): AutomationsRepository {
+    if (!this.automationsRepo) {
+      this.automationsRepo = new AutomationsRepository(this.client);
     }
-    return this.jobsRepo;
+    return this.automationsRepo;
   }
   
   /**
@@ -176,7 +178,7 @@ class RepositoriesRegistry {
     this.functionLogsRepo = null;
     this.userSettingsRepo = null;
     this.categorizationRepo = null;
-    this.jobsRepo = null;
+    this.automationsRepo = null;
     this.notesRepo = null;
   }
 }
@@ -213,19 +215,19 @@ export type {
   FunctionLogsRepository,
   UserSettingsRepository,
   CategorizationRepository,
-  JobsRepository
+  AutomationsRepository
 };
 
 // Re-export repository domain models for convenience
-export { 
+export type { 
   SparkDomain, 
   BookDomain, 
   HighlightDomain, 
   CategoryDomain, 
   TagDomain,
   FunctionLogModel,
-  JobModel,
-  JobActionModel
+  AutomationModel,
+  AutomationActionModel
 };
 
 // Export the registry type

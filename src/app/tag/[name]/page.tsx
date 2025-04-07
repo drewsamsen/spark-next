@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { services } from '@/services';
+import { services, tagService } from '@/services';
 import { Button } from '@/components/ui/button';
 import { Tag, Resource } from '@/lib/categorization/types';
 import { ArrowLeft, BookIcon, SparklesIcon, HighlighterIcon } from 'lucide-react';
@@ -22,10 +22,7 @@ export default function TagPage() {
       setError(null);
       
       try {
-        // Get tag service
-        const tagService = services.categorization.tags;
-        
-        // Fetch tags to find the one with matching name
+        // Use imported tag service
         const tags = await tagService.getTags();
         
         // Try to find by name (converted to lowercase and with spaces replaced by dashes)

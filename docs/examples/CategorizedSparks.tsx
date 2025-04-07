@@ -137,8 +137,8 @@ export function CategorizedSparks() {
             ) : (
               filteredSparks.map(spark => (
                 <div key={spark.id} className="spark-item">
-                  <h3>{spark.title}</h3>
-                  <p>{spark.content}</p>
+                  <h3>{spark.name}</h3>
+                  <p>{spark.details.body}</p>
                   
                   <button onClick={() => toggleExpandSpark(spark.id)}>
                     {expandedSparkIds.has(spark.id) ? 'Hide Categories' : 'Show Categories'}

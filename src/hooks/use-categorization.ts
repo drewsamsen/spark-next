@@ -6,13 +6,14 @@ import {
   Resource, 
   Category, 
   Tag, 
-  CategorizationJob, 
   CategorizationResult,
   CategoryWithUsage,
-  TagWithUsage
+  TagWithUsage,
+  CategorizationAutomation
 } from '@/lib/categorization/types';
 import { toast } from 'react-toastify';
 import { useAuthService } from './use-services';
+import { useSupabaseAuth as useAuth } from './use-supabase-auth';
 
 // Interface for useCategoriesHook return value
 interface UseCategoriesReturn {
@@ -38,13 +39,15 @@ interface UseTagsReturn {
   createTag: (name: string) => Promise<Tag | null>;
 }
 
-// Interface for useJobsHook return value
-interface UseJobsReturn {
-  jobs: CategorizationJob[];
-  isLoading: boolean;
+// Interface for useAutomations hook return value
+interface UseAutomationsReturn {
+  automations: CategorizationAutomation[];
+  loading: boolean;
   error: Error | null;
-  approveJob: (jobId: string) => Promise<void>;
-  rejectJob: (jobId: string) => Promise<void>;
+  approveAutomation: (automationId: string) => Promise<void>;
+  rejectAutomation: (automationId: string) => Promise<void>;
+  revertAutomation: (automationId: string) => Promise<void>;
+  refreshAutomations: () => Promise<void>;
 }
 
 /**
@@ -346,110 +349,121 @@ export function useTags(): UseTagsReturn {
 }
 
 /**
- * React hook for managing categorization jobs with loading states and error handling
+ * React hook for managing automations with loading states and error handling
  */
-export function useCategorizationJobs(): UseJobsReturn {
-  const [jobs, setJobs] = useState<CategorizationJob[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function useCategorizationAutomations(): UseAutomationsReturn {
+  const [automations, setAutomations] = useState<CategorizationAutomation[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   
-  const { jobs: jobService } = useCategorizationService();
-  const authService = useAuthService();
+  const { automations: automationService } = useCategorizationService();
+  const { session, loading: authLoading } = useAuth();
   
-  // Load jobs on mount
+  // Load automations on mount
   useEffect(() => {
-    let isMounted = true;
-    
-    const loadJobs = async (): Promise<void> => {
-      try {
-        setIsLoading(true);
-        
-        // Check if user is authenticated
-        const isAuthenticated = await authService.isAuthenticated();
-        if (!isAuthenticated) {
-          if (isMounted) {
-            setJobs([]);
-            setIsLoading(false);
-          }
-          return;
-        }
-        
-        // Fetch jobs
-        const data = await jobService.getJobs();
-        
-        if (isMounted) {
-          setJobs(data);
-          setError(null);
-        }
-      } catch (err) {
-        console.error('Error loading jobs:', err);
-        if (isMounted) {
-          setError(err instanceof Error ? err : new Error('Failed to load jobs'));
-          setJobs([]);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-    
-    loadJobs();
-    
-    // Subscribe to auth state changes
-    const subscription = authService.onAuthStateChange(() => {
-      loadJobs();
-    });
-    
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [jobService, authService]);
+    if (session) {
+      loadAutomations();
+    }
+  }, [session]);
   
-  // Function to approve a job
-  const approveJob = useCallback(
-    async (jobId: string): Promise<void> => {
+  const loadAutomations = async (): Promise<void> => {
+    if (!session) {
+      setError(new Error('User must be authenticated'));
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
+      setAutomations([]);
+      
+      // Simple delay to show loading state for demo purposes
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Fetch automations
+      const data = await automationService.getAutomations();
+      
+      // Update state with fetched data
+      setAutomations(data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading automations:', err);
+      setLoading(false);
+      setError(err instanceof Error ? err : new Error('Failed to load automations'));
+      setAutomations([]);
+    }
+  };
+  
+  // Refresh automations data
+  const refreshAutomations = useCallback(async (): Promise<void> => {
+    await loadAutomations();
+  }, [automationService, session, loadAutomations]);
+  
+  // Function to approve an automation
+  const approveAutomation = useCallback(
+    async (automationId: string): Promise<void> => {
       try {
-        await jobService.approveJob(jobId);
+        await automationService.approveAutomation(automationId);
         
-        // Update local state - remove the approved job or mark as approved
-        setJobs(prev => prev.filter(job => job.id !== jobId));
+        // Update local state - remove the approved automation or mark as approved
+        setAutomations(prev => prev.filter(automation => automation.id !== automationId));
         
-        toast.success('Job approved successfully');
+        toast.success('Automation approved successfully');
       } catch (err) {
-        console.error('Error approving job:', err);
-        toast.error('Failed to approve job');
+        console.error('Error approving automation:', err);
+        toast.error('Failed to approve automation');
         throw err;
       }
     },
-    [jobService]
+    [automationService]
   );
   
-  // Function to reject a job
-  const rejectJob = useCallback(
-    async (jobId: string): Promise<void> => {
+  // Function to reject an automation
+  const rejectAutomation = useCallback(
+    async (automationId: string): Promise<void> => {
       try {
-        await jobService.rejectJob(jobId);
+        await automationService.rejectAutomation(automationId);
         
-        // Update local state - remove the rejected job
-        setJobs(prev => prev.filter(job => job.id !== jobId));
+        // Update local state - remove the rejected automation
+        setAutomations(prev => prev.filter(automation => automation.id !== automationId));
         
-        toast.success('Job rejected successfully');
+        toast.success('Automation rejected successfully');
       } catch (err) {
-        console.error('Error rejecting job:', err);
-        toast.error('Failed to reject job');
+        console.error('Error rejecting automation:', err);
+        toast.error('Failed to reject automation');
         throw err;
       }
     },
-    [jobService]
+    [automationService]
+  );
+  
+  // Function to revert an automation
+  const revertAutomation = useCallback(
+    async (automationId: string): Promise<void> => {
+      try {
+        await automationService.revertAutomation(automationId);
+        
+        // Update local state - mark as reverted or remove
+        setAutomations(prev => prev.filter(automation => automation.id !== automationId));
+        
+        toast.success('Automation reverted successfully');
+      } catch (err) {
+        console.error('Error reverting automation:', err);
+        toast.error('Failed to revert automation');
+        throw err;
+      }
+    },
+    [automationService]
   );
   
   return {
-    jobs,
-    isLoading,
+    automations,
+    loading,
     error,
-    approveJob,
-    rejectJob
+    approveAutomation,
+    rejectAutomation,
+    revertAutomation,
+    refreshAutomations
   };
 } 

@@ -32,7 +32,11 @@ const RESOURCE_ID_COLUMNS = {
 /**
  * Repository for categorization-related operations
  */
-export class CategorizationRepository extends BaseRepository {
+export class CategorizationRepository extends BaseRepository<Record<string, any>> {
+  constructor(client: any) {
+    super(client, 'categorization');
+  }
+
   /**
    * Generate a resource object from a database entity
    */
@@ -84,71 +88,71 @@ export class CategorizationRepository extends BaseRepository {
   /**
    * Prepare an insert object for a category junction table
    */
-  prepareCategoryJunction(resource: Resource, categoryId: string, jobActionId?: string) {
+  prepareCategoryJunction(resource: Resource, categoryId: string, automationActionId?: string) {
     const idColumn = this.getResourceIdColumn(resource.type);
     
     return {
       [idColumn]: resource.id,
       category_id: categoryId,
-      job_action_id: jobActionId || null,
-      created_by: jobActionId ? 'job' : 'user'
+      automation_action_id: automationActionId || null,
+      created_by: automationActionId ? 'automation' : 'user'
     };
   }
 
   /**
    * Prepare an insert object for a tag junction table
    */
-  prepareTagJunction(resource: Resource, tagId: string, jobActionId?: string) {
+  prepareTagJunction(resource: Resource, tagId: string, automationActionId?: string) {
     const idColumn = this.getResourceIdColumn(resource.type);
     
     return {
       [idColumn]: resource.id,
       tag_id: tagId,
-      job_action_id: jobActionId || null,
-      created_by: jobActionId ? 'job' : 'user'
+      automation_action_id: automationActionId || null,
+      created_by: automationActionId ? 'automation' : 'user'
     };
   }
 
   /**
-   * Find job action ID for a category assigned to a resource
+   * Find automation action ID for a category assigned to a resource
    */
-  async findCategoryJobAction(resource: Resource, categoryId: string): Promise<string | null> {
+  async findCategoryAutomationAction(resource: Resource, categoryId: string): Promise<string | null> {
     const junctionTable = this.getCategoryJunctionTable(resource.type);
     const idColumn = this.getResourceIdColumn(resource.type);
     
     const { data, error } = await this.client
       .from(junctionTable)
-      .select('job_action_id')
+      .select('automation_action_id')
       .eq(idColumn, resource.id)
       .eq('category_id', categoryId)
       .single();
     
-    if (error || !data || !data.job_action_id) {
+    if (error || !data || !data.automation_action_id) {
       return null;
     }
     
-    return data.job_action_id;
+    return data.automation_action_id;
   }
 
   /**
-   * Find job action ID for a tag assigned to a resource
+   * Find automation action ID for a tag assigned to a resource
    */
-  async findTagJobAction(resource: Resource, tagId: string): Promise<string | null> {
+  async findTagAutomationAction(resource: Resource, tagId: string): Promise<string | null> {
     const junctionTable = this.getTagJunctionTable(resource.type);
     const idColumn = this.getResourceIdColumn(resource.type);
     
     const { data, error } = await this.client
       .from(junctionTable)
-      .select('job_action_id')
+      .select('automation_action_id')
       .eq(idColumn, resource.id)
       .eq('tag_id', tagId)
       .single();
     
-    if (error || !data || !data.job_action_id) {
+    if (error || !data || !data.automation_action_id) {
       return null;
     }
     
-    return data.job_action_id;
+    return data.automation_action_id;
   }
 
   /**
@@ -183,8 +187,10 @@ export class CategorizationRepository extends BaseRepository {
 
   /**
    * Find tag by name
+   * @param name The tag name to search for
+   * @param userId Optional user ID (not used for filtering, kept for API compatibility)
    */
-  async findTagByName(name: string) {
+  async findTagByName(name: string, userId?: string) {
     const { data, error } = await this.client
       .from('tags')
       .select('*')
