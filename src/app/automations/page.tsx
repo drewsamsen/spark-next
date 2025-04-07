@@ -353,7 +353,7 @@ export default function ContextAutomationsPage() {
   return (
     <div className="container mx-auto px-2 sm:px-4 py-6 max-w-screen-xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Context Automations</h1>
+        <h1 className="text-2xl font-bold mb-2">Automation Logs</h1>
         <p className="text-gray-500 dark:text-gray-400">
           Manage and review categorization automations for your content
         </p>

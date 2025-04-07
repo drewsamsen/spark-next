@@ -1,5 +1,5 @@
 import { inngest } from "../../../inngest/client";
-import { getRepositories } from "@/repositories";
+import { getRepositories, getServerRepositories } from "@/repositories";
 import { Resource, ResourceType } from "@/lib/categorization/types";
 import { markAsError, markAsLastStep } from "../../utils/function-conventions";
 import { HighlightWithRelations } from "@/lib/types";
@@ -90,7 +90,7 @@ export const tagRandomHighlights = inngest.createFunction(
       // Step 1: Check if tag exists or create it
       const tagCheckResult = await step.run("check-tag-exists", async () => {
         logger.info("Checking if tag exists");
-        const repos = getRepositories();
+        const repos = getServerRepositories();
         
         const existingTag = await repos.categorization.findTagByName('automation-test', userId);
         if (existingTag.data) {
@@ -120,7 +120,7 @@ export const tagRandomHighlights = inngest.createFunction(
         logger.info("Selecting random highlights");
         
         try {
-          const repos = getRepositories();
+          const repos = getServerRepositories();
           // Use the repository method to get random highlights with explicit userId
           const randomHighlights = await repos.highlights.getRandomHighlights(5, userId);
           
@@ -171,7 +171,7 @@ export const tagRandomHighlights = inngest.createFunction(
         logger.info("Creating context automation for tagging highlights");
         
         try {
-          const repos = getRepositories();
+          const repos = getServerRepositories();
           
           // Build list of actions for this automation
           const actions: AutomationAction[] = [];
