@@ -65,14 +65,23 @@ export async function POST(request: NextRequest) {
         try {
           console.log(`Reverting automation ${automationId} using repository pattern`);
           
-          // Update automation status to reverted using repository methods
+          // Get the automation to get the user ID
+          const automation = await repos.automations.getAutomationById(automationId);
+          if (!automation) {
+            return { 
+              success: false, 
+              error: 'Automation not found'
+            };
+          }
+          
+          // First get all executed actions for this automation to revert their effects
+          await repos.automations.revertAutomationActions(automationId, automation.user_id);
+          
+          // Then update automation status to reverted
           await repos.automations.updateAutomationStatus(automationId, 'reverted');
           
-          // Mark all executed actions as reverted
+          // Then mark all executed actions as reverted
           await repos.automations.updateAllActionStatusForAutomation(automationId, 'reverted', { currentStatus: 'executed' });
-          
-          // Get all executed actions for this automation to revert their effects
-          await repos.automations.revertAutomationActions(automationId);
           
           return { success: true, automationId };
         } catch (error) {

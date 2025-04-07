@@ -149,18 +149,21 @@ export class AutomationsRepository extends BaseRepository<AutomationModel> {
    * Get executed automation actions
    */
   async getExecutedAutomationActions(automationId: string): Promise<AutomationActionModel[]> {
+    console.log(`Getting executed actions for automation ${automationId}`);
+    
     const { data, error } = await this.client
       .from('automation_actions')
       .select('*')
       .eq('automation_id', automationId)
-      .eq('status', 'executed')
+      // .eq('status', 'executed')  // Comment this out
       .order('executed_at', { ascending: true });
     
     if (error) {
+      console.error(`Error fetching executed actions:`, error);
       throw new DatabaseError(`Error fetching executed actions for automation ${automationId}`, error);
     }
     
-    // Return data directly since column is now named correctly
+    console.log(`Found ${data.length} executed actions`);
     return data as AutomationActionModel[];
   }
 
@@ -262,11 +265,12 @@ export class AutomationsRepository extends BaseRepository<AutomationModel> {
    * Revert an automation - directly updates the automation and actions status without calling a stored procedure
    * The actual reversion of effects is handled by revertAutomationActions
    */
-  async revertAutomation(automationId: string): Promise<void> {
-    // Update automation status to reverted
-    await this.updateAutomationStatus(automationId, 'reverted');
+  async revertAutomation(automationId: string, userId?: string): Promise<void> {
+    // First delete the data
+    await this.revertAutomationActions(automationId, userId);
     
-    // Mark all executed actions as reverted
+    // Only then update the statuses
+    await this.updateAutomationStatus(automationId, 'reverted');
     await this.updateAllActionStatusForAutomation(automationId, 'reverted', { currentStatus: 'executed' });
   }
 
@@ -600,9 +604,29 @@ export class AutomationsRepository extends BaseRepository<AutomationModel> {
   /**
    * Revert all actions of an automation
    */
-  async revertAutomationActions(automationId: string): Promise<void> {
+  async revertAutomationActions(automationId: string, userId?: string): Promise<void> {
+    console.log(`Starting revertAutomationActions for automation ${automationId}`);
+    
     // Get all executed actions for this automation
     const actions = await this.getExecutedAutomationActions(automationId);
+    console.log(`Found ${actions.length} executed actions to revert`);
+    
+    // If no actions, log that
+    if (actions.length === 0) {
+      console.log(`No executed actions found for automation ${automationId}`);
+      return;
+    }
+
+    // Get user ID from parameter or from session as fallback
+    const userIdToUse = userId || await this.getUserId().catch(err => {
+      console.error('Failed to get user ID from session', err);
+      return null;
+    });
+    
+    if (!userIdToUse) {
+      console.error('No user ID available for reversion, cannot proceed');
+      throw new Error('No user ID available');
+    }
     
     // Process actions in reverse order (LIFO)
     for (const action of actions.reverse()) {
@@ -614,38 +638,60 @@ export class AutomationsRepository extends BaseRepository<AutomationModel> {
         const resource: Resource = {
           id: target_id,
           type: target,
-          userId: await this.getUserId() // We need to get the current user ID
+          userId: userIdToUse
         };
         
         // Remove category from resource
         const junctionTable = this.getCategoryJunctionTable(target);
         const idColumn = this.getResourceIdColumn(target);
         
-        await this.client
-          .from(junctionTable)
-          .delete()
-          .eq(idColumn, target_id)
-          .eq('category_id', category_id)
-          .eq('automation_action_id', action.id);
+        try {
+          const { data, error } = await this.client
+            .from(junctionTable)
+            .delete()
+            .eq('automation_action_id', action.id)
+            .select();
+          
+          if (error) {
+            console.error(`Failed to delete from ${junctionTable}:`, error);
+            throw error;
+          }
+          
+          console.log(`Deleted ${data?.length || 0} rows from ${junctionTable}`);
+        } catch (err) {
+          console.error(`Error during delete operation:`, err);
+          throw err;
+        }
       } 
       else if (actionData.action === 'add_tag') {
         const { target, target_id, tag_id } = actionData as AddTagActionData;
         const resource: Resource = {
           id: target_id,
           type: target,
-          userId: await this.getUserId()
+          userId: userIdToUse
         };
         
         // Remove tag from resource
         const junctionTable = this.getTagJunctionTable(target);
         const idColumn = this.getResourceIdColumn(target);
         
-        await this.client
-          .from(junctionTable)
-          .delete()
-          .eq(idColumn, target_id)
-          .eq('tag_id', tag_id)
-          .eq('automation_action_id', action.id);
+        try {
+          const { data, error } = await this.client
+            .from(junctionTable)
+            .delete()
+            .eq('automation_action_id', action.id)
+            .select();
+          
+          if (error) {
+            console.error(`Failed to delete from ${junctionTable}:`, error);
+            throw error;
+          }
+          
+          console.log(`Deleted ${data?.length || 0} rows from ${junctionTable}`);
+        } catch (err) {
+          console.error(`Error during delete operation:`, err);
+          throw err;
+        }
       }
       // For now, we don't attempt to undo category/tag creation
       // This could be implemented in the future if needed
