@@ -40,5 +40,6 @@ export * from './useSidebarVisibility';
 export * from './useSidebarSelection';
 export * from './useActiveItemTracking';
 export * from './useSidebarSearch';
+export { useSidebarData } from './useSidebarData';
 
 // Add additional hooks as needed 

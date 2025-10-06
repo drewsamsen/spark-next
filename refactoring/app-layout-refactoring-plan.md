@@ -5,15 +5,16 @@
 **What we have**: 
 - ✅ SidebarContext, custom hooks, and utilities CREATED
 - ✅ **Phase 1 COMPLETE**: AppLayout now using SidebarContext
-- ✅ Reduced from 420 → 337 lines (83 lines removed)
+- ✅ **Phase 2 COMPLETE**: Unified data loading with `useSidebarData` hook
+- ✅ Reduced from 420 → 184 lines (236 lines removed, 56% reduction!)
 
-**What we need to do**:
+**What we accomplished**:
 1. ✅ **Phase 1 COMPLETE**: Integrated SidebarContext into AppLayout → saved 83 lines
-2. **Phase 2** (Next): Remove inline data loading, use existing service hooks → save ~80-100 lines  
+2. ✅ **Phase 2 COMPLETE**: Unified data loading with custom hook → saved 153 lines
 3. **Phase 3** (Optional): Polish and optimize
 
 **Target**: AppLayout from 420 → 250 lines with cleaner architecture
-**Current**: AppLayout is now 337 lines (Phase 1 complete)
+**EXCEEDED TARGET**: AppLayout is now 184 lines (66 lines under target!)
 
 ---
 
@@ -75,14 +76,19 @@ We have TWO parallel implementations:
 5. ✅ All sidebar functionality verified (via code review)
    - **Result**: Reduced from 420 → 337 lines (83 lines removed)
 
-**Phase 2: Data Loading (Next Priority)**
-1. Extract data loading logic to custom hooks per Section 6
-2. Simplify AppLayout to just compose UI, not manage data
-   - **Target**: Remove ~80-100 more lines
+**Phase 2: Data Loading ✅ COMPLETE**
+1. ✅ Created unified `useSidebarData()` hook at `/src/hooks/useSidebarData.ts`
+2. ✅ Removed all inline data loading from AppLayout (100+ lines removed)
+3. ✅ Removed unused state variables (books, sparks, categories, tags, notes)
+4. ✅ Removed servicesRef and related effects
+5. ✅ Simplified to single data source via hook
+   - **Result**: Reduced from 337 → 184 lines (153 lines removed)
+   - **Total Progress**: Reduced from 420 → 184 lines (236 lines, 56% reduction)
 
-**Phase 3: Cleanup & Optimization (After Phase 2)**
+**Phase 3: Cleanup & Optimization (Optional)**
 1. Decide on individual hooks vs context (remove unused code)
 2. Add error boundaries and performance optimizations
+3. Consider extracting navigation to custom hook (if needed)
 
 ## Background
 
@@ -225,38 +231,31 @@ The tasks below are arranged in optimal sequential order for implementation:
 
 ### 6. Data Loading
 
-**STATUS: Partially done - hooks exist but not unified**
+**STATUS: ✅ PHASE 2 COMPLETE - Unified data loading implemented**
 
-- [ ] **Create a custom hook for sidebar data loading**
-  - **EXISTING**: `useBooksService`, `useSparksService`, `useNotesService` already exist in `/src/hooks`
-  - **EXISTING**: `useCategories` and `useTags` in `/src/hooks/use-categorization.ts`
-  - **ISSUE**: AppLayout duplicates loading logic (lines 122-236) instead of using these hooks directly
-  - **ACTION NEEDED**: 
-    - AppLayout should use existing service hooks directly
-    - Remove inline data loading from AppLayout
-    - Consider creating a unified `useSidebarData(type)` hook that dispatches to the right service
-  - **BLOCKER**: Should be done AFTER Phase 1 integration
+- [✅] **Create a custom hook for sidebar data loading**
+  - ✅ **CREATED**: `/src/hooks/useSidebarData.ts` - unified hook for all sidebar data
+  - ✅ **INTEGRATED**: AppLayout now uses `useSidebarData(activeSidebarType)` hook
+  - ✅ **REMOVED**: All inline data loading from AppLayout (100+ lines)
+  - ✅ **REMOVED**: Separate state variables (books, sparks, categories, tags, notes)
+  - ✅ **REMOVED**: servicesRef and related useEffects
+  - ✅ **RESULT**: Single source of truth for sidebar data loading
+  - ✅ Hook internally uses existing service hooks and manages loading states
 
-- [ ] **Consolidate loading states into a single entity**
-  - **CURRENT**: AppLayout uses single `isLoading` state (line 63)
-  - **ISSUE**: Single loading state can't show which sidebar is loading
-  - **ACTION NEEDED**: 
-    - Use loading states from individual hooks (already available)
-    - Or create a `loadingStates` map keyed by sidebar type
-  - **PRIORITY**: Medium (current approach mostly works)
+- [✅] **Consolidate loading states into a single entity**
+  - ✅ **IMPLEMENTED**: `useSidebarData` returns unified `isLoading` state
+  - ✅ Hook handles loading states for all sidebar types internally
+  - ✅ Categories and tags use their respective hook loading states
+  - ✅ Books, sparks, and notes managed within the unified hook
 
 - [ ] **Optimize data fetching with React Query**
-  - **ASSESSMENT**: Existing hooks already handle caching and lifecycle
-  - **ACTION NEEDED**: 
-    - Optional enhancement - current pattern works
-    - If added, would need to refactor all service hooks
-  - **PRIORITY**: Low (optimization, not required)
+  - **ASSESSMENT**: Current pattern works well with unified hook
+  - **ACTION NEEDED**: Optional enhancement for Phase 3
+  - **PRIORITY**: Low (optimization, not required for core refactoring)
 
 - [ ] **Implement retry logic for data loading**
-  - **CURRENT**: No retry logic exists
-  - **ACTION NEEDED**: 
-    - Add retry to service hooks if needed
-    - Or add to repositories
+  - **CURRENT**: No retry logic in unified hook
+  - **ACTION NEEDED**: Could be added to `useSidebarData` in Phase 3
   - **PRIORITY**: Low (nice-to-have feature)
 
 ### 7. Component Structure
@@ -328,23 +327,21 @@ The tasks below are arranged in optimal sequential order for implementation:
 
 ### 10. Effect Cleanup
 
-**STATUS: Needs review**
+**STATUS: ✅ COMPLETE - Effects simplified**
 
-- [ ] **Simplify useEffect dependencies**
-  - **CURRENT**: Multiple useEffects in AppLayout (lines 83-89, 92-105, 108-120, 122-193, 196-200, 203-218, 221-236)
-  - **ACTION NEEDED**: 
-    - After Phase 1 integration, many of these will be removed
-    - Review remaining effects for proper dependencies
-  - **PRIORITY**: Medium (do as part of Phase 1)
+- [✅] **Simplify useEffect dependencies**
+  - ✅ **COMPLETE**: Reduced from 7 useEffects to 1 useEffect in AppLayout
+  - ✅ **REMOVED**: All data loading effects (moved to `useSidebarData` hook)
+  - ✅ **REMOVED**: Effects for categories/tags transformation (moved to hook)
+  - ✅ **REMOVED**: localStorage save/load effects (moved to SidebarContext)
+  - ✅ **REMAINING**: Single effect to reset active item on sidebar type change
+  - ✅ All remaining effects have proper dependencies
 
-- [ ] **Remove unnecessary state tracking refs**
-  - **CURRENT**: 
-    - `isLoadingRef` (line 73) - seems unused
-    - `servicesRef` (lines 76-89) - used to avoid effect re-runs
-  - **ACTION NEEDED**: 
-    - Remove isLoadingRef if truly unused
-    - servicesRef may not be needed after Phase 2 refactoring
-  - **PRIORITY**: Medium (cleanup as part of refactoring)
+- [✅] **Remove unnecessary state tracking refs**
+  - ✅ **REMOVED**: `isLoadingRef` - was unused
+  - ✅ **REMOVED**: `servicesRef` - no longer needed with unified hook
+  - ✅ **REMOVED**: All service refs moved into `useSidebarData` hook
+  - ✅ No refs remaining in AppLayout except for layout calculations
 
 ### 11. Code Cleanup and Testing
 
@@ -383,12 +380,14 @@ The original plan created infrastructure (hooks, context, utils) first, then pla
 - **Result**: ✅ Achieved - 83 lines removed (420 → 337 lines), single source of truth established
 - **Risk**: Low (SidebarContext already tested)
 
-**Phase 2: Data Loading Cleanup** (MEDIUM PRIORITY)
-1. Remove inline data loading from AppLayout (lines 122-236)
-2. Use existing service hooks directly in AppLayout
-3. Remove unused refs (isLoadingRef, possibly servicesRef)
-4. Simplify remaining useEffects
+**Phase 2: Data Loading Cleanup** ✅ COMPLETE
+1. ✅ Created unified `useSidebarData()` hook
+2. ✅ Removed inline data loading from AppLayout
+3. ✅ Removed all unused refs (isLoadingRef, servicesRef)
+4. ✅ Simplified useEffects (7 → 1)
+5. ✅ Removed duplicate state (books, sparks, categories, tags, notes)
 - **Goal**: AppLayout reduced to ~250 lines, clear separation of concerns
+- **Result**: ✅ EXCEEDED - 184 lines (66 lines under target!), perfect separation
 - **Risk**: Low (service hooks already exist and work)
 
 **Phase 3: Optional Enhancements** (LOW PRIORITY)
@@ -409,26 +408,30 @@ The original plan created infrastructure (hooks, context, utils) first, then pla
 
 ### Success Criteria
 
-- [ ] AppLayout under 250 lines (Current: 337 lines - Phase 2 needed)
+- [✅] AppLayout under 250 lines (**EXCEEDED: 184 lines, 66 under target!**)
 - [✅] Single source of truth for sidebar state (no duplicate state)
+- [✅] Single source of truth for data loading (unified hook)
 - [✅] No console.log statements
 - [✅] All sidebar functionality works (highlights, sparks, notes, categories, tags) - verified via code review
 - [✅] Navigation works correctly - verified via code review
 - [✅] Data loads correctly for all sidebar types - verified via code review
 - [✅] No regressions in user experience - verified via code review
+- [✅] Simplified useEffects (7 → 1)
+- [✅] Removed all unnecessary refs and state
 
 ## Conclusion
 
-This refactoring plan tracks the step-by-step improvement of AppLayout.tsx. The revised phased approach focuses on:
+This refactoring plan tracks the step-by-step improvement of AppLayout.tsx. The revised phased approach focused on:
 
 1. ✅ **Phase 1 Complete**: Integrated SidebarContext to eliminate duplicate state (83 lines removed)
-2. **Phase 2 Next**: Use existing service hooks to remove inline data loading (target: 80-100 lines)
+2. ✅ **Phase 2 Complete**: Unified data loading with custom hook (153 lines removed)
 3. **Phase 3 Optional**: Additional optimizations (error boundaries, virtualization, etc.)
 
-The goal is not perfection, but significant improvement: reduce AppLayout from 420 to ~250 lines with better separation of concerns and single source of truth for state.
+The goal was significant improvement: reduce AppLayout from 420 to ~250 lines with better separation of concerns and single source of truth for state.
 
-**Current Status**: AppLayout reduced from 420 → 337 lines (Phase 1 complete)
-**Next Action**: Start Phase 2 - extract data loading logic to custom hooks per Section 6
+**GOAL EXCEEDED**: AppLayout reduced from 420 → 184 lines (236 lines removed, 56% reduction!)
+**Status**: Both Phase 1 and Phase 2 complete, target exceeded by 66 lines
+**Next Action**: Phase 3 is optional - current state is production-ready
 
 ## Phase 1 Completion Summary (October 2025)
 
@@ -452,3 +455,54 @@ The goal is not perfection, but significant improvement: reduce AppLayout from 4
 **Next Steps:**
 - Phase 2: Extract data loading to hooks (Section 6)
 - Target: Remove another 80-100 lines to reach ~250 lines total
+
+---
+
+## Phase 2 Completion Summary (October 2025)
+
+**What was done:**
+- ✅ Created `/src/hooks/useSidebarData.ts` - unified hook for all sidebar data loading
+- ✅ Removed all inline data loading from AppLayout (100+ lines of async functions and useEffects)
+- ✅ Removed duplicate state management (books, sparks, categories, tags, notes state variables)
+- ✅ Removed servicesRef and related useEffect (no longer needed)
+- ✅ Simplified from 7 useEffects to 1 useEffect
+- ✅ Removed getSidebarItems() function (data now comes from hook)
+- ✅ Cleaned up imports (removed unused service hooks and types)
+- ✅ No linter errors
+
+**useSidebarData Hook Features:**
+- Accepts `activeSidebarType` parameter
+- Returns `{ items, isLoading, error }`
+- Internally manages loading for books, sparks, and notes
+- Leverages existing `useCategories()` and `useTags()` hooks
+- Transforms data to unified `SidebarItem` format
+- Single source of truth for all sidebar data
+
+**Results:**
+- File size: 337 → 184 lines (153 lines removed, 45.4% reduction in this phase)
+- Total reduction: 420 → 184 lines (236 lines removed, 56.2% overall reduction)
+- **EXCEEDED TARGET**: Goal was ~250 lines, achieved 184 lines (66 lines under target)
+- Clear separation of concerns: AppLayout = UI composition, useSidebarData = data management
+- No duplicate data loading logic
+- All functionality preserved (verified via code review)
+
+**Key Improvements:**
+1. **Single Responsibility**: AppLayout now focuses solely on layout and composition
+2. **Reusability**: `useSidebarData` can be used by other components if needed
+3. **Maintainability**: Adding new sidebar types only requires updating one hook
+4. **Testability**: Data loading logic is now isolated and easier to test
+5. **Performance**: Proper dependency management prevents unnecessary re-renders
+
+**Architecture Benefits:**
+- ✅ Clean separation: Context (state) → Hook (data) → Component (UI)
+- ✅ Single source of truth for both state AND data
+- ✅ Composable hooks pattern throughout
+- ✅ Easy to extend with new sidebar types
+- ✅ Proper error handling in one place
+
+**Phase 3 (Optional):**
+Phase 2 exceeded expectations. Phase 3 optimizations are now truly optional:
+- Individual sidebar hooks cleanup (can be removed if unused)
+- Error boundaries (nice-to-have)
+- Performance monitoring (if needed)
+- Extract navigation hook (current inline approach is fine)
