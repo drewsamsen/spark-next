@@ -36,10 +36,6 @@ export { useSparks } from './use-sparks';
 export { useNotesService } from './use-notes-service';
 
 // Export new sidebar hooks
-export * from './useSidebarVisibility';
-export * from './useSidebarSelection';
-export * from './useActiveItemTracking';
-export * from './useSidebarSearch';
 export { useSidebarData } from './useSidebarData';
 
 // Add additional hooks as needed 
