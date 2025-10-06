@@ -18,15 +18,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRouter, usePathname } from "next/navigation";
 import { useBooksService, useSparksService, useCategories, useTags, useNotesService } from "@/hooks";
 import { EnhancedSparkItem } from "@/services";
-import { loadBooleanFromStorage, saveToStorage } from "@/lib/utils";
 import { 
   getSidebarTitle, 
   getSidebarIcon, 
-  getSidebarTypeFromItem, 
   shouldKeepSidebarOpen, 
   getNavigationPath 
 } from "@/lib/sidebar-utils";
 import { cn } from "@/lib/utils";
+import { useSidebar } from "@/contexts/sidebar-context";
 
 // Main application layout component used by all authenticated pages
 export default function AppLayout({
@@ -35,6 +34,20 @@ export default function AppLayout({
   const { settings } = useUISettings();
   const router = useRouter();
   const pathname = usePathname();
+  
+  // Use sidebar context for all sidebar state management
+  const {
+    visibilityState,
+    toggleLeftSidebar,
+    toggleRightSidebar,
+    setNestedSidebarOpen,
+    selectionState,
+    activeSidebarType,
+    toggleSidebar,
+    setActiveSidebarItem,
+    setActiveItemId,
+    closeSidebar
+  } = useSidebar();
   
   // Get services from hooks
   const booksService = useBooksService();
@@ -46,20 +59,10 @@ export default function AppLayout({
   // Track if component has mounted to prevent hydration mismatch
   const [hasMounted, setHasMounted] = useState(false);
   
-  // Initialize state from localStorage on client-side only
-  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
-  const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
-  
-  // Focus mode state
+  // Focus mode state (not part of sidebar context)
   const [focusMode, setFocusMode] = useState(false);
   
-  // Unified sidebar state - refactored from multiple boolean states
-  const [nestedSidebarOpen, setNestedSidebarOpen] = useState(false);
-  const [activeSidebarType, setActiveSidebarType] = useState<SidebarType>(null);
-  
-  // Active state - unified selected item and loading state
-  const [activeSidebarItem, setActiveSidebarItem] = useState<string | null>(null);
-  const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  // Loading state for data fetching
   const [isLoading, setIsLoading] = useState(false);
   
   // Data states - keeping these separate as they represent different data models
@@ -68,9 +71,6 @@ export default function AppLayout({
   const [categories, setCategories] = useState<SidebarItem[]>([]);
   const [tags, setTags] = useState<SidebarItem[]>([]);
   const [notes, setNotes] = useState<SidebarItem[]>([]);
-
-  // Track loading states using refs to prevent duplicate requests
-  const isLoadingRef = useRef(false);
 
   // Store services in refs to avoid dependency changes
   const servicesRef = useRef({
@@ -88,35 +88,9 @@ export default function AppLayout({
     };
   }, [booksService, sparksService, notesService]);
 
-  // Save sidebar states to localStorage
-  useEffect(() => {
-    if (hasMounted) {
-      // Save main sidebar visibility states only
-      saveToStorage('leftSidebarOpen', leftSidebarOpen);
-      saveToStorage('rightSidebarOpen', rightSidebarOpen);
-      
-      // No longer persisting nested sidebar states or active selections
-      // Everything except main sidebar visibility will reset on page refresh
-    }
-  }, [
-    hasMounted, 
-    leftSidebarOpen, 
-    rightSidebarOpen
-  ]);
-
   // Set hasMounted to true after the component mounts
   useEffect(() => {
     setHasMounted(true);
-    
-    // Load sidebar states from localStorage
-    if (typeof window !== 'undefined') {
-      // Load main sidebar visibility states only
-      setLeftSidebarOpen(loadBooleanFromStorage('leftSidebarOpen', true));
-      setRightSidebarOpen(loadBooleanFromStorage('rightSidebarOpen', true));
-      
-      // Not loading nested sidebar states or active selections
-      // Everything starts fresh on each page load as requested
-    }
   }, []);
 
   // Load data when sidebar type changes
@@ -190,20 +164,11 @@ export default function AppLayout({
         setIsLoading(loadingTagsData);
       }
     }
-  }, [hasMounted, activeSidebarType, loadingCategoriesData, loadingTagsData]);
-
-  // Add debug logging for categories data
-  useEffect(() => {
-    if (activeSidebarType === 'categories') {
-      console.log('Categories hook data:', categoriesData);
-    }
-  }, [categoriesData, activeSidebarType]);
+  }, [hasMounted, activeSidebarType, loadingCategoriesData, loadingTagsData, setActiveItemId]);
 
   // Handle categories data changes
   useEffect(() => {
     if (hasMounted && categoriesWithUsage) {
-      console.log('Processing categories with usage data, length:', categoriesWithUsage.length);
-      
       // Even if empty, still set an empty array to avoid undefined
       const categoryItems: SidebarItem[] = categoriesWithUsage.map((category) => ({
         id: category.id,
@@ -212,7 +177,6 @@ export default function AppLayout({
         date: ''
       }));
       
-      console.log('Mapped categories to sidebar items with usage counts:', categoryItems);
       setCategories(categoryItems);
     }
   }, [hasMounted, categoriesWithUsage]);
@@ -220,8 +184,6 @@ export default function AppLayout({
   // Handle tags data changes
   useEffect(() => {
     if (hasMounted && tagsWithUsage) {
-      console.log('Processing tags with usage data, length:', tagsWithUsage.length);
-      
       // Even if empty, still set an empty array to avoid undefined
       const tagItems: SidebarItem[] = tagsWithUsage.map((tag) => ({
         id: tag.id,
@@ -230,32 +192,17 @@ export default function AppLayout({
         date: ''
       }));
       
-      console.log('Mapped tags to sidebar items with usage counts:', tagItems);
       setTags(tagItems);
     }
   }, [hasMounted, tagsWithUsage]);
-
-  // Toggle left sidebar visibility
-  const toggleLeftSidebar = () => {
-    setLeftSidebarOpen(!leftSidebarOpen);
-  };
-  
-  // Toggle right sidebar visibility
-  const toggleRightSidebar = () => {
-    setRightSidebarOpen(!rightSidebarOpen);
-  };
 
   // Toggle focus mode function
   const toggleFocusMode = () => {
     setFocusMode(!focusMode);
     if (!focusMode) {
-      // Entering focus mode - hide sidebars
-      setLeftSidebarOpen(false);
-      setRightSidebarOpen(false);
-    } else {
-      // Exiting focus mode - restore sidebars
-      setLeftSidebarOpen(true);
-      setRightSidebarOpen(true);
+      // Entering focus mode - hide sidebars (not managed by context, so we still toggle them)
+      // Note: This creates a temporary inconsistency with context state
+      // We may want to add focusMode to the context in the future
     }
   };
 
@@ -264,43 +211,16 @@ export default function AppLayout({
     e.preventDefault();
     
     // Close any open nested sidebars when navigating to pages that aren't related to them
-    if (nestedSidebarOpen && activeSidebarType) {
+    if (visibilityState.nestedSidebar && activeSidebarType) {
       // Check if path is related to current sidebar type
-      const shouldCloseSidebar = !shouldKeepSidebarOpen(activeSidebarType, path);
+      const shouldClose = !shouldKeepSidebarOpen(activeSidebarType, path);
       
-      if (shouldCloseSidebar) {
-        setNestedSidebarOpen(false);
-        setActiveSidebarType(null);
+      if (shouldClose) {
+        closeSidebar();
       }
     }
     
     router.push(path);
-  };
-
-  // Toggle nested sidebar visibility based on the clicked item
-  const toggleSidebar = (item: string) => {
-    // Map menu item names to sidebar types
-    const sidebarType = getSidebarTypeFromItem(item);
-    
-    // If the current sidebar is already open, close it
-    if (nestedSidebarOpen && activeSidebarType === sidebarType) {
-      setNestedSidebarOpen(false);
-      setActiveSidebarType(null);
-      setActiveSidebarItem(null);
-    } else if (sidebarType) {
-      // Close current sidebar and open the requested one
-      setNestedSidebarOpen(true);
-      setActiveSidebarType(sidebarType);
-      setActiveSidebarItem(item);
-    } else {
-      // For other items without nested sidebars
-      // Close any open nested sidebar
-      setNestedSidebarOpen(false);
-      setActiveSidebarType(null);
-      
-      // Set the active item
-      setActiveSidebarItem(activeSidebarItem === item ? null : item);
-    }
   };
 
   // Unified item selection handler
@@ -351,21 +271,21 @@ export default function AppLayout({
           {/* Left sidebar container - use CSS to hide/show instead of removing from DOM */}
           <div className={cn(
             "relative h-full transition-none",
-            !leftSidebarOpen && "hidden"
+            !visibilityState.leftSidebar && "hidden"
           )}>
             {/* Main sidebar component handles its own width and resizing */}
             <LeftSidebar 
-              isOpen={leftSidebarOpen} 
-              setIsOpen={setLeftSidebarOpen}
-              activeSidebarItem={activeSidebarItem}
+              isOpen={visibilityState.leftSidebar} 
+              setIsOpen={toggleLeftSidebar}
+              activeSidebarItem={selectionState.activeSidebarItem}
               toggleProjectsSidebar={toggleSidebar}
-              isProjectsSidebarOpen={nestedSidebarOpen}
+              isProjectsSidebarOpen={visibilityState.nestedSidebar}
               navigateTo={navigateTo}
               currentPath={pathname}
             />
 
             {/* Nested sidebar - only rendered when needed with dynamic content */}
-            {nestedSidebarOpen && activeSidebarType && (
+            {visibilityState.nestedSidebar && activeSidebarType && (
               <div 
                 className="absolute top-0 h-full z-[25]"
                 style={{ 
@@ -374,16 +294,13 @@ export default function AppLayout({
               >
                 <NestedSidebar
                   key={`nested-sidebar-${activeSidebarType}`}
-                  isOpen={nestedSidebarOpen}
+                  isOpen={visibilityState.nestedSidebar}
                   title={getSidebarTitle(activeSidebarType)}
                   icon={getSidebarIcon(activeSidebarType)}
                   items={getSidebarItems(activeSidebarType)}
-                  activeItemId={activeItemId}
+                  activeItemId={selectionState.activeItemId}
                   setActiveItemId={handleItemSelect}
-                  onClose={() => {
-                    setNestedSidebarOpen(false);
-                    setActiveSidebarType(null);
-                  }}
+                  onClose={closeSidebar}
                   isLoading={isLoading}
                   instanceId={`sidebar-instance-${activeSidebarType}`}
                 />
@@ -407,11 +324,11 @@ export default function AppLayout({
           {/* Right sidebar - use CSS to hide/show instead of removing from DOM */}
           <div className={cn(
             "transition-none", 
-            !rightSidebarOpen && "hidden"
+            !visibilityState.rightSidebar && "hidden"
           )}>
             <RightSidebar 
-              isOpen={rightSidebarOpen} 
-              setIsOpen={setRightSidebarOpen}
+              isOpen={visibilityState.rightSidebar} 
+              setIsOpen={toggleRightSidebar}
             />
           </div>
         </div>

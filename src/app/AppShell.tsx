@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/AppLayout';
 import { usePathname } from 'next/navigation';
+import { SidebarProvider } from '@/contexts/sidebar-context';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -22,6 +23,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
   
-  // For all other pages, use the app layout
-  return <AppLayout>{children}</AppLayout>;
+  // For all other pages, use the app layout with SidebarProvider
+  return (
+    <SidebarProvider>
+      <AppLayout>{children}</AppLayout>
+    </SidebarProvider>
+  );
 } 
