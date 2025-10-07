@@ -51,9 +51,10 @@ interface AirtableResponse {
  * - Creates sparks in sparks table with md5_uid set
  * - Creates/links categories and tags via junction tables
  * - Updates user_settings with import metadata
+ * - Logs the names of newly created categories and tags
  * 
  * @param event - Contains userId, apiKey, baseId, tableId
- * @returns Summary of imported records with counts and skip reasons
+ * @returns Summary of imported records with counts, skip reasons, and names of newly created categories/tags
  */
 export const airtableImportSparksFn = inngest.createFunction(
   { id: "airtable-import-sparks" },
@@ -390,14 +391,14 @@ export const airtableImportSparksFn = inngest.createFunction(
         
         if (sparks.length === 0) {
           return { 
-            categoriesAdded: 0,
-            tagsAdded: 0,
+            newCategories: [],
+            newTags: [],
             success: true 
           };
         }
         
-        let categoriesAdded = 0;
-        let tagsAdded = 0;
+        const newCategories: string[] = [];
+        const newTags: string[] = [];
         
         for (const spark of sparks) {
           try {
@@ -430,6 +431,8 @@ export const airtableImportSparksFn = inngest.createFunction(
               
               if (newCategory) {
                 categoryId = newCategory.id;
+                newCategories.push(spark.category);
+                logger.info(`Created new category: ${spark.category}`);
               } else {
                 logger.error(`Failed to create category ${spark.category}:`, categoryError);
               }
@@ -445,9 +448,7 @@ export const airtableImportSparksFn = inngest.createFunction(
                   created_by: 'airtable-import'
                 });
               
-              if (!junctionError) {
-                categoriesAdded++;
-              } else {
+              if (junctionError) {
                 logger.error(`Failed to link spark ${spark.sparkId} to category:`, junctionError);
               }
             }
@@ -480,6 +481,8 @@ export const airtableImportSparksFn = inngest.createFunction(
                   
                   if (newTag) {
                     tagId = newTag.id;
+                    newTags.push(tagName);
+                    logger.info(`Created new tag: ${tagName}`);
                   } else {
                     logger.error(`Failed to create tag ${tagName}:`, tagError);
                   }
@@ -495,9 +498,7 @@ export const airtableImportSparksFn = inngest.createFunction(
                       created_by: 'airtable-import'
                     });
                   
-                  if (!junctionError) {
-                    tagsAdded++;
-                  } else {
+                  if (junctionError) {
                     logger.error(`Failed to link spark ${spark.sparkId} to tag:`, junctionError);
                   }
                 }
@@ -510,11 +511,16 @@ export const airtableImportSparksFn = inngest.createFunction(
           }
         }
         
-        logger.info(`Categories and tags added: ${categoriesAdded} categories, ${tagsAdded} tags`);
+        logger.info(`Categories and tags processed`, {
+          newCategoriesCount: newCategories.length,
+          newCategories,
+          newTagsCount: newTags.length,
+          newTags
+        });
         
         return {
-          categoriesAdded,
-          tagsAdded,
+          newCategories,
+          newTags,
           success: true
         };
       });
@@ -585,8 +591,8 @@ export const airtableImportSparksFn = inngest.createFunction(
           noCategory: processResult.skipped.noCategory,
           noTags: processResult.skipped.noTags
         },
-        categoriesAdded: categorizationResult.categoriesAdded,
-        tagsAdded: categorizationResult.tagsAdded
+        newCategories: categorizationResult.newCategories,
+        newTags: categorizationResult.newTags
       });
       
       return markAsLastStep({
@@ -599,8 +605,8 @@ export const airtableImportSparksFn = inngest.createFunction(
         skippedNoContent: processResult.skipped.noContent,
         skippedNoCategory: processResult.skipped.noCategory,
         skippedNoTags: processResult.skipped.noTags,
-        categoriesAdded: categorizationResult.categoriesAdded,
-        tagsAdded: categorizationResult.tagsAdded
+        newCategories: categorizationResult.newCategories,
+        newTags: categorizationResult.newTags
       });
     } catch (error) {
       logger.error("Error in Airtable import function:", error);
