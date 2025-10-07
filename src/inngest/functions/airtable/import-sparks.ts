@@ -24,6 +24,26 @@ interface AirtableResponse {
 }
 
 /**
+ * Apply text replacements to clean up spark content
+ */
+function cleanSparkContent(content: string): string {
+  let cleaned = content;
+  
+  // Apply replacements (case-insensitive)
+  const replacements: Array<[RegExp, string]> = [
+    [/\bxtians\b/gi, 'Christians'],
+    [/\bxtian\b/gi, 'Christian'],
+    [/\bq for\b/gi, 'question for'],
+  ];
+  
+  for (const [pattern, replacement] of replacements) {
+    cleaned = cleaned.replace(pattern, replacement);
+  }
+  
+  return cleaned;
+}
+
+/**
  * Import sparks from Airtable "Thoughts Manager" base.
  * Fetches records from the "Thoughts All" table and creates sparks in Supabase.
  * 
@@ -220,12 +240,12 @@ export const airtableImportSparksFn = inngest.createFunction(
             return null;
           }
           
-          // Create a consistent record structure
+          // Create a consistent record structure with cleaned content
           return {
             airtable_id: record.id,
             md5_uid: fields.uid.trim(),
             user_id: userId,
-            body: fields.content.trim(),
+            body: cleanSparkContent(fields.content.trim()),
             category: categoryName.trim(),
             tags: validTags,
             todo_id: fields.toDoId || null,
