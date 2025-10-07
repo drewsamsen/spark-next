@@ -3,10 +3,9 @@ import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import { Metadata } from "next";
 import { ClientProvider } from "@/components/Providers";
-import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import { ThemeAwareToast } from "@/components/theme/ThemeAwareToast";
+import { ThemeProvider, ThemeAwareToast } from "@/components/theme";
 import { UISettingsProvider } from '@/contexts/ui-settings-context';
-import { AuthCheck } from "@/components/auth/AuthCheck";
+import { AuthCheck } from "@/components/auth";
 import AppShell from './AppShell';
 
 export const metadata: Metadata = {

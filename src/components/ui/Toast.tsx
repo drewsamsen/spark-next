@@ -1,7 +1,7 @@
 "use client";
 
 import { toast as toastify, ToastOptions } from "react-toastify";
-import { ThemeAwareToast } from "@/components/theme/ThemeAwareToast";
+import { ThemeAwareToast } from "@/components/theme";
 
 type ToastType = "success" | "error" | "info" | "warning";
 type ToastPosition = "top-right" | "top-center" | "top-left" | "bottom-right" | "bottom-center" | "bottom-left";

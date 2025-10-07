@@ -10,8 +10,8 @@ import {
   Maximize,
   Minimize
 } from "lucide-react";
-import { ModeToggle } from "@/components/theme/ModeToggle";
-import { LogoutButton } from "@/components/auth/LogoutButton";
+import { ModeToggle } from "@/components/theme";
+import { LogoutButton } from "@/components/auth";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { LogoIcon } from "@/components/icons/LogoIcon";
