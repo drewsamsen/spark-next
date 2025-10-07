@@ -7,6 +7,7 @@
 // Form components
 export * from './button';
 export { Input, type InputProps } from './input';
+export { Textarea, type TextareaProps } from './textarea';
 export * from './dropdown-menu';
 export * from './badge';
 export * from './tooltip';

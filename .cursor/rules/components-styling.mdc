@@ -13,6 +13,32 @@ alwaysApply: false
 - Store components in `src/components/` directory
 - Keep components small and focused on a single responsibility
 
+## Component Organization
+
+Components are organized by feature or type in `src/components/`:
+
+**Feature-Based Directories:**
+- `auth/` - Authentication components (LoginForm, AuthCheck, etc.)
+- `FunctionLogs/` - Function logging UI components
+- `Highlights/` - Highlight display and management components
+- `integrations/` - Third-party integration components (Readwise, Airtable)
+- `Layout/` - App layout components (Header, Sidebars, etc.)
+- `ScheduledTasks/` - Scheduled task management components
+- `Sidebar/` - Sidebar-specific components
+- `SparkPreview/` - Spark preview panel components
+
+**Type-Based Directories:**
+- `icons/` - Custom icon components
+- `Providers/` - React context providers
+- `theme/` - Theme and dark mode components
+- `ui/` - Reusable UI primitives (buttons, inputs, tables, etc.)
+
+**Best Practices:**
+- Each feature directory should have an `index.ts` file exporting all components
+- Related components should be co-located in their feature directory
+- Generic/reusable components go in `ui/`
+- Feature-specific components go in their respective feature directory
+
 ## Styling with Tailwind
 
 - Use Tailwind CSS for styling components
