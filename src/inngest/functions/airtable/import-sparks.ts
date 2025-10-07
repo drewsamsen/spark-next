@@ -6,13 +6,13 @@ interface AirtableRecord {
   id: string;
   fields: {
     uid?: string;
-    Text?: string;
-    Notes?: string;
-    Source?: string;
-    Author?: string;
-    URL?: string;
-    Category?: string;
-    Tags?: string[] | string;
+    content?: string;
+    Categories?: string[];  // Array of category record IDs
+    "Name (from Categories)"?: string[];  // Array of category names
+    Tags?: string[];  // Array of tag record IDs
+    "Name (from Tags)"?: string[];  // Array of tag names
+    originallyCreated?: string;
+    toDoId?: string;
     [key: string]: any;
   };
   createdTime?: string;
@@ -28,10 +28,16 @@ interface AirtableResponse {
  * Fetches records from the "Thoughts All" table and creates sparks in Supabase.
  * 
  * VALIDATION REQUIREMENTS:
- * - Text field must be present and non-empty
- * - Category field must be present and non-empty
- * - At least one valid tag must be present
+ * - content field must be present and non-empty
+ * - "Name (from Categories)" must have at least one category name
+ * - "Name (from Tags)" must have at least one tag name
  * - uid field must be present (for deduplication)
+ * 
+ * AIRTABLE DATA STRUCTURE:
+ * - Categories: Array of Airtable record IDs
+ * - "Name (from Categories)": Array of category names (takes first one)
+ * - Tags: Array of Airtable record IDs
+ * - "Name (from Tags)": Array of tag names
  * 
  * DEDUPLICATION:
  * - Uses the existing uid field from Airtable
@@ -157,7 +163,7 @@ export const airtableImportSparksFn = inngest.createFunction(
       const processResult = await step.run("process-airtable-data", async () => {
         logger.info("Processing Airtable data");
         
-        let skippedNoText = 0;
+        let skippedNoContent = 0;
         let skippedNoCategory = 0;
         let skippedNoTags = 0;
         let skippedNoUid = 0;
@@ -173,26 +179,43 @@ export const airtableImportSparksFn = inngest.createFunction(
             return null;
           }
           
-          // Validate Text field
-          if (!fields.Text || typeof fields.Text !== 'string' || fields.Text.trim().length === 0) {
-            skippedNoText++;
+          // Validate content field
+          if (!fields.content || typeof fields.content !== 'string' || fields.content.trim().length === 0) {
+            skippedNoContent++;
             return null;
           }
           
-          // Validate Category field - required
-          if (!fields.Category || typeof fields.Category !== 'string' || fields.Category.trim().length === 0) {
+          // Validate Categories field - required (comes as array of IDs)
+          // Use "Name (from Categories)" to get the actual category name
+          const categoryNames = fields["Name (from Categories)"];
+          if (!categoryNames || !Array.isArray(categoryNames) || categoryNames.length === 0) {
             skippedNoCategory++;
-            logger.debug(`Skipping record ${record.id}: missing or empty Category`);
+            logger.debug(`Skipping record ${record.id}: missing or empty category name`);
+            return null;
+          }
+          
+          // Get the first category name (should only be one)
+          const categoryName = categoryNames[0];
+          if (!categoryName || typeof categoryName !== 'string' || categoryName.trim().length === 0) {
+            skippedNoCategory++;
+            logger.debug(`Skipping record ${record.id}: invalid category name`);
             return null;
           }
           
           // Validate Tags field - must have at least one tag
-          const tags = fields.Tags ? (Array.isArray(fields.Tags) ? fields.Tags : [fields.Tags]) : [];
-          const validTags = tags.filter(tag => typeof tag === 'string' && tag.trim().length > 0);
+          // Use "Name (from Tags)" to get actual tag names
+          const tagNames = fields["Name (from Tags)"];
+          if (!tagNames || !Array.isArray(tagNames) || tagNames.length === 0) {
+            skippedNoTags++;
+            logger.debug(`Skipping record ${record.id}: no valid tags`);
+            return null;
+          }
+          
+          const validTags = tagNames.filter(tag => typeof tag === 'string' && tag.trim().length > 0);
           
           if (validTags.length === 0) {
             skippedNoTags++;
-            logger.debug(`Skipping record ${record.id}: no valid tags`);
+            logger.debug(`Skipping record ${record.id}: no valid tag names`);
             return null;
           }
           
@@ -201,24 +224,21 @@ export const airtableImportSparksFn = inngest.createFunction(
             airtable_id: record.id,
             md5_uid: fields.uid.trim(),
             user_id: userId,
-            body: fields.Text.trim(),
-            note: fields.Notes || null,
-            source: fields.Source || 'Airtable Import',
-            author: fields.Author || null,
-            url: fields.URL || null,
-            category: fields.Category.trim(),
+            body: fields.content.trim(),
+            category: categoryName.trim(),
             tags: validTags,
-            created_at: new Date().toISOString(),
+            todo_id: fields.toDoId || null,
+            todo_created_at: fields.originallyCreated || null,
           };
         }).filter(record => record !== null);
         
         logger.info(`Processed ${processedRecords.length} valid records`, {
           skipped: {
             noUid: skippedNoUid,
-            noText: skippedNoText,
+            noContent: skippedNoContent,
             noCategory: skippedNoCategory,
             noTags: skippedNoTags,
-            total: skippedNoUid + skippedNoText + skippedNoCategory + skippedNoTags
+            total: skippedNoUid + skippedNoContent + skippedNoCategory + skippedNoTags
           }
         });
         
@@ -226,7 +246,7 @@ export const airtableImportSparksFn = inngest.createFunction(
           records: processedRecords,
           skipped: {
             noUid: skippedNoUid,
-            noText: skippedNoText,
+            noContent: skippedNoContent,
             noCategory: skippedNoCategory,
             noTags: skippedNoTags
           },
@@ -250,20 +270,30 @@ export const airtableImportSparksFn = inngest.createFunction(
         // Get all md5_uids from processed records
         const md5Uids = records.map(r => r.md5_uid);
         
-        // Check which ones already exist in the database using md5_uid
-        const { data: existingSparks, error } = await supabase
-          .from('sparks')
-          .select('md5_uid')
-          .eq('user_id', userId)
-          .in('md5_uid', md5Uids);
+        // Check in batches to avoid URI too large errors
+        const batchSize = 100;
+        const existingIds = new Set<string>();
         
-        if (error) {
-          logger.error("Error checking for existing sparks:", error);
-          throw error;
+        for (let i = 0; i < md5Uids.length; i += batchSize) {
+          const batch = md5Uids.slice(i, i + batchSize);
+          logger.info(`Checking batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(md5Uids.length/batchSize)}`);
+          
+          const { data: existingSparks, error } = await supabase
+            .from('sparks')
+            .select('md5_uid')
+            .eq('user_id', userId)
+            .in('md5_uid', batch);
+          
+          if (error) {
+            logger.error("Error checking for existing sparks in batch:", error);
+            throw error;
+          }
+          
+          // Add found IDs to the set
+          if (existingSparks) {
+            existingSparks.forEach(s => existingIds.add(s.md5_uid));
+          }
         }
-        
-        // Create a set of existing md5_uids for fast lookup
-        const existingIds = new Set(existingSparks?.map(s => s.md5_uid) || []);
         
         // Filter out records that already exist
         const newRecords = records.filter(r => !existingIds.has(r.md5_uid));
@@ -286,6 +316,7 @@ export const airtableImportSparksFn = inngest.createFunction(
           logger.info("No new records to import");
           return {
             importedCount: 0,
+            importedSparks: [],
             skippedDuplicates: deduplicationResult.duplicateCount,
             success: true
           };
@@ -304,13 +335,25 @@ export const airtableImportSparksFn = inngest.createFunction(
                 user_id: record.user_id,
                 body: record.body,
                 md5_uid: record.md5_uid,
-                created_at: record.created_at,
+                todo_id: record.todo_id,
+                todo_created_at: record.todo_created_at,
               })
               .select('id')
               .single();
             
-            if (sparkError || !spark) {
-              logger.error(`Error inserting spark for airtable_id ${record.airtable_id}:`, sparkError);
+            if (sparkError) {
+              logger.error(`Supabase error inserting spark for airtable_id ${record.airtable_id}:`, {
+                error: sparkError,
+                message: sparkError.message,
+                details: sparkError.details,
+                hint: sparkError.hint,
+                code: sparkError.code
+              });
+              continue;
+            }
+            
+            if (!spark) {
+              logger.error(`No spark returned for airtable_id ${record.airtable_id} (no error but no data)`);
               continue;
             }
             
@@ -322,7 +365,11 @@ export const airtableImportSparksFn = inngest.createFunction(
             
             importedCount++;
           } catch (error) {
-            logger.error(`Exception inserting spark for airtable_id ${record.airtable_id}:`, error);
+            logger.error(`Exception inserting spark for airtable_id ${record.airtable_id}:`, {
+              error,
+              message: error instanceof Error ? error.message : 'Unknown error',
+              stack: error instanceof Error ? error.stack : undefined
+            });
           }
         }
         
@@ -342,7 +389,11 @@ export const airtableImportSparksFn = inngest.createFunction(
         logger.info(`Adding categories and tags for ${sparks.length} sparks`);
         
         if (sparks.length === 0) {
-          return { success: true };
+          return { 
+            categoriesAdded: 0,
+            tagsAdded: 0,
+            success: true 
+          };
         }
         
         let categoriesAdded = 0;
@@ -356,15 +407,15 @@ export const airtableImportSparksFn = inngest.createFunction(
             let categoryId: string | null = null;
             
             // Try to find existing category
-            const { data: existingCategory } = await supabase
+            const { data: existingCategories } = await supabase
               .from('categories')
               .select('id')
               .eq('slug', categorySlug)
               .eq('user_id', userId)
-              .single();
+              .limit(1);
             
-            if (existingCategory) {
-              categoryId = existingCategory.id;
+            if (existingCategories && existingCategories.length > 0) {
+              categoryId = existingCategories[0].id;
             } else {
               // Create new category
               const { data: newCategory, error: categoryError } = await supabase
@@ -407,15 +458,15 @@ export const airtableImportSparksFn = inngest.createFunction(
                 let tagId: string | null = null;
                 
                 // Try to find existing tag
-                const { data: existingTag } = await supabase
+                const { data: existingTags } = await supabase
                   .from('tags')
                   .select('id')
                   .eq('name', tagName)
                   .eq('user_id', userId)
-                  .single();
+                  .limit(1);
                 
-                if (existingTag) {
-                  tagId = existingTag.id;
+                if (existingTags && existingTags.length > 0) {
+                  tagId = existingTags[0].id;
                 } else {
                   // Create new tag
                   const { data: newTag, error: tagError } = await supabase
@@ -496,7 +547,7 @@ export const airtableImportSparksFn = inngest.createFunction(
                 skipped: {
                   duplicates: importResult.skippedDuplicates,
                   noUid: processResult.skipped.noUid,
-                  noText: processResult.skipped.noText,
+                  noContent: processResult.skipped.noContent,
                   noCategory: processResult.skipped.noCategory,
                   noTags: processResult.skipped.noTags
                 },
@@ -530,7 +581,7 @@ export const airtableImportSparksFn = inngest.createFunction(
         skipped: {
           duplicates: importResult.skippedDuplicates,
           noUid: processResult.skipped.noUid,
-          noText: processResult.skipped.noText,
+          noContent: processResult.skipped.noContent,
           noCategory: processResult.skipped.noCategory,
           noTags: processResult.skipped.noTags
         },
@@ -545,6 +596,7 @@ export const airtableImportSparksFn = inngest.createFunction(
         importedRecords: importResult.importedCount,
         skippedDuplicates: importResult.skippedDuplicates,
         skippedNoUid: processResult.skipped.noUid,
+        skippedNoContent: processResult.skipped.noContent,
         skippedNoCategory: processResult.skipped.noCategory,
         skippedNoTags: processResult.skipped.noTags,
         categoriesAdded: categorizationResult.categoriesAdded,
