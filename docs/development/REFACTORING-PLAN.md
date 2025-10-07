@@ -186,24 +186,25 @@ The codebase contains deprecated legacy service files (`books-service.ts`, `spar
 
 ---
 
-#### Story 0.2: Remove Unused/Deprecated Hooks
+#### ✅ Story 0.2: Remove Unused/Deprecated Hooks [COMPLETED]
 
 **Effort:** 30 minutes  
-**Dependencies:** None
+**Dependencies:** None  
+**Completed:** October 7, 2025
 
 **Context:**  
 The file `useQueryHooks.ts` contains only an example query that isn't used anywhere. This should be removed to reduce clutter.
 
-**Tasks:**
-- [ ] Verify `useQueryHooks` is not imported anywhere
-- [ ] Delete `src/hooks/useQueryHooks.ts`
-- [ ] Update `src/hooks/index.ts` if it exports this hook
-- [ ] Verify application still works
+**What Was Done:**
+- Verified `useQueryHooks` is not imported anywhere in the codebase
+- Verified `src/hooks/index.ts` does not export this hook
+- Deleted `src/hooks/useQueryHooks.ts`
+- Confirmed no broken imports
 
 **Acceptance Criteria:**
-- [ ] `useQueryHooks.ts` deleted
-- [ ] No broken imports
-- [ ] Application runs without errors
+- [x] `useQueryHooks.ts` deleted
+- [x] No broken imports
+- [x] No linter errors
 
 ---
 
