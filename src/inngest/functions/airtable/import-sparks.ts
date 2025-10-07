@@ -21,10 +21,21 @@ interface AirtableResponse {
   offset?: string;
 }
 
-// Function to import data from Airtable
-export const airtableImportDataFn = inngest.createFunction(
-  { id: "airtable-import-data" },
-  { event: "airtable/import-data" },
+/**
+ * Import sparks from Airtable "Thoughts Manager" base.
+ * Fetches records from the "Thoughts All" table and creates sparks in Supabase.
+ * 
+ * TRIGGERED BY: User action in integrations settings
+ * SIDE EFFECTS:
+ * - Creates sparks in imported_highlights table
+ * - Updates user_settings with import metadata
+ * 
+ * @param event - Contains userId, apiKey, baseId, tableId
+ * @returns Summary of imported records with counts
+ */
+export const airtableImportSparksFn = inngest.createFunction(
+  { id: "airtable-import-sparks" },
+  { event: "airtable/import-sparks" },
   async ({ event, step, logger }) => {
     const { userId, apiKey, baseId, tableId } = event.data;
     

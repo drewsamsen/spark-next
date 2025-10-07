@@ -29,7 +29,7 @@ export type AppEvents = {
       userId: string;
     }
   };
-  "airtable/import-data": {
+  "airtable/import-sparks": {
     data: {
       userId: string;
       apiKey: string;

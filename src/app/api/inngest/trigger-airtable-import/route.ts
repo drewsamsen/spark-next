@@ -49,9 +49,9 @@ export async function POST(request: NextRequest) {
     // Get the import data from the service
     const importData = airtableService.prepareImportData(userId, apiKey, baseId, tableId);
     
-    // Send the Inngest event
+    // Send the Inngest event to import sparks from Airtable
     await inngest.send({
-      name: "airtable/import-data",
+      name: "airtable/import-sparks",
       data: importData
     });
     

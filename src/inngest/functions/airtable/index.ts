@@ -1,1 +1,1 @@
-export { airtableImportDataFn } from './import-data'; 
+export { airtableImportSparksFn } from './import-sparks'; 

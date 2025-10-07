@@ -40,9 +40,9 @@ export const availableTasks: ScheduledTask[] = [
     requiresApiKey: false
   },
   {
-    id: "airtable-import",
-    name: "Import from Airtable",
-    description: "Import data from an Airtable table and create sparks with associated categories and tags",
+    id: "airtable-import-sparks",
+    name: "Import Sparks from Airtable",
+    description: "Import sparks from Airtable Thoughts Manager and create them in Supabase with categories and tags",
     isSchedulable: false,
     triggerEndpoint: "/api/inngest/trigger-airtable-import",
     requiresApiKey: true,

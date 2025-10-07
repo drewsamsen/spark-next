@@ -6,7 +6,7 @@ import {
   readwiseSyncBooksFn,
   readwiseSyncHighlightsFn,
   migrateHighlightTagsFn,
-  airtableImportDataFn,
+  airtableImportSparksFn,
   tagRandomHighlights,
   categorizeRandomHighlights
 } from "@/inngest";
@@ -25,7 +25,7 @@ export const { GET, POST, PUT } = serve({
     migrateHighlightTagsFn,
     
     // Airtable functions
-    airtableImportDataFn,
+    airtableImportSparksFn,
     
     // Automation functions
     tagRandomHighlights,
