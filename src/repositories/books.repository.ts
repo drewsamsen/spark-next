@@ -20,14 +20,6 @@ export class BooksRepository extends BaseRepository<BookModel> {
   }
 
   /**
-   * Get all books for the current user
-   * @deprecated Use getAll() from BaseRepository instead
-   */
-  async getBooks(): Promise<BookModel[]> {
-    return this.getAll();
-  }
-
-  /**
    * Get basic book info for listing
    */
   async getBasicBookInfo(): Promise<BookBasicInfo[]> {
@@ -150,14 +142,6 @@ export class BooksRepository extends BaseRepository<BookModel> {
       rw_tags: updates.rwTags,
       rw_document_note: updates.rwDocumentNote,
     });
-  }
-
-  /**
-   * Delete a book
-   * @deprecated Use delete() from BaseRepository instead
-   */
-  async deleteBook(bookId: string): Promise<void> {
-    return this.delete(bookId);
   }
 
   /**

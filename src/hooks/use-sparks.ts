@@ -178,7 +178,7 @@ export function useSparks(): UseSparksReturn {
   const deleteSpark = useCallback(
     async (sparkId: string): Promise<boolean> => {
       try {
-        await sparksService.deleteSpark(sparkId);
+        await sparksService.delete(sparkId);
         
         // Update local state
         setSparks(prev => prev.filter(spark => spark.id !== sparkId));

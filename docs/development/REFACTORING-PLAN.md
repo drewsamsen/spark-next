@@ -150,13 +150,13 @@ This refactoring plan has been comprehensively reviewed and updated to reflect t
 9. **Priority 6**: Accessibility and final polish
 
 **Recommended Starting Point:**
-Start with **Priority 0 stories** (2-3 days) to clean up technical debt, then proceed to **Priority 5 stories** (loading/error/server components) as these provide immediate user experience improvements.
+✅ **Priority 0 stories** are now complete! Proceed with **Priority 5 stories** (loading/error/server components) as these provide immediate user experience improvements, or start with **Priority 1 stories** for organization verification.
 
 ---
 
-### 🔴 Priority 0: Critical Cleanup & Technical Debt (2-3 days)
+### ✅ Priority 0: Critical Cleanup & Technical Debt [COMPLETED]
 
-These stories remove deprecated code and clean up technical debt that could cause confusion or bugs.
+All stories in this priority have been completed. Deprecated code has been removed and technical debt cleaned up.
 
 ---
 
@@ -208,35 +208,30 @@ The file `useQueryHooks.ts` contains only an example query that isn't used anywh
 
 ---
 
-#### Story 0.3: Clean Up Deprecated Repository Methods
+#### ✅ Story 0.3: Clean Up Deprecated Repository Methods [COMPLETED]
 
 **Effort:** 1 hour  
-**Dependencies:** None
+**Dependencies:** None  
+**Completed:** October 7, 2025
 
 **Context:**  
-Some repositories have `@deprecated` methods that wrap base repository methods (e.g., `deleteBook`, `deleteSpark`). These should be removed in favor of the base methods.
+Some repositories had `@deprecated` methods that wrapped base repository methods (e.g., `deleteBook`, `deleteSpark`, `getBooks`). These have been removed in favor of the base methods.
 
-**Current Issues:**
-```typescript
-// In books.repository.ts
-@deprecated Use delete() from BaseRepository instead
-async deleteBook(bookId: string): Promise<void>
-
-// In sparks.repository.ts  
-@deprecated Use delete() from BaseRepository instead
-async deleteSpark(sparkId: string): Promise<void>
-```
-
-**Tasks:**
-- [ ] Search for usages of deprecated repository methods
-- [ ] Update usages to use base methods
-- [ ] Remove deprecated methods from repositories
-- [ ] Verify all tests pass (when tests exist)
+**What Was Done:**
+- Updated `src/hooks/use-sparks.ts` to use `sparksService.delete()` instead of `deleteSpark()`
+- Updated `src/hooks/useSidebarData.ts` to use `books.getAll()` instead of `getBooks()`
+- Removed deprecated `deleteSpark()` from `src/repositories/sparks.repository.ts`
+- Removed deprecated `getBooks()` and `deleteBook()` from `src/repositories/books.repository.ts`
+- Removed unnecessary wrapper methods `deleteSpark()` from `src/services/sparks.service.ts`
+- Removed unnecessary wrapper methods `deleteBook()` from `src/services/books.service.ts`
+- Verified no linter errors
+- Verified no remaining deprecated methods in repositories
 
 **Acceptance Criteria:**
-- [ ] All deprecated methods removed
-- [ ] Code uses base repository methods
-- [ ] No broken functionality
+- [x] All deprecated methods removed
+- [x] Code uses base repository methods
+- [x] No broken functionality
+- [x] No linter errors
 
 ---
 

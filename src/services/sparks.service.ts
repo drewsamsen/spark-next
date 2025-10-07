@@ -111,13 +111,6 @@ class SparksService extends BaseService<SparkModel, SparksRepository> {
   }
 
   /**
-   * Delete a spark - overrides base service delete method
-   */
-  async deleteSpark(sparkId: string): Promise<boolean> {
-    return this.delete(sparkId);
-  }
-
-  /**
    * Generate an MD5 hash from a string
    * Used to avoid duplicate sparks
    */

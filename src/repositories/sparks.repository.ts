@@ -117,14 +117,6 @@ export class SparksRepository extends BaseRepository<SparkModel> {
   }
 
   /**
-   * Delete a spark
-   * @deprecated Use delete() from BaseRepository instead
-   */
-  async deleteSpark(sparkId: string): Promise<void> {
-    return this.delete(sparkId);
-  }
-
-  /**
    * Map a database spark model with relations to the domain model
    */
   mapToDomain(spark: SparkWithRelations): SparkDomain {

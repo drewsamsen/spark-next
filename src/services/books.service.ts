@@ -149,13 +149,6 @@ class BooksService extends BaseService<BookModel, BooksRepository> {
       return handleServiceItemError<BookDomain>(error, `Error in BooksService.updateBook for book ${bookId}`);
     }
   }
-
-  /**
-   * Delete a book - overrides base service delete method
-   */
-  async deleteBook(bookId: string): Promise<boolean> {
-    return this.delete(bookId);
-  }
 }
 
 /**
