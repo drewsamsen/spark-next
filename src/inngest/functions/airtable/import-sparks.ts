@@ -5,11 +5,13 @@ import { createClient } from "@supabase/supabase-js";
 interface AirtableRecord {
   id: string;
   fields: {
+    uid?: string;
     Text?: string;
     Notes?: string;
     Source?: string;
     Author?: string;
     URL?: string;
+    Category?: string;
     Tags?: string[] | string;
     [key: string]: any;
   };
@@ -25,13 +27,27 @@ interface AirtableResponse {
  * Import sparks from Airtable "Thoughts Manager" base.
  * Fetches records from the "Thoughts All" table and creates sparks in Supabase.
  * 
- * TRIGGERED BY: User action in integrations settings
+ * VALIDATION REQUIREMENTS:
+ * - Text field must be present and non-empty
+ * - Category field must be present and non-empty
+ * - At least one valid tag must be present
+ * - uid field must be present (for deduplication)
+ * 
+ * DEDUPLICATION:
+ * - Uses the existing uid field from Airtable
+ * - Stores it in md5_uid field (existing unique field for deduplication)
+ * - Checks for existing sparks using md5_uid before importing
+ * - Only imports new records not already in the database
+ * - Safe to run on a schedule without creating duplicates
+ * 
+ * TRIGGERED BY: User action in integrations settings or scheduled automation
  * SIDE EFFECTS:
- * - Creates sparks in imported_highlights table
+ * - Creates sparks in sparks table with md5_uid set
+ * - Creates/links categories and tags via junction tables
  * - Updates user_settings with import metadata
  * 
  * @param event - Contains userId, apiKey, baseId, tableId
- * @returns Summary of imported records with counts
+ * @returns Summary of imported records with counts and skip reasons
  */
 export const airtableImportSparksFn = inngest.createFunction(
   { id: "airtable-import-sparks" },
@@ -141,74 +157,318 @@ export const airtableImportSparksFn = inngest.createFunction(
       const processResult = await step.run("process-airtable-data", async () => {
         logger.info("Processing Airtable data");
         
+        let skippedNoText = 0;
+        let skippedNoCategory = 0;
+        let skippedNoTags = 0;
+        let skippedNoUid = 0;
+        
         // Transform Airtable records to our format
         const processedRecords = airtableResult.records.map(record => {
           const fields = record.fields;
           
-          // Basic validation
-          if (!fields.Text || typeof fields.Text !== 'string') {
+          // Validate uid field - required for deduplication
+          if (!fields.uid || typeof fields.uid !== 'string' || fields.uid.trim().length === 0) {
+            skippedNoUid++;
+            logger.debug(`Skipping record ${record.id}: missing or empty uid`);
+            return null;
+          }
+          
+          // Validate Text field
+          if (!fields.Text || typeof fields.Text !== 'string' || fields.Text.trim().length === 0) {
+            skippedNoText++;
+            return null;
+          }
+          
+          // Validate Category field - required
+          if (!fields.Category || typeof fields.Category !== 'string' || fields.Category.trim().length === 0) {
+            skippedNoCategory++;
+            logger.debug(`Skipping record ${record.id}: missing or empty Category`);
+            return null;
+          }
+          
+          // Validate Tags field - must have at least one tag
+          const tags = fields.Tags ? (Array.isArray(fields.Tags) ? fields.Tags : [fields.Tags]) : [];
+          const validTags = tags.filter(tag => typeof tag === 'string' && tag.trim().length > 0);
+          
+          if (validTags.length === 0) {
+            skippedNoTags++;
+            logger.debug(`Skipping record ${record.id}: no valid tags`);
             return null;
           }
           
           // Create a consistent record structure
           return {
             airtable_id: record.id,
+            md5_uid: fields.uid.trim(),
             user_id: userId,
-            text: fields.Text,
+            body: fields.Text.trim(),
             note: fields.Notes || null,
             source: fields.Source || 'Airtable Import',
             author: fields.Author || null,
             url: fields.URL || null,
-            tags: fields.Tags ? (Array.isArray(fields.Tags) ? fields.Tags : [fields.Tags]) : [],
+            category: fields.Category.trim(),
+            tags: validTags,
             created_at: new Date().toISOString(),
-            imported_at: new Date().toISOString(),
           };
         }).filter(record => record !== null);
         
-        logger.info(`Processed ${processedRecords.length} valid records`);
+        logger.info(`Processed ${processedRecords.length} valid records`, {
+          skipped: {
+            noUid: skippedNoUid,
+            noText: skippedNoText,
+            noCategory: skippedNoCategory,
+            noTags: skippedNoTags,
+            total: skippedNoUid + skippedNoText + skippedNoCategory + skippedNoTags
+          }
+        });
         
         return {
           records: processedRecords,
+          skipped: {
+            noUid: skippedNoUid,
+            noText: skippedNoText,
+            noCategory: skippedNoCategory,
+            noTags: skippedNoTags
+          },
           success: true
         };
       });
       
-      // Step 3: Import processed records to Supabase
-      const importResult = await step.run("import-to-supabase", async () => {
+      // Step 3: Check for existing sparks and filter out duplicates
+      const deduplicationResult = await step.run("check-for-duplicates", async () => {
         const records = processResult.records;
-        logger.info(`Importing ${records.length} records to Supabase`);
+        logger.info(`Checking for duplicates among ${records.length} records`);
+        
+        if (records.length === 0) {
+          return {
+            newRecords: [],
+            duplicateCount: 0,
+            success: true
+          };
+        }
+        
+        // Get all md5_uids from processed records
+        const md5Uids = records.map(r => r.md5_uid);
+        
+        // Check which ones already exist in the database using md5_uid
+        const { data: existingSparks, error } = await supabase
+          .from('sparks')
+          .select('md5_uid')
+          .eq('user_id', userId)
+          .in('md5_uid', md5Uids);
+        
+        if (error) {
+          logger.error("Error checking for existing sparks:", error);
+          throw error;
+        }
+        
+        // Create a set of existing md5_uids for fast lookup
+        const existingIds = new Set(existingSparks?.map(s => s.md5_uid) || []);
+        
+        // Filter out records that already exist
+        const newRecords = records.filter(r => !existingIds.has(r.md5_uid));
+        
+        logger.info(`Deduplication complete: ${newRecords.length} new records, ${existingIds.size} duplicates skipped`);
+        
+        return {
+          newRecords,
+          duplicateCount: existingIds.size,
+          success: true
+        };
+      });
+      
+      // Step 4: Import new sparks to Supabase
+      const importResult = await step.run("import-to-supabase", async () => {
+        const records = deduplicationResult.newRecords;
+        logger.info(`Importing ${records.length} new records to Supabase`);
+        
+        if (records.length === 0) {
+          logger.info("No new records to import");
+          return {
+            importedCount: 0,
+            skippedDuplicates: deduplicationResult.duplicateCount,
+            success: true
+          };
+        }
         
         let importedCount = 0;
+        const importedSparks: Array<{ sparkId: string; category: string; tags: string[] }> = [];
         
-        // Import in batches to avoid size limits
-        if (records.length > 0) {
-          const batchSize = 100;
-          for (let i = 0; i < records.length; i += batchSize) {
-            const batch = records.slice(i, i + batchSize);
-            logger.info(`Importing batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(records.length/batchSize)}: ${batch.length} records`);
+        // Import records one by one to handle categories and tags
+        for (const record of records) {
+          try {
+            // Insert the spark with md5_uid for deduplication
+            const { data: spark, error: sparkError } = await supabase
+              .from('sparks')
+              .insert({
+                user_id: record.user_id,
+                body: record.body,
+                md5_uid: record.md5_uid,
+                created_at: record.created_at,
+              })
+              .select('id')
+              .single();
             
-            const { error } = await supabase
-              .from('imported_highlights')
-              .insert(batch);
-              
-            if (error) {
-              logger.error("Error importing records batch:", error);
-            } else {
-              importedCount += batch.length;
-              logger.info(`Successfully imported batch: ${batch.length} records`);
+            if (sparkError || !spark) {
+              logger.error(`Error inserting spark for airtable_id ${record.airtable_id}:`, sparkError);
+              continue;
             }
+            
+            importedSparks.push({
+              sparkId: spark.id,
+              category: record.category,
+              tags: record.tags
+            });
+            
+            importedCount++;
+          } catch (error) {
+            logger.error(`Exception inserting spark for airtable_id ${record.airtable_id}:`, error);
           }
         }
         
-        logger.info(`Completed database import. Imported: ${importedCount} records`);
+        logger.info(`Completed spark imports. Imported: ${importedCount} records`);
         
         return {
           importedCount,
+          importedSparks,
+          skippedDuplicates: deduplicationResult.duplicateCount,
           success: true
         };
       });
       
-      // Step 4: Update import status in user settings
+      // Step 5: Handle categories and tags
+      const categorizationResult = await step.run("add-categories-and-tags", async () => {
+        const sparks = importResult.importedSparks;
+        logger.info(`Adding categories and tags for ${sparks.length} sparks`);
+        
+        if (sparks.length === 0) {
+          return { success: true };
+        }
+        
+        let categoriesAdded = 0;
+        let tagsAdded = 0;
+        
+        for (const spark of sparks) {
+          try {
+            // Get or create category
+            const categorySlug = spark.category.toLowerCase().replace(/\s+/g, '-');
+            
+            let categoryId: string | null = null;
+            
+            // Try to find existing category
+            const { data: existingCategory } = await supabase
+              .from('categories')
+              .select('id')
+              .eq('slug', categorySlug)
+              .eq('user_id', userId)
+              .single();
+            
+            if (existingCategory) {
+              categoryId = existingCategory.id;
+            } else {
+              // Create new category
+              const { data: newCategory, error: categoryError } = await supabase
+                .from('categories')
+                .insert({
+                  name: spark.category,
+                  slug: categorySlug,
+                  user_id: userId
+                })
+                .select('id')
+                .single();
+              
+              if (newCategory) {
+                categoryId = newCategory.id;
+              } else {
+                logger.error(`Failed to create category ${spark.category}:`, categoryError);
+              }
+            }
+            
+            // Link spark to category
+            if (categoryId) {
+              const { error: junctionError } = await supabase
+                .from('spark_categories')
+                .insert({
+                  spark_id: spark.sparkId,
+                  category_id: categoryId,
+                  created_by: 'airtable-import'
+                });
+              
+              if (!junctionError) {
+                categoriesAdded++;
+              } else {
+                logger.error(`Failed to link spark ${spark.sparkId} to category:`, junctionError);
+              }
+            }
+            
+            // Process tags
+            for (const tagName of spark.tags) {
+              try {
+                let tagId: string | null = null;
+                
+                // Try to find existing tag
+                const { data: existingTag } = await supabase
+                  .from('tags')
+                  .select('id')
+                  .eq('name', tagName)
+                  .eq('user_id', userId)
+                  .single();
+                
+                if (existingTag) {
+                  tagId = existingTag.id;
+                } else {
+                  // Create new tag
+                  const { data: newTag, error: tagError } = await supabase
+                    .from('tags')
+                    .insert({
+                      name: tagName,
+                      user_id: userId
+                    })
+                    .select('id')
+                    .single();
+                  
+                  if (newTag) {
+                    tagId = newTag.id;
+                  } else {
+                    logger.error(`Failed to create tag ${tagName}:`, tagError);
+                  }
+                }
+                
+                // Link spark to tag
+                if (tagId) {
+                  const { error: junctionError } = await supabase
+                    .from('spark_tags')
+                    .insert({
+                      spark_id: spark.sparkId,
+                      tag_id: tagId,
+                      created_by: 'airtable-import'
+                    });
+                  
+                  if (!junctionError) {
+                    tagsAdded++;
+                  } else {
+                    logger.error(`Failed to link spark ${spark.sparkId} to tag:`, junctionError);
+                  }
+                }
+              } catch (error) {
+                logger.error(`Exception processing tag ${tagName}:`, error);
+              }
+            }
+          } catch (error) {
+            logger.error(`Exception processing spark ${spark.sparkId}:`, error);
+          }
+        }
+        
+        logger.info(`Categories and tags added: ${categoriesAdded} categories, ${tagsAdded} tags`);
+        
+        return {
+          categoriesAdded,
+          tagsAdded,
+          success: true
+        };
+      });
+      
+      // Step 6: Update import status in user settings
       await step.run("update-import-status", async () => {
         logger.info("Updating import status in user settings");
         
@@ -232,7 +492,14 @@ export const airtableImportSparksFn = inngest.createFunction(
               ...(currentSettings?.integrations?.airtable || {}),
               lastImport: {
                 date: new Date().toISOString(),
-                count: importResult.importedCount,
+                imported: importResult.importedCount,
+                skipped: {
+                  duplicates: importResult.skippedDuplicates,
+                  noUid: processResult.skipped.noUid,
+                  noText: processResult.skipped.noText,
+                  noCategory: processResult.skipped.noCategory,
+                  noTags: processResult.skipped.noTags
+                },
                 baseId,
                 tableId
               }
@@ -257,15 +524,31 @@ export const airtableImportSparksFn = inngest.createFunction(
       // Final log and return
       logger.info("Airtable import completed successfully", {
         totalRecords: airtableResult.records.length,
-        processed: processResult.records.length,
-        imported: importResult.importedCount
+        validRecords: processResult.records.length,
+        newRecords: deduplicationResult.newRecords.length,
+        imported: importResult.importedCount,
+        skipped: {
+          duplicates: importResult.skippedDuplicates,
+          noUid: processResult.skipped.noUid,
+          noText: processResult.skipped.noText,
+          noCategory: processResult.skipped.noCategory,
+          noTags: processResult.skipped.noTags
+        },
+        categoriesAdded: categorizationResult.categoriesAdded,
+        tagsAdded: categorizationResult.tagsAdded
       });
       
       return markAsLastStep({
         success: true,
         totalRecords: airtableResult.records.length,
-        processedRecords: processResult.records.length,
-        importedRecords: importResult.importedCount
+        validRecords: processResult.records.length,
+        importedRecords: importResult.importedCount,
+        skippedDuplicates: importResult.skippedDuplicates,
+        skippedNoUid: processResult.skipped.noUid,
+        skippedNoCategory: processResult.skipped.noCategory,
+        skippedNoTags: processResult.skipped.noTags,
+        categoriesAdded: categorizationResult.categoriesAdded,
+        tagsAdded: categorizationResult.tagsAdded
       });
     } catch (error) {
       logger.error("Error in Airtable import function:", error);
