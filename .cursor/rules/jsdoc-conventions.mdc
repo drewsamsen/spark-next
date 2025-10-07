@@ -1,0 +1,520 @@
+---
+description: Guidelines for JSDoc documentation in the Spark application
+globs: **/*.ts **/*.tsx
+alwaysApply: false
+---
+# JSDoc Documentation Guidelines
+
+## Philosophy
+
+JSDoc in this codebase serves to provide **context, decisions, and guidance** that TypeScript types alone cannot convey. Focus on documenting **WHY** and **WHEN**, not just **WHAT** (which TypeScript already tells us).
+
+**Key Principle**: Document decision points, architectural patterns, and non-obvious behavior. Skip documenting what is already clear from TypeScript types.
+
+## When to Add JSDoc
+
+### ✅ HIGH PRIORITY - Always Document
+
+1. **Architectural Pattern Files**
+   - `BaseService`, `BaseRepository` classes
+   - Hook pattern exports and indexes
+   - Service/repository factory functions
+
+2. **Decision Points** (When to use X vs Y)
+   - Multiple ways to accomplish the same goal
+   - Service hooks vs data hooks
+   - Different service patterns (BaseService vs standalone)
+
+3. **Error Handling Functions**
+   - Which layer should use which function
+   - Return behavior and side effects
+   - Layer-specific guidance
+
+4. **Complex Business Logic**
+   - Multi-step operations
+   - Non-obvious side effects
+   - Integration points between systems
+
+5. **Public Hook APIs**
+   - What each returned property does behaviorally
+   - State management behavior
+   - When the hook re-executes
+
+### ⚠️ MEDIUM PRIORITY - Document Selectively
+
+6. **Service Methods with Custom Logic**
+   - When behavior differs from BaseService
+   - Special validation or processing
+   - State changes and side effects
+
+7. **Utility Functions with Options**
+   - Functions with configuration objects
+   - Functions with multiple use cases
+
+### ❌ SKIP - Don't Document
+
+- Simple getters/setters where types are sufficient
+- Private or protected methods (internal implementation)
+- One-line utility functions with obvious behavior
+- Type definitions (TypeScript is self-documenting)
+- React component props (TypeScript interfaces are sufficient)
+- Basic CRUD methods that inherit from `BaseService`
+
+## JSDoc Template Structure
+
+Use this template for consistency:
+
+```typescript
+/**
+ * [One-line summary of what this does]
+ * 
+ * [Optional: Decision guidance - when to use this vs alternatives]
+ * USE WHEN: [Primary use case scenario]
+ * USE [Alternative] WHEN: [Alternative scenario]
+ * DO NOT USE: [Anti-pattern or wrong context]
+ * 
+ * [Optional: Important behavioral notes]
+ * NOTE: [Non-obvious behavior, side effects, state changes]
+ * 
+ * @param {Type} paramName - [What it represents, not just repeating the type]
+ * @returns {Type} [What is returned and its state/characteristics]
+ * @throws {ErrorType} [When and why this error occurs]
+ * 
+ * @example
+ * // [Most common use case with real context]
+ * const result = await service.method(params);
+ * if (result) {
+ *   // ...
+ * }
+ * 
+ * @see [Related function, alternative, or documentation link]
+ */
+```
+
+## Layer-Specific Patterns
+
+### Repository Layer
+
+Document **custom queries** beyond basic CRUD:
+
+```typescript
+/**
+ * Get all sparks for a user with their categories and tags.
+ * Performs a join across sparks, categories, and tags tables.
+ * 
+ * NOTE: This is a complex query that includes related data.
+ * For simple spark retrieval, use getById() or getAll().
+ * 
+ * @param userId - The authenticated user's ID
+ * @returns Array of sparks with nested category and tag objects
+ * @throws {DatabaseError} If the query fails or user is not found
+ * 
+ * @example
+ * const sparksWithRelations = await repository.getSparksWithCategories(userId);
+ */
+async getSparksWithCategories(userId: string): Promise<SparkWithRelations[]> {
+  // ...
+}
+```
+
+**Don't document** inherited BaseRepository methods unless you override them with different behavior.
+
+### Service Layer
+
+#### For BaseService Extensions
+
+Only document **custom methods** or **overridden behavior**:
+
+```typescript
+/**
+ * Spark service handling spark-related business logic.
+ * Extends BaseService for standard CRUD operations.
+ * 
+ * USE: For all spark-related operations
+ * ACCESS VIA: useSparksService() hook for imperative control
+ * 
+ * @example
+ * const sparksService = useSparksService();
+ * const spark = await sparksService.getById(id);
+ */
+export class SparksService extends BaseService<SparkModel, SparksRepository> {
+  /**
+   * Get sparks with enhanced metadata including category names and tag counts.
+   * 
+   * NOTE: This returns EnhancedSparkItem[], not raw SparkModel[]
+   * 
+   * @returns Enhanced spark items suitable for UI display
+   */
+  async getSparks(): Promise<EnhancedSparkItem[]> {
+    // ...
+  }
+}
+```
+
+#### For Standalone Services
+
+Document **class purpose** and **when to use** vs other services:
+
+```typescript
+/**
+ * Authentication service for user login, logout, and session management.
+ * 
+ * This is a standalone service (not extending BaseService) because
+ * authentication doesn't follow standard CRUD patterns.
+ * 
+ * USE: For all authentication operations
+ * ACCESS VIA: useAuthService() hook
+ * 
+ * @example
+ * const authService = useAuthService();
+ * const isAuthed = await authService.isAuthenticated();
+ */
+export class AuthService {
+  // ...
+}
+```
+
+#### For Object Export Services
+
+Document **why grouped** and **structure**:
+
+```typescript
+/**
+ * Categorization services grouped by domain area.
+ * 
+ * This service uses object export pattern (not class) because it groups
+ * three related but distinct services: categories, tags, and automations.
+ * 
+ * STRUCTURE:
+ * - categoryService: Category CRUD and queries
+ * - tagService: Tag CRUD and queries  
+ * - automationService: Category automation logic
+ * 
+ * @example
+ * import { categoryService, tagService } from '@/services/categorization.service';
+ * const categories = await categoryService.getAll();
+ */
+export const categorization = {
+  category: categoryService,
+  tag: tagService,
+  automation: automationService
+};
+```
+
+### Hook Layer
+
+#### Service Hooks (Imperative Control)
+
+Always document the **pattern difference** and **when to use**:
+
+```typescript
+/**
+ * Access the sparks service for imperative operations.
+ * Returns service instance for manual control over loading/error states.
+ * 
+ * USE WHEN:
+ * - You need imperative control (form handlers, button clicks)
+ * - You want to manage loading/error states yourself
+ * - You need maximum flexibility
+ * 
+ * USE useSparks() WHEN:
+ * - You need automatic state management
+ * - You want built-in loading/error states
+ * - You need declarative data fetching
+ * 
+ * @returns SparksService instance
+ * 
+ * @example
+ * // Service hook - imperative control
+ * function CreateSparkForm() {
+ *   const sparksService = useSparksService();
+ *   const [isLoading, setIsLoading] = useState(false);
+ *   
+ *   async function handleSubmit(data) {
+ *     setIsLoading(true);
+ *     const spark = await sparksService.createSpark(data);
+ *     setIsLoading(false);
+ *   }
+ * }
+ * 
+ * @see useSparks for declarative data loading with automatic state management
+ */
+export function useSparksService() {
+  return services.sparks;
+}
+```
+
+#### Data Hooks (Declarative State Management)
+
+Document **return structure**, **behavior**, and **when it re-executes**:
+
+```typescript
+/**
+ * Data hook for sparks with automatic state management.
+ * 
+ * Automatically loads sparks on mount and when auth state changes.
+ * Provides loading states, error handling, and refetch capability.
+ * 
+ * USE WHEN:
+ * - You need automatic data loading
+ * - You want built-in loading/error states
+ * - You need auth-aware data fetching
+ * 
+ * USE useSparksService() WHEN:
+ * - You need manual control over when to fetch
+ * - You're handling loading states yourself
+ * 
+ * RE-EXECUTES WHEN:
+ * - Component mounts
+ * - User logs in/out
+ * - Manual refetch is called
+ * 
+ * @returns {Object} Sparks data and control methods
+ * @returns {EnhancedSparkItem[]} returns.sparks - Array of spark items
+ * @returns {boolean} returns.isLoading - Loading state indicator
+ * @returns {Error | null} returns.error - Error object if fetch failed
+ * @returns {Function} returns.getSparks - Manual refetch function
+ * @returns {Function} returns.createSpark - Create new spark with optimistic update
+ * @returns {Function} returns.updateSpark - Update spark with optimistic update
+ * @returns {Function} returns.deleteSpark - Delete spark with optimistic update
+ * 
+ * @example
+ * function SparksPage() {
+ *   const { sparks, isLoading, error, createSpark } = useSparks();
+ *   
+ *   if (isLoading) return <Spinner />;
+ *   if (error) return <Error message={error.message} />;
+ *   
+ *   return (
+ *     <div>
+ *       {sparks.map(spark => (
+ *         <SparkCard key={spark.id} {...spark} />
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * 
+ * @see useSparksService for imperative control
+ */
+export function useSparks(): UseSparksReturn {
+  // ...
+}
+```
+
+### Error Handling Functions
+
+Document **layer usage** and **return behavior**:
+
+```typescript
+/**
+ * Handle errors in service layer methods that return collections.
+ * Returns empty array on error with logging to console.
+ * 
+ * USE IN: Service class methods that return arrays
+ * DO NOT USE IN: React components or hooks (use handleHookCollectionError instead)
+ * 
+ * BEHAVIOR:
+ * - Logs error to console with context
+ * - Returns empty array for safe fallback
+ * - Does NOT show toast notifications (service layer is silent)
+ * 
+ * @param error - The error that occurred
+ * @param context - Descriptive context for logging (e.g., "Error in SparksService.getAll")
+ * @returns Empty array of type T for safe fallback
+ * 
+ * @example
+ * // In a service method
+ * async getAll(): Promise<SparkDomain[]> {
+ *   try {
+ *     return await this.repository.getAll();
+ *   } catch (error) {
+ *     return handleServiceError<SparkDomain>(error, 'Error in SparksService.getAll');
+ *   }
+ * }
+ * 
+ * @see handleHookCollectionError for hook layer error handling with toasts
+ */
+export function handleServiceError<T>(error: any, context: string): T[] {
+  // ...
+}
+```
+
+## Special Patterns
+
+### Grouped Services (Object Exports)
+
+```typescript
+/**
+ * Content service for dashboard data and quick access items.
+ * 
+ * NOTE: Currently returns demo/placeholder data.
+ * Will be implemented with real data persistence in future.
+ * 
+ * PATTERN: Object export (not class) because this is a simple
+ * utility service without state or inheritance needs.
+ */
+export const contentService = {
+  /**
+   * Get quick access items for dashboard display.
+   * 
+   * NOTE: Returns static demo data, not from database
+   * 
+   * @returns Array of quick access items with demo data
+   */
+  getQuickAccessItems(): QuickAccessItem[] {
+    // ...
+  }
+};
+```
+
+### Inngest Functions
+
+Document **trigger events** and **side effects**:
+
+```typescript
+/**
+ * Inngest function to import data from Airtable.
+ * 
+ * TRIGGERED BY: User action in integrations settings
+ * SIDE EFFECTS:
+ * - Creates/updates sparks in database
+ * - Creates/updates categories
+ * - Logs function execution to function_logs table
+ * 
+ * @param event - Inngest event with user ID and import options
+ * @returns Summary of imported records
+ * 
+ * @see /docs/INNGEST.md for more on Inngest patterns
+ */
+export const importAirtableData = inngest.createFunction(
+  // ...
+);
+```
+
+## Common Mistakes to Avoid
+
+### ❌ Don't Repeat TypeScript
+
+```typescript
+// BAD - Just repeating the type signature
+/**
+ * Get spark by ID
+ * @param id - The ID
+ * @returns The spark or null
+ */
+async getById(id: string): Promise<Spark | null>
+
+// GOOD - Add context TypeScript can't provide
+/**
+ * Get spark by ID with populated category and tag relationships.
+ * 
+ * NOTE: Returns null if spark doesn't exist or user lacks permission.
+ * 
+ * @param id - Spark's unique identifier
+ * @returns Spark with nested relations, or null if not found/unauthorized
+ */
+async getById(id: string): Promise<Spark | null>
+```
+
+### ❌ Don't Over-Document
+
+```typescript
+// BAD - This is obvious from the code
+/**
+ * Set the loading state
+ * @param isLoading - Whether it's loading
+ */
+setIsLoading(true);
+
+// GOOD - No JSDoc needed, code is self-explanatory
+setIsLoading(true);
+```
+
+### ❌ Don't Document Implementation Details
+
+```typescript
+// BAD - Too much internal detail
+/**
+ * Gets sparks. First checks cache, then hits database.
+ * Uses Supabase client to query sparks table.
+ * Joins with categories table on category_id foreign key.
+ */
+
+// GOOD - Focus on behavior and usage
+/**
+ * Get all sparks for the current user with category information.
+ * 
+ * NOTE: Results are not cached; each call queries the database.
+ */
+```
+
+## Maintenance Guidelines
+
+1. **Update JSDoc when behavior changes** - Stale documentation is worse than no documentation
+2. **Keep examples realistic** - Use actual code patterns from the app, not toy examples
+3. **Link related items** - Use `@see` tags to connect related functions/patterns
+4. **Be concise** - If it takes more than 5 lines to explain, the code might be too complex
+
+## ESLint Integration
+
+Consider adding `eslint-plugin-jsdoc` to enforce:
+- Valid JSDoc syntax
+- Required tags for documented functions
+- No empty descriptions
+
+```json
+// .eslintrc.json (future enhancement)
+{
+  "plugins": ["jsdoc"],
+  "rules": {
+    "jsdoc/check-alignment": "warn",
+    "jsdoc/check-param-names": "warn",
+    "jsdoc/require-param-description": "warn",
+    "jsdoc/require-returns-description": "warn"
+  }
+}
+```
+
+## Documentation Priority Order
+
+When adding JSDoc to existing code, follow this priority:
+
+1. **Phase 1**: Pattern files (BaseService, BaseRepository, hook indexes)
+2. **Phase 2**: Error handling utilities (errors.ts, error-handling.ts)
+3. **Phase 3**: Service layer custom methods
+4. **Phase 4**: Data hooks with complex state management
+5. **Phase 5**: Service hooks with pattern guidance
+
+This aligns with Stories 1-8 in `docs/architecture/ARCHITECTURE-IMPROVEMENTS.md`.
+
+## Quick Reference
+
+**Decision Tree: Should I Add JSDoc?**
+
+```
+Is this a pattern/architectural file?
+├─ YES → ✅ Always document with decision guidance
+└─ NO ↓
+
+Does this have multiple valid approaches?
+├─ YES → ✅ Document WHEN to use this vs alternatives
+└─ NO ↓
+
+Is the behavior non-obvious from the type signature?
+├─ YES → ✅ Document the behavior
+└─ NO ↓
+
+Is this public API (exported function/hook)?
+├─ YES → ⚠️ Consider documenting
+└─ NO ↓
+
+Is TypeScript sufficient to understand this?
+├─ YES → ❌ Skip JSDoc
+└─ NO → ✅ Add minimal documentation
+```
+
+## Resources
+
+- Architecture improvements plan: `/docs/architecture/ARCHITECTURE-IMPROVEMENTS.md`
+- Service layer overview: `/docs/architecture/SERVICE-LAYER-OVERVIEW.md`
+- Hook usage patterns: `/docs/development/HOOKS-USAGE.md`
