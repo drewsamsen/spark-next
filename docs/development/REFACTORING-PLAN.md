@@ -1,7 +1,7 @@
 # Spark Application Refactoring Plan
 
 **Last Updated:** October 7, 2025  
-**Status:** Active Development - Recently Reviewed and Enhanced
+**Status:** Active Development - Reorganized for Sequential Execution
 
 ---
 
@@ -9,15 +9,30 @@
 
 1. [Overview](#overview)
 2. [Architecture & Completed Foundation](#architecture--completed-foundation)
-3. [Prioritized Developer Stories](#prioritized-developer-stories)
+3. [Active Stories (Work These in Order)](#active-stories-work-these-in-order)
 4. [Completed Major Initiatives](#completed-major-initiatives)
 5. [Success Metrics](#success-metrics)
+6. [How to Use This Document](#how-to-use-this-document)
 
 ---
 
 ## Overview
 
-This document provides the current, consolidated refactoring plan for the Spark application. It organizes remaining work into well-defined, sequential developer stories that can be tackled one at a time.
+This document provides the current, consolidated refactoring plan for the Spark application. **Stories are numbered sequentially in priority order** - work on Story 1 first, then Story 2, then Story 3, and so on.
+
+**Application Context:**
+- **Single-user application** for personal use only
+- **Local development** with eventual production deployment (still single-user)
+- **No SEO requirements** - not a public-facing application
+- **Performance is secondary** to maintainability and developer experience
+
+**Refactoring Focus:**
+Given the personal/single-user context, this plan prioritizes:
+1. **Developer experience** - Easy to understand and modify
+2. **Code maintainability** - Easy to work with after time away
+3. **Debugging capabilities** - Quick to troubleshoot issues
+4. **Data safety** - Backup and recovery for personal data
+5. **Code quality** - Reduce duplication, improve organization
 
 ### Architectural Goals
 
@@ -114,185 +129,33 @@ We're implementing a clean architecture pattern with clear separation of concern
 - `docs/development/HOOKS-USAGE.md` - Hook usage patterns
 - `docs/development/REFACTORING.md` - Historical tracking
 
----
-
-## Prioritized Developer Stories
-
-### Overview & Recent Updates
-
-**Last Major Update:** October 7, 2025
-
-This refactoring plan has been comprehensively reviewed and updated to reflect the current state of the codebase. Key findings from the review:
-
-**Good News:**
-- ✅ Component organization is already excellent (90% complete)
-- ✅ Repository-Service-Hook pattern fully implemented
-- ✅ Most components already use PascalCase naming
-- ✅ Feature-based directory structure is well established
-- ✅ Error handling infrastructure exists
-
-**Critical Gaps Identified:**
-- ❌ **No `loading.tsx` files** - Pages handle loading internally (suboptimal)
-- ❌ **No `error.tsx` files** - No error boundaries for graceful error handling
-- ❌ **All pages are client components** - Missing Next.js App Router performance benefits
-- ⚠️ **Deprecated code** - Legacy services and methods still present
-- ⚠️ **Index files incomplete** - Many directories missing complete exports
-
-**Strategic Priorities:**
-1. **Priority 0** (NEW): Clean up deprecated code to prevent confusion
-2. **Priority 1**: Complete organization work (reduced scope - mostly verification now)
-3. **Priority 2**: Continue with table/UI abstractions
-4. **Priority 2.5** (NEW): Improve context and state management
-5. **Priority 3**: Enhanced hooks (mostly on track)
-6. **Priority 4**: Testing and performance
-7. **Priority 4.5** (NEW): API layer consistency
-8. **Priority 5**: Next.js best practices (CRITICAL - major gaps identified)
-9. **Priority 6**: Accessibility and final polish
-
-**Recommended Starting Point:**
-✅ **Priority 0 stories** are now complete!  
-✅ **Story 5.1** (loading.tsx files) is complete!  
-✅ **Story 5.2** (error.tsx files) is complete!  
-✅ **Story 1.1** (component organization) is complete!  
-➡️ **Next:** Continue with **Story 1.2** (index files) for better imports, or start **Story 5.3** (Server Components optimization) for major Next.js performance improvements.
+#### ✅ Completed Cleanup (Priority 0)
+- Removed deprecated legacy services (books-service.ts, sparks-service.ts)
+- Removed unused hooks (useQueryHooks.ts)
+- Cleaned up deprecated repository methods
+- Added loading.tsx files to all major routes
+- Added error.tsx files to all major routes
+- Cleaned up empty directories
+- Component organization verified and documented
 
 ---
 
-### ✅ Priority 0: Critical Cleanup & Technical Debt [COMPLETED]
+## Active Stories (Work These in Order)
 
-All stories in this priority have been completed. Deprecated code has been removed and technical debt cleaned up.
-
----
-
-#### ✅ Story 0.1: Remove Deprecated Legacy Services [COMPLETED]
-
-**Effort:** 1 hour  
-**Dependencies:** None  
-**Completed:** October 7, 2025
-
-**Context:**  
-The codebase contains deprecated legacy service files (`books-service.ts`, `sparks-service.ts`) that wrap the new service layer. These should be removed to prevent confusion and ensure all code uses the new architecture.
-
-**What Was Done:**
-- Found 2 files importing `Tag` type from `@/lib/books-service`
-- Updated `src/components/Highlights/HighlightCard.tsx` to use `HighlightTag` from `@/lib/types`
-- Updated `src/components/Highlights/utils.ts` to use `HighlightTag` from `@/lib/types`
-- Simplified `renderTag` function (no longer needs to handle flexible tag formats)
-- Deleted `src/lib/books-service.ts`
-- Deleted `src/lib/sparks-service.ts`
-- Verified no linter errors
-
-**Acceptance Criteria:**
-- [x] No imports of `@/lib/books-service` or `@/lib/sparks-service`
-- [x] Legacy service files deleted
-- [x] All code uses proper types from `@/lib/types`
-- [x] No linter errors
+**Instructions:** Work on stories sequentially. Start with Story 1, then Story 2, etc.
 
 ---
 
-#### ✅ Story 0.2: Remove Unused/Deprecated Hooks [COMPLETED]
+### 📋 PHASE 1: Code Organization & Standards
 
-**Effort:** 30 minutes  
-**Dependencies:** None  
-**Completed:** October 7, 2025
-
-**Context:**  
-The file `useQueryHooks.ts` contains only an example query that isn't used anywhere. This should be removed to reduce clutter.
-
-**What Was Done:**
-- Verified `useQueryHooks` is not imported anywhere in the codebase
-- Verified `src/hooks/index.ts` does not export this hook
-- Deleted `src/hooks/useQueryHooks.ts`
-- Confirmed no broken imports
-
-**Acceptance Criteria:**
-- [x] `useQueryHooks.ts` deleted
-- [x] No broken imports
-- [x] No linter errors
+**Goal:** Improve code organization for better maintainability and developer experience.
 
 ---
 
-#### ✅ Story 0.3: Clean Up Deprecated Repository Methods [COMPLETED]
-
-**Effort:** 1 hour  
-**Dependencies:** None  
-**Completed:** October 7, 2025
-
-**Context:**  
-Some repositories had `@deprecated` methods that wrapped base repository methods (e.g., `deleteBook`, `deleteSpark`, `getBooks`). These have been removed in favor of the base methods.
-
-**What Was Done:**
-- Updated `src/hooks/use-sparks.ts` to use `sparksService.delete()` instead of `deleteSpark()`
-- Updated `src/hooks/useSidebarData.ts` to use `books.getAll()` instead of `getBooks()`
-- Removed deprecated `deleteSpark()` from `src/repositories/sparks.repository.ts`
-- Removed deprecated `getBooks()` and `deleteBook()` from `src/repositories/books.repository.ts`
-- Removed unnecessary wrapper methods `deleteSpark()` from `src/services/sparks.service.ts`
-- Removed unnecessary wrapper methods `deleteBook()` from `src/services/books.service.ts`
-- Verified no linter errors
-- Verified no remaining deprecated methods in repositories
-
-**Acceptance Criteria:**
-- [x] All deprecated methods removed
-- [x] Code uses base repository methods
-- [x] No broken functionality
-- [x] No linter errors
-
----
-
-### 🔴 Priority 1: Code Organization & Standards (2-3 days)
-
-These stories improve maintainability and developer experience by organizing code consistently.
-
-**NOTE:** After thorough codebase review, this priority has been significantly reduced in scope. Most organization work is already done! These stories are now primarily verification and completion tasks.
-
----
-
-#### ✅ Story 1.1: Reorganize UI Components into Feature Directories [COMPLETED]
-
-**Effort:** 2-3 hours  
-**Dependencies:** None  
-**Completed:** October 7, 2025
-
-**Context:**  
-Component organization was already excellent. This story involved verification and cleanup of empty directories and ensuring the UI components index was complete.
-
-**What Was Done:**
-- Removed empty `src/components/debug/` directory
-- Removed empty `src/components/layouts/` directory
-- Added missing `textarea` export to `src/components/ui/index.ts`
-- Verified all feature directories are properly organized (all excellent)
-- Documented component organization structure in `.cursor/rules/components-styling.mdc`
-
-**Final State:**
-```
-src/components/
-  - auth/                   ✅ Good (feature-based)
-  - FunctionLogs/           ✅ Good (feature-based, has index.ts)
-  - Highlights/             ✅ Good (feature-based, has index.ts)
-  - icons/                  ✅ Good (has index.ts)
-  - integrations/           ✅ Good (feature-based)
-  - Layout/                 ✅ Good (feature-based, has index.ts)
-  - Providers/              ✅ Good (feature-based, has index.ts)
-  - ScheduledTasks/         ✅ Good (feature-based, has index.ts)
-  - Sidebar/                ✅ Good (feature-based, has index.ts)
-  - SparkPreview/           ✅ Good (feature-based, has index.ts)
-  - theme/                  ✅ Good (feature-based)
-  - ui/                     ✅ Good (has complete index.ts)
-```
-
-**Acceptance Criteria:**
-- [x] No empty directories in `src/components/`
-- [x] All feature-specific components are in their own directories
-- [x] Component structure is documented in components-styling.mdc
-- [x] Directory structure is clean and intuitive
-- [x] UI components index.ts is complete
-
----
-
-#### Story 1.2: Create Index Files for Component Directories
+#### Story 1: Create Index Files for Component Directories
 
 **Effort:** 1-2 hours  
-**Dependencies:** Story 1.1
+**Dependencies:** None
 
 **Context:**  
 Index files simplify imports and make the API surface of each directory clear. This follows the pattern in our file-structure guidelines.
@@ -308,12 +171,11 @@ import { FunctionLogsTable, FunctionLogDetails } from '@/components/FunctionLogs
 ```
 
 **Tasks:**
-- [ ] Complete `src/components/ui/index.ts` exports (currently incomplete)
 - [ ] Create `src/components/auth/index.ts`
 - [ ] Create `src/components/integrations/index.ts`
-- [ ] Create `src/components/Layout/index.ts` (exists but may be incomplete)
-- [ ] Create `src/components/Providers/index.ts` (exists but verify completeness)
 - [ ] Create `src/components/theme/index.ts`
+- [ ] Verify completeness of `src/components/Layout/index.ts`
+- [ ] Verify completeness of `src/components/Providers/index.ts`
 - [ ] Update imports to use directory imports where beneficial
 
 **Acceptance Criteria:**
@@ -329,25 +191,18 @@ import { FunctionLogsTable, FunctionLogDetails } from '@/components/FunctionLogs
 ✅ src/components/SparkPreview/index.ts
 ✅ src/components/ScheduledTasks/index.ts
 ✅ src/components/Sidebar/index.ts
-⚠️ src/components/ui/index.ts (incomplete)
+✅ src/components/ui/index.ts (complete)
 ✅ src/components/icons/index.ts
 ⚠️ src/components/Layout/index.ts (verify completeness)
 ⚠️ src/components/Providers/index.ts (verify completeness)
 ```
 
-**Files to Create:**
-```
-src/components/auth/index.ts
-src/components/integrations/index.ts
-src/components/theme/index.ts
-```
-
 ---
 
-#### Story 1.3: Standardize Component File Naming (PascalCase)
+#### Story 2: Standardize Component File Naming (PascalCase)
 
 **Effort:** 30 minutes  
-**Dependencies:** Story 1.1, 1.2
+**Dependencies:** Story 1
 
 **Context:**  
 After reviewing the codebase, almost all component files already use PascalCase! This story is minimal verification work.
@@ -375,7 +230,7 @@ After reviewing the codebase, almost all component files already use PascalCase!
 
 ---
 
-#### Story 1.4: Reorganize Hooks by Feature
+#### Story 3: Reorganize Hooks by Feature
 
 **Effort:** 1-2 hours  
 **Dependencies:** None
@@ -413,8 +268,6 @@ src/hooks/
     - use-base-resource.ts
     - use-realtime-subscription.ts
     - index.ts
-  - __legacy__/                 # NEW: For hooks pending removal
-    - (empty initially, add hooks being phased out)
 ```
 
 **Tasks:**
@@ -423,18 +276,16 @@ src/hooks/
 - [ ] Create index.ts in each subdirectory
 - [ ] Update main `src/hooks/index.ts` to re-export all
 - [ ] Update imports throughout codebase
-- [ ] Create `__legacy__/` directory for hooks being phased out
 
 **Acceptance Criteria:**
 - [ ] Hooks organized by logical grouping
 - [ ] Each subdirectory has index.ts
 - [ ] Main hooks/index.ts exports all hooks
 - [ ] All imports updated and working
-- [ ] Legacy directory exists for deprecated hooks (if any)
 
 ---
 
-#### Story 1.5: Standardize Utility Organization
+#### Story 4: Standardize Utility Organization
 
 **Effort:** 2-3 hours  
 **Dependencies:** None
@@ -463,18 +314,15 @@ src/lib/
   - database/                 # NEW: db.ts, supabase.ts
   - clients/                  # NEW: aiClient.ts
   - utilities/                # NEW: utils.ts, api-utils.ts, sidebar-utils.tsx
-  - error-handling/           # NEW: error-handling.ts, errors.ts (already good standalone)
   - storage/                  # NEW: storage.ts, client-storage.ts
-  - types/                    # NEW: types.ts (or keep at root for easy access)
-  - __legacy__/               # NEW: For deprecated files (books-service.ts, sparks-service.ts after removal)
   
   Keep at root level:
   - inngest.ts               # Inngest initialization
   - inngest-db-logger-middleware.ts  # Inngest-specific
-  - types.ts                 # Core types used everywhere (or move to types/)
+  - types.ts                 # Core types used everywhere
+  - errors.ts                # Core error handling
+  - error-handling.ts        # Error utilities
 ```
-
-**Note:** Consider keeping `types.ts` and `errors.ts` at lib root for easy access, as they're used throughout the app.
 
 **Tasks:**
 - [ ] Create new subdirectories
@@ -491,13 +339,13 @@ src/lib/
 
 ---
 
-### 🟡 Priority 2: Code Quality & Duplication (2-3 weeks)
+### 📋 PHASE 2: Code Quality & Duplication Reduction
 
-These stories reduce code duplication and improve code quality through abstraction.
+**Goal:** Reduce code duplication and improve code quality through abstraction.
 
 ---
 
-#### Story 2.1: Create Reusable Date & Duration Formatting Utilities
+#### Story 5: Create Reusable Date & Duration Formatting Utilities
 
 **Effort:** 1 hour  
 **Dependencies:** None
@@ -543,7 +391,7 @@ src/components/FunctionLogs/FunctionLogDetails.tsx
 
 ---
 
-#### Story 2.2: Abstract Table Filtering, Sorting, and Pagination Patterns
+#### Story 6: Abstract Table Filtering, Sorting, and Pagination Patterns
 
 **Effort:** 3-4 hours  
 **Dependencies:** None
@@ -594,10 +442,10 @@ export function useTablePagination<T>(
 
 ---
 
-#### Story 2.3: Create Reusable Table UI Components
+#### Story 7: Create Reusable Table UI Components
 
 **Effort:** 3-4 hours  
-**Dependencies:** Story 2.2
+**Dependencies:** Story 6
 
 **Context:**  
 Table components share common UI patterns: loading skeletons, empty states, expansion rows, status badges. These should be abstracted into reusable components.
@@ -641,7 +489,7 @@ src/components/ScheduledTasks/ScheduledTasksTable.tsx
 
 ---
 
-#### Story 2.4: Create Standardized Search Component
+#### Story 8: Create Standardized Search Component
 
 **Effort:** 2 hours  
 **Dependencies:** None
@@ -677,7 +525,7 @@ Search inputs appear in multiple places (sidebar, tables) with similar functiona
 
 ---
 
-#### Story 2.5: Create Standardized Filter Component
+#### Story 9: Create Standardized Filter Component
 
 **Effort:** 2 hours  
 **Dependencies:** None
@@ -712,13 +560,13 @@ Filter dropdowns appear in multiple tables and views with similar patterns. A re
 
 ---
 
-### 🟠 Priority 2.5: Context & State Management Improvements (1 week)
+### 📋 PHASE 3: Context & State Management
 
-These stories improve state management and reduce prop drilling through better context usage.
+**Goal:** Improve state management and reduce prop drilling through better context usage.
 
 ---
 
-#### Story 2.6: Extract Focus Mode to Context
+#### Story 10: Extract Focus Mode to Context
 
 **Effort:** 2 hours  
 **Dependencies:** None
@@ -747,7 +595,7 @@ Focus mode is currently managed as local state in `AppLayout.tsx` and doesn't in
 
 ---
 
-#### Story 2.7: Consolidate Authentication Hooks
+#### Story 11: Consolidate Authentication Hooks
 
 **Effort:** 2-3 hours  
 **Dependencies:** None
@@ -779,13 +627,222 @@ export function useSupabaseAuth()
 
 ---
 
-### 🟢 Priority 3: Enhanced Hooks & State Management (3-4 weeks)
+### 📋 PHASE 4: Data Safety & Backup (HIGH VALUE) 🔒
 
-These stories improve the hook layer with consistent patterns and better state management.
+**Goal:** Protect your personal data with export, import, and seeding capabilities.
+
+**Why This Matters:** Since this is a personal application with your own data, data safety is critical. These stories protect against data loss and enable easy backup/restore.
 
 ---
 
-#### Story 3.1: Implement Enhanced Hooks for Books Service
+#### Story 12: Implement Data Export Functionality
+
+**Effort:** 3-4 hours  
+**Dependencies:** None
+
+**Context:**  
+Personal data in Spark (highlights, notes, categories, etc.) should be exportable for backup and portability. This protects against data loss and allows easy migration.
+
+**Tasks:**
+- [ ] Create export service in `src/lib/utilities/data-export.ts`
+- [ ] Support exporting all user data to JSON
+- [ ] Support exporting specific collections (books, notes, highlights, etc.)
+- [ ] Include metadata (timestamps, relationships)
+- [ ] Add UI in settings/debug page for triggering exports
+- [ ] Support downloading as file
+- [ ] Include data validation on export
+
+**Proposed API:**
+```typescript
+// src/lib/utilities/data-export.ts
+export async function exportAllData(): Promise<ExportData>
+export async function exportCollection(collection: CollectionType): Promise<any[]>
+export function downloadExport(data: ExportData, filename: string): void
+```
+
+**Acceptance Criteria:**
+- [ ] Can export all data to structured JSON
+- [ ] Can export individual collections
+- [ ] Export includes all necessary metadata
+- [ ] Downloaded files are properly formatted
+- [ ] Export is validated before download
+- [ ] UI accessible from settings or debug page
+
+---
+
+#### Story 13: Implement Data Import/Restore Functionality
+
+**Effort:** 3-4 hours  
+**Dependencies:** Story 12
+
+**Context:**  
+Complement the export functionality with the ability to import/restore data. This enables backup restoration and data migration.
+
+**Tasks:**
+- [ ] Create import service in `src/lib/utilities/data-import.ts`
+- [ ] Validate import data structure
+- [ ] Support full data restore
+- [ ] Support selective collection import
+- [ ] Handle conflicts (duplicate IDs, etc.)
+- [ ] Add UI for uploading import files
+- [ ] Show preview before importing
+- [ ] Add confirmation for destructive operations
+
+**Proposed API:**
+```typescript
+// src/lib/utilities/data-import.ts
+export async function validateImportData(data: any): Promise<ValidationResult>
+export async function importAllData(data: ExportData, mode: 'replace' | 'merge'): Promise<void>
+export async function importCollection(collection: CollectionType, data: any[]): Promise<void>
+```
+
+**Acceptance Criteria:**
+- [ ] Can import previously exported data
+- [ ] Data validation prevents corrupt imports
+- [ ] Handles conflicts appropriately
+- [ ] Preview shows what will be imported
+- [ ] Confirmation required for destructive operations
+- [ ] Clear error messages for invalid data
+
+---
+
+#### Story 14: Database Seeding for Development
+
+**Effort:** 2-3 hours  
+**Dependencies:** None
+
+**Context:**  
+When developing or testing, it's useful to have seed data available. This makes it easier to test features and verify behavior.
+
+**Tasks:**
+- [ ] Create seed data utilities in `src/scripts/seed-data.ts`
+- [ ] Create sample books, highlights, notes
+- [ ] Create sample categories and tags
+- [ ] Support seeding via script or UI
+- [ ] Include option to clear all data (with confirmation)
+- [ ] Add to debug page for easy access
+
+**Acceptance Criteria:**
+- [ ] Can seed database with sample data
+- [ ] Seed data is realistic and useful
+- [ ] Can clear data (with strong confirmation)
+- [ ] Available via script and UI
+- [ ] Works in local development
+
+---
+
+### 📋 PHASE 5: Development Tooling & Debugging
+
+**Goal:** Improve debugging capabilities and development workflow.
+
+**Why This Matters:** As the sole developer, good debugging tools save time and frustration when troubleshooting issues.
+
+---
+
+#### Story 15: Enhanced Debug Page
+
+**Effort:** 2-3 hours  
+**Dependencies:** None
+
+**Context:**  
+The `/debug` page should be a comprehensive tool for development, testing, and troubleshooting.
+
+**Current State:**
+- Basic debug page exists
+- Error boundary test added
+
+**Enhancements:**
+- [ ] Add database query testing panel
+- [ ] Add API endpoint testing
+- [ ] Add service layer testing
+- [ ] Show current environment variables (non-sensitive)
+- [ ] Add cache clearing utilities
+- [ ] Add localStorage inspection/editing
+- [ ] Add Supabase connection status
+- [ ] Add recent error logs viewer
+- [ ] Add performance profiling tools
+
+**Acceptance Criteria:**
+- [ ] Can test database queries directly
+- [ ] Can test API endpoints with custom payloads
+- [ ] Can clear various caches
+- [ ] Can view and edit localStorage
+- [ ] Connection status is visible
+- [ ] Recent errors are logged and viewable
+- [ ] Only accessible in development mode
+
+---
+
+#### Story 16: Improved Error Messages and Logging
+
+**Effort:** 2-3 hours  
+**Dependencies:** None
+
+**Context:**  
+Better error messages and logging make debugging faster and easier, especially when working solo.
+
+**Tasks:**
+- [ ] Enhance error messages with context
+- [ ] Add structured logging utility
+- [ ] Log important operations (imports, deletions, etc.)
+- [ ] Add request/response logging in development
+- [ ] Create error aggregation view
+- [ ] Add search/filter for logs
+- [ ] Include stack traces in development
+
+**Proposed Logging Utility:**
+```typescript
+// src/lib/utilities/logger.ts
+export const logger = {
+  info: (message: string, context?: any) => void,
+  warn: (message: string, context?: any) => void,
+  error: (message: string, error?: Error, context?: any) => void,
+  debug: (message: string, context?: any) => void,
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Consistent error message format
+- [ ] Context included in error messages
+- [ ] Structured logging throughout app
+- [ ] Can view logs in debug page
+- [ ] Logs include timestamps and context
+- [ ] Development mode shows detailed logs
+
+---
+
+#### Story 17: Configuration Management Improvements
+
+**Effort:** 1-2 hours  
+**Dependencies:** None
+
+**Context:**  
+Make it easy to adjust application settings without code changes.
+
+**Tasks:**
+- [ ] Create settings panel in debug/settings page
+- [ ] Support runtime configuration overrides
+- [ ] Add feature flags for experimental features
+- [ ] Add ability to toggle development features
+- [ ] Store preferences in localStorage
+- [ ] Document available configuration options
+
+**Acceptance Criteria:**
+- [ ] Can adjust settings without code changes
+- [ ] Settings persist across sessions
+- [ ] Feature flags work properly
+- [ ] Configuration options are documented
+- [ ] Changes take effect immediately (or after refresh)
+
+---
+
+### 📋 PHASE 6: Enhanced Hooks & Consistent Patterns
+
+**Goal:** Implement consistent patterns across all data hooks with proper loading states, error handling, and optimistic updates.
+
+---
+
+#### Story 18: Implement Enhanced Hooks for Books Service
 
 **Effort:** 2-3 hours  
 **Dependencies:** None
@@ -843,7 +900,7 @@ export function useBooks() {
 
 ---
 
-#### Story 3.2: Implement Enhanced Hooks for Highlights Service
+#### Story 19: Implement Enhanced Hooks for Highlights Service
 
 **Effort:** 2-3 hours  
 **Dependencies:** None
@@ -869,7 +926,7 @@ Similar to books, highlights hooks need enhancement with proper loading states, 
 
 ---
 
-#### Story 3.3: Implement Enhanced Hooks for Notes Service
+#### Story 20: Implement Enhanced Hooks for Notes Service
 
 **Effort:** 2-3 hours  
 **Dependencies:** None
@@ -894,10 +951,10 @@ Notes service needs enhanced hooks following the established pattern.
 
 ---
 
-#### Story 3.4: Standardize Error Handling Across All Hooks
+#### Story 21: Standardize Error Handling Across All Hooks
 
 **Effort:** 3-4 hours  
-**Dependencies:** Stories 3.1, 3.2, 3.3
+**Dependencies:** Stories 18, 19, 20
 
 **Context:**  
 After enhancing all service hooks, we should ensure error handling is completely consistent across all hooks with standardized error types and user feedback.
@@ -929,10 +986,10 @@ export function handleHookError(
 
 ---
 
-#### Story 3.5: Implement Retry Logic for Network Requests
+#### Story 22: Implement Retry Logic for Network Requests
 
 **Effort:** 2-3 hours  
-**Dependencies:** Story 3.4
+**Dependencies:** Story 21
 
 **Context:**  
 Network requests should have automatic retry logic with exponential backoff to improve resilience against transient failures.
@@ -962,181 +1019,15 @@ export async function withRetry<T>(
 
 ---
 
-### 🔵 Priority 4: Testing & Performance (4+ weeks)
+### 📋 PHASE 7: API Layer Consistency
 
-These stories add testing infrastructure and improve performance.
+**Goal:** Standardize API patterns for easier maintenance and debugging.
 
----
-
-#### Story 4.1: Implement Unit Tests for Repositories
-
-**Effort:** 1 week  
-**Dependencies:** None
-
-**Context:**  
-Repositories should have comprehensive unit tests to ensure database operations work correctly. This prevents regressions as we continue refactoring.
-
-**Tasks:**
-- [ ] Set up testing infrastructure (Jest/Vitest)
-- [ ] Create test fixtures and mocks for Supabase
-- [ ] Write tests for base.repository.ts
-- [ ] Write tests for each repository
-- [ ] Achieve >80% code coverage for repositories
-- [ ] Document testing patterns
-
-**Acceptance Criteria:**
-- [ ] Testing framework configured
-- [ ] Mock utilities for Supabase created
-- [ ] Each repository has test file
-- [ ] >80% code coverage for repositories
-- [ ] Tests run in CI/CD pipeline
+**Why This Matters:** Consistent patterns reduce cognitive load when making changes to the API layer.
 
 ---
 
-#### Story 4.2: Implement Unit Tests for Services
-
-**Effort:** 1 week  
-**Dependencies:** Story 4.1
-
-**Context:**  
-Services contain business logic that should be thoroughly tested. Tests should mock repositories and verify service logic.
-
-**Tasks:**
-- [ ] Create mocks for repositories
-- [ ] Write tests for base.service.ts
-- [ ] Write tests for each service
-- [ ] Test error handling paths
-- [ ] Achieve >80% code coverage for services
-- [ ] Document testing patterns
-
-**Acceptance Criteria:**
-- [ ] Each service has test file
-- [ ] Repository mocks created
-- [ ] Business logic thoroughly tested
-- [ ] >80% code coverage for services
-- [ ] Tests run in CI/CD pipeline
-
----
-
-#### Story 4.3: Implement Unit Tests for Custom Hooks
-
-**Effort:** 1 week  
-**Dependencies:** Story 4.2
-
-**Context:**  
-Custom hooks should be tested to ensure they properly manage state and integrate with services.
-
-**Tasks:**
-- [ ] Set up React Testing Library
-- [ ] Create mocks for services
-- [ ] Write tests for base hook factory
-- [ ] Write tests for each custom hook
-- [ ] Test loading and error states
-- [ ] Test optimistic updates
-- [ ] Achieve >80% code coverage
-
-**Acceptance Criteria:**
-- [ ] React Testing Library configured
-- [ ] Each hook has test file
-- [ ] State management thoroughly tested
-- [ ] >80% code coverage for hooks
-- [ ] Tests run in CI/CD pipeline
-
----
-
-#### Story 4.4: Add End-to-End Tests for Critical Flows
-
-**Effort:** 1-2 weeks  
-**Dependencies:** None
-
-**Context:**  
-Critical user flows should have E2E tests to prevent regressions and ensure the application works as expected from a user's perspective.
-
-**Critical Flows to Test:**
-1. Authentication (sign in, sign out)
-2. Import highlights from Readwise
-3. Categorize sparks/highlights
-4. Search and filter data
-5. Create and edit notes
-6. Manage categories and tags
-
-**Tasks:**
-- [ ] Set up E2E testing framework (Playwright/Cypress)
-- [ ] Create test utilities and helpers
-- [ ] Write tests for authentication flow
-- [ ] Write tests for import flow
-- [ ] Write tests for categorization flow
-- [ ] Write tests for search/filter
-- [ ] Write tests for notes CRUD
-- [ ] Configure E2E tests in CI/CD
-
-**Acceptance Criteria:**
-- [ ] E2E framework configured
-- [ ] All critical flows have E2E tests
-- [ ] Tests run in CI environment
-- [ ] Tests run on every PR
-- [ ] Test failures block merging
-
----
-
-#### Story 4.5: Optimize Database Queries
-
-**Effort:** 1 week  
-**Dependencies:** Story 4.1
-
-**Context:**  
-Some database queries, especially those with complex joins and filters, could be optimized for better performance.
-
-**Tasks:**
-- [ ] Audit all repository methods for query efficiency
-- [ ] Identify N+1 query problems
-- [ ] Add appropriate indexes (work with backend team)
-- [ ] Optimize complex joins
-- [ ] Add query performance monitoring
-- [ ] Document query optimization patterns
-
-**Acceptance Criteria:**
-- [ ] All queries reviewed for efficiency
-- [ ] N+1 problems resolved
-- [ ] Indexes added where needed
-- [ ] Complex queries optimized
-- [ ] Performance improvements measurable
-
----
-
-#### Story 4.6: Implement React Rendering Optimizations
-
-**Effort:** 1 week  
-**Dependencies:** None
-
-**Context:**  
-Some components may have unnecessary re-renders. We should identify and optimize these with React.memo, useMemo, and useCallback.
-
-**Tasks:**
-- [ ] Install React DevTools Profiler
-- [ ] Profile application to identify re-render issues
-- [ ] Apply React.memo to appropriate components
-- [ ] Use useMemo for expensive calculations
-- [ ] Use useCallback for event handlers
-- [ ] Measure improvement
-- [ ] Document optimization patterns
-
-**Acceptance Criteria:**
-- [ ] Re-render issues identified and documented
-- [ ] Optimizations applied where beneficial
-- [ ] Performance improvements measured
-- [ ] No over-optimization (keep code readable)
-- [ ] Guidelines documented
-
----
-
-### 🔵 Priority 4.5: API Layer Improvements (1 week)
-
-These stories improve consistency and error handling in the API layer.
-
----
-
-#### Story 4.7: Standardize API Route Authentication
+#### Story 23: Standardize API Route Authentication
 
 **Effort:** 2-3 hours  
 **Dependencies:** None
@@ -1171,7 +1062,7 @@ if (!authHeader || !authHeader.startsWith('Bearer ')) {
 
 ---
 
-#### Story 4.8: Standardize API Response Format
+#### Story 24: Standardize API Response Format
 
 **Effort:** 2-3 hours  
 **Dependencies:** None
@@ -1215,268 +1106,105 @@ return createSuccessResponse(data, 'Success message');
 
 ---
 
-### 🟣 Priority 5: Frontend Structure & Next.js Best Practices (4+ weeks)
+### 📋 PHASE 8: Testing Infrastructure
 
-These stories ensure we're following Next.js App Router best practices.
+**Goal:** Add unit tests for repositories, services, and hooks to prevent regressions.
 
----
-
-#### ✅ Story 5.1: Implement loading.tsx for Route Loading States [COMPLETED]
-
-**Effort:** 3-4 hours  
-**Dependencies:** None  
-**Completed:** October 7, 2025
-
-**Context:**  
-Next.js App Router supports `loading.tsx` files for route-level loading states. Previously, NO routes had loading.tsx files, and pages handled loading internally. This has been improved for better UX.
-
-**What Was Done:**
-- Created reusable skeleton components in `src/components/ui/ContentSkeleton.tsx`:
-  - `BookHighlightsSkeleton` - For book highlights detail pages
-  - `NotesListSkeleton` - For notes list page
-  - `NoteDetailSkeleton` - For single note detail pages
-  - `CategoryTagSkeleton` - For category and tag pages
-  - `AutomationsSkeleton` - For automations page
-- Created `LoadingSpinner` component in `src/components/ui/LoadingSpinner.tsx`
-- Created `app/loading.tsx` for root loading (fallback)
-- Created `app/highlights/[rwId]/loading.tsx`
-- Created `app/notes/loading.tsx` and `app/notes/[id]/loading.tsx`
-- Created `app/category/[slug]/loading.tsx`
-- Created `app/tag/[name]/loading.tsx`
-- Created `app/automations/loading.tsx`
-- Updated `src/components/ui/index.ts` to export new skeleton components
-- Verified no linter errors
-
-**Routes Now With loading.tsx:**
-- ✅ `/` (root) - Uses LoadingSpinner
-- ✅ `/highlights/[rwId]` - Uses BookHighlightsSkeleton
-- ✅ `/notes` - Uses NotesListSkeleton
-- ✅ `/notes/[id]` - Uses NoteDetailSkeleton
-- ✅ `/category/[slug]` - Uses CategoryTagSkeleton
-- ✅ `/tag/[name]` - Uses CategoryTagSkeleton
-- ✅ `/automations` - Uses AutomationsSkeleton
-
-**Acceptance Criteria:**
-- [x] All data-loading routes have loading.tsx
-- [x] Loading states are consistent and match content layout
-- [x] User sees immediate feedback during navigation
-- [x] Loading skeletons match actual content layout
-- [x] No flash of empty content during navigation
-- [x] Reusable skeleton components created
-- [x] Components exported from ui/index.ts
-
-**Note:** Pages still handle internal loading states for backward compatibility. In a future story (Story 5.3), when converting pages to Server Components, the internal loading states can be removed in favor of these route-level loading.tsx files.
+**Why This Matters:** Even for personal use, tests prevent regressions and serve as documentation of intended behavior.
 
 ---
 
-#### ✅ Story 5.2: Implement error.tsx for Error Boundaries [COMPLETED]
+#### Story 25: Implement Unit Tests for Repositories
 
-**Effort:** 3-4 hours  
-**Dependencies:** None  
-**Completed:** October 7, 2025
-
-**Context:**  
-Next.js App Router supports `error.tsx` files for route-level error boundaries. Previously, NO error.tsx files existed. Pages handled errors internally or showed uncaught errors. This has been improved with comprehensive error boundaries.
-
-**What Was Done:**
-- Reviewed existing `ErrorBoundary` component in `src/components/ui/ErrorState.tsx` (excellent implementation with error logging, reset functionality, and user-friendly UI)
-- Created 10 error.tsx files for all major routes using the `ErrorBoundary` component:
-  - ✅ `app/error.tsx` - Root level error boundary
-  - ✅ `app/highlights/[rwId]/error.tsx`
-  - ✅ `app/notes/error.tsx` - Notes list
-  - ✅ `app/notes/[id]/error.tsx` - Note detail
-  - ✅ `app/category/[slug]/error.tsx`
-  - ✅ `app/tag/[name]/error.tsx`
-  - ✅ `app/automations/error.tsx`
-  - ✅ `app/debug/error.tsx`
-  - ✅ `app/(routes)/settings/error.tsx`
-  - ✅ `app/login/error.tsx`
-- Error logging already implemented in ErrorBoundary component (console.error with error details)
-- "Try Again" functionality already implemented via reset button in ErrorBoundary
-- Added test button to `/debug` page to manually trigger errors and verify error boundary works correctly
-- Error handling pattern documented in this refactoring plan
-
-**Routes Now With error.tsx:**
-All 10 major routes now have error boundaries that catch and gracefully handle errors without crashing the entire application.
-
-**Acceptance Criteria:**
-- [x] All major routes have error.tsx
-- [x] Errors are caught and displayed gracefully
-- [x] Error details logged for debugging (via ErrorBoundary component)
-- [x] Users can recover from errors with reset button
-- [x] Consistent error UI across routes (all use same ErrorBoundary component)
-- [x] App doesn't crash completely on route errors
-- [x] Manual test capability added to /debug page
-
-**Note:** The existing `ErrorBoundary` component in `ErrorState.tsx` is excellent and provides consistent, user-friendly error handling with proper logging and recovery options. All error.tsx files use this component for consistency.
-
----
-
-#### Story 5.3: Optimize Client vs Server Component Usage
-
-**Effort:** 2 weeks  
-**Dependencies:** Story 5.1, 5.2 (loading and error boundaries should be in place first)
-
-**Context:**  
-Currently, ALL page components use `"use client"` directive. This is suboptimal for Next.js App Router. We should convert pages to Server Components where possible and move client-side logic to client components.
-
-**Current State:**
-```typescript
-// ALL of these are client components:
-app/page.tsx                    - "use client"
-app/notes/page.tsx              - "use client"
-app/notes/[id]/page.tsx        - "use client"
-app/category/[slug]/page.tsx   - "use client"
-app/tag/[name]/page.tsx        - "use client"
-app/automations/page.tsx       - "use client"
-app/debug/page.tsx             - "use client"
-app/login/page.tsx             - "use client"
-app/(routes)/settings/page.tsx - "use client"
-app/highlights/[rwId]/page.tsx - "use client"
-```
-
-**Why This Matters:**
-- Server Components reduce client bundle size
-- Initial page loads are faster
-- SEO is improved
-- Data fetching happens on server
-
-**Conversion Strategy:**
-1. Pages should be Server Components by default
-2. Create client components for interactive parts
-3. Fetch data in Server Components (parallel to loading.tsx)
-4. Pass data to client components as props
-
-**Tasks:**
-- [ ] Audit all page components to identify client-side requirements
-- [ ] Create client components for interactive features
-- [ ] Convert pages to Server Components where possible
-- [ ] Move data fetching to Server Components using async/await
-- [ ] Test each converted page thoroughly
-- [ ] Measure bundle size before and after
-- [ ] Document conversion patterns and guidelines
-
-**Priority Order for Conversion:**
-1. `/category/[slug]` - Simplest, mostly data display
-2. `/tag/[name]` - Similar to category
-3. `/notes` - List page
-4. `/highlights/[rwId]` - Detail page (if highlighting doesn't need client)
-5. More complex pages later
-
-**Acceptance Criteria:**
-- [ ] At least 50% of pages converted to Server Components
-- [ ] Client bundle size measurably reduced
-- [ ] No loss of functionality
-- [ ] Loading and error states work with Server Components
-- [ ] Guidelines documented with examples
-
----
-
-#### Story 5.4: Implement Proper Metadata for SEO
-
-**Effort:** 4-5 hours  
-**Dependencies:** Story 5.3 (easier with Server Components)
-
-**Context:**  
-Next.js App Router supports metadata API for SEO. Currently only root layout has metadata. Dynamic routes and pages need proper metadata for SEO.
-
-**Current State:**
-```typescript
-// ✅ Root layout has basic metadata
-export const metadata: Metadata = {
-  title: 'Spark | Your Knowledge Hub',
-  description: 'Organize your knowledge and spark new insights',
-  icons: { ... }
-};
-
-// ❌ No other pages have metadata
-// ❌ No dynamic metadata for [slug], [id], [name] routes
-```
-
-**Tasks:**
-- [ ] Create metadata utility functions in `src/lib/utilities/metadata.ts`
-- [ ] Add static metadata to static pages:
-  - [ ] `/notes` - "Notes | Spark"
-  - [ ] `/automations` - "Automations | Spark"
-  - [ ] `/settings` - "Settings | Spark"
-  - [ ] `/debug` - "Debug | Spark"
-- [ ] Add dynamic metadata using `generateMetadata` to:
-  - [ ] `/category/[slug]` - "Category: {name} | Spark"
-  - [ ] `/tag/[name]` - "Tag: {name} | Spark"
-  - [ ] `/notes/[id]` - "{note title} | Spark"
-  - [ ] `/highlights/[rwId]` - "{book title} Highlights | Spark"
-- [ ] Add Open Graph tags for sharing
-- [ ] Add Twitter Card tags
-- [ ] Test with SEO tools (Lighthouse, Open Graph debugger)
-- [ ] Document metadata patterns
-
-**Metadata Template:**
-```typescript
-export async function generateMetadata({ params }): Promise<Metadata> {
-  // Fetch data for dynamic content
-  const data = await getData(params);
-  
-  return {
-    title: `${data.title} | Spark`,
-    description: data.description || 'Organize your knowledge',
-    openGraph: {
-      title: `${data.title} | Spark`,
-      description: data.description,
-      type: 'article',
-    },
-  };
-}
-```
-
-**Acceptance Criteria:**
-- [ ] All routes have proper metadata
-- [ ] Dynamic routes generate metadata from data
-- [ ] Open Graph tags implemented
-- [ ] Twitter Card tags implemented
-- [ ] SEO scores improved (measure with Lighthouse)
-- [ ] Metadata utilities documented
-
-**Note:** This is significantly easier once pages are Server Components (Story 5.3).
-
----
-
-#### Story 5.5: Review and Optimize Routing Structure
-
-**Effort:** 3-4 hours  
+**Effort:** 1 week  
 **Dependencies:** None
 
 **Context:**  
-Review the current routing structure to ensure it follows Next.js App Router best practices and provides good UX.
+Repositories should have comprehensive unit tests to ensure database operations work correctly. This prevents regressions as we continue refactoring.
 
 **Tasks:**
-- [ ] Audit current routing structure
-- [ ] Identify opportunities for route groups
-- [ ] Identify opportunities for parallel routes
-- [ ] Review nested layouts
-- [ ] Document routing decisions
-- [ ] Implement any structural improvements
+- [ ] Set up testing infrastructure (Jest/Vitest)
+- [ ] Create test fixtures and mocks for Supabase
+- [ ] Write tests for base.repository.ts
+- [ ] Write tests for each repository
+- [ ] Achieve >80% code coverage for repositories
+- [ ] Document testing patterns
 
 **Acceptance Criteria:**
-- [ ] Routing structure follows App Router best practices
-- [ ] Route groups used appropriately
-- [ ] Layouts properly nested
-- [ ] Routing documented in README
+- [ ] Testing framework configured
+- [ ] Mock utilities for Supabase created
+- [ ] Each repository has test file
+- [ ] >80% code coverage for repositories
+- [ ] Tests run in CI/CD pipeline
 
 ---
 
-### 🟤 Priority 6: Additional Improvements (Ongoing)
+#### Story 26: Implement Unit Tests for Services
 
-These stories are lower priority but still valuable improvements.
+**Effort:** 1 week  
+**Dependencies:** Story 25
+
+**Context:**  
+Services contain business logic that should be thoroughly tested. Tests should mock repositories and verify service logic.
+
+**Tasks:**
+- [ ] Create mocks for repositories
+- [ ] Write tests for base.service.ts
+- [ ] Write tests for each service
+- [ ] Test error handling paths
+- [ ] Achieve >80% code coverage for services
+- [ ] Document testing patterns
+
+**Acceptance Criteria:**
+- [ ] Each service has test file
+- [ ] Repository mocks created
+- [ ] Business logic thoroughly tested
+- [ ] >80% code coverage for services
+- [ ] Tests run in CI/CD pipeline
 
 ---
 
-#### Story 6.1: Add Comprehensive JSDoc Comments
+#### Story 27: Implement Unit Tests for Custom Hooks
+
+**Effort:** 1 week  
+**Dependencies:** Story 26
+
+**Context:**  
+Custom hooks should be tested to ensure they properly manage state and integrate with services.
+
+**Tasks:**
+- [ ] Set up React Testing Library
+- [ ] Create mocks for services
+- [ ] Write tests for base hook factory
+- [ ] Write tests for each custom hook
+- [ ] Test loading and error states
+- [ ] Test optimistic updates
+- [ ] Achieve >80% code coverage
+
+**Acceptance Criteria:**
+- [ ] React Testing Library configured
+- [ ] Each hook has test file
+- [ ] State management thoroughly tested
+- [ ] >80% code coverage for hooks
+- [ ] Tests run in CI/CD pipeline
+
+---
+
+### 📋 PHASE 9: Documentation (Ongoing)
+
+**Goal:** Add comprehensive JSDoc documentation for better IDE support and code clarity.
+
+**Why This Matters:** When returning to code after weeks/months away, good documentation makes it much easier to understand what functions do and how to use them.
+
+---
+
+#### Story 28: Add Comprehensive JSDoc Comments
 
 **Effort:** Ongoing  
 **Dependencies:** None
 
 **Context:**  
-Functions, classes, and types should have JSDoc comments for better IDE support and documentation.
+Functions, classes, and types should have JSDoc comments for better IDE support and documentation. This is especially valuable when returning to the codebase after time away.
 
 **Tasks:**
 - [ ] Add JSDoc to all repository methods
@@ -1484,68 +1212,94 @@ Functions, classes, and types should have JSDoc comments for better IDE support 
 - [ ] Add JSDoc to all custom hooks
 - [ ] Add JSDoc to utility functions
 - [ ] Add JSDoc to type definitions
+- [ ] Include usage examples for complex functions
 
 **Acceptance Criteria:**
 - [ ] All public APIs have JSDoc comments
 - [ ] JSDoc includes parameter descriptions
 - [ ] JSDoc includes return type descriptions
 - [ ] JSDoc includes usage examples where helpful
+- [ ] IDE provides helpful autocomplete and hints
+
+**Note:** This can be done incrementally as you touch files for other stories.
 
 ---
 
-#### Story 6.2: Review and Improve Accessibility
+### 📋 PHASE 10: Optional Next.js Optimizations
 
-**Effort:** 1 week  
+**Status:** Lower priority - implement only if time permits or for learning purposes.
+
+**Context:** These Next.js best practices have reduced importance for a single-user application. Server Components and performance optimizations provide less benefit when the app runs locally and serves only one user.
+
+---
+
+#### Story 29: Optimize Client vs Server Component Usage (Optional)
+
+**Effort:** 2 weeks  
 **Dependencies:** None
 
-**Context:**  
-Ensure the application follows accessibility best practices (WCAG 2.1 AA).
+**Context for Single-User:**  
+While Server Components reduce bundle size and improve performance, these benefits are less impactful for local/single-user deployment. This story is marked optional - only pursue if interested in learning Server Components or planning to share the app publicly later.
 
-**Tasks:**
-- [ ] Run accessibility audit tools
-- [ ] Implement keyboard navigation for all interactive elements
-- [ ] Add proper ARIA labels
-- [ ] Ensure proper color contrast
-- [ ] Test with screen readers
-- [ ] Document accessibility patterns
+**Deprioritization Rationale:**
+- Performance gains minimal for single-user
+- Client Components work fine for personal use
+- Time better spent on debugging tools and data safety
+- Can revisit if deployment needs change
+
+**Tasks (If Pursued):**
+- [ ] Audit all page components to identify client-side requirements
+- [ ] Create client components for interactive features
+- [ ] Convert pages to Server Components where possible
+- [ ] Move data fetching to Server Components using async/await
+- [ ] Test each converted page thoroughly
+- [ ] Document conversion patterns and guidelines
 
 **Acceptance Criteria:**
-- [ ] Application passes accessibility audits
-- [ ] Full keyboard navigation support
-- [ ] Proper ARIA labels throughout
-- [ ] Color contrast meets WCAG AA
-- [ ] Screen reader compatible
+- [ ] At least 50% of pages converted to Server Components (optional)
+- [ ] No loss of functionality
+- [ ] Loading and error states work with Server Components
+- [ ] Guidelines documented with examples
 
 ---
 
-#### Story 6.3: Implement Consistent Keyboard Navigation
+#### Story 30: Review and Optimize Routing Structure (Optional)
 
-**Effort:** 3-4 days  
-**Dependencies:** Story 6.2
+**Effort:** 3-4 hours  
+**Dependencies:** None
 
-**Context:**  
-All interactive components should support keyboard navigation with intuitive shortcuts.
+**Context for Single-User:**  
+Routing structure review is a nice-to-have. The current structure works fine for personal use.
 
-**Tasks:**
-- [ ] Define keyboard shortcuts
-- [ ] Implement navigation shortcuts
-- [ ] Implement action shortcuts
-- [ ] Add keyboard shortcut help modal
-- [ ] Document shortcuts
+**Tasks (If Pursued):**
+- [ ] Audit current routing structure
+- [ ] Identify opportunities for route groups
+- [ ] Review nested layouts
+- [ ] Document routing decisions
 
 **Acceptance Criteria:**
-- [ ] All components support keyboard navigation
-- [ ] Shortcuts are intuitive and consistent
-- [ ] Help modal shows all shortcuts
-- [ ] Shortcuts documented
-
----
+- [ ] Routing structure documented
+- [ ] Any improvements implemented
 
 ---
 
 ## Completed Major Initiatives
 
 These significant refactoring efforts have been completed and documented here for reference.
+
+### ✅ Priority 0: Critical Cleanup & Technical Debt [COMPLETED]
+
+All stories in this priority have been completed. Deprecated code has been removed and technical debt cleaned up.
+
+**Completed Stories:**
+- ✅ Story 0.1: Remove Deprecated Legacy Services
+- ✅ Story 0.2: Remove Unused/Deprecated Hooks
+- ✅ Story 0.3: Clean Up Deprecated Repository Methods
+- ✅ Story 5.1: Implement loading.tsx for Route Loading States
+- ✅ Story 5.2: Implement error.tsx for Error Boundaries
+- ✅ Story 1.1: Reorganize UI Components into Feature Directories
+
+---
 
 ### ✅ AppLayout Refactoring
 
@@ -1603,89 +1357,104 @@ These significant refactoring efforts have been completed and documented here fo
 
 ---
 
----
-
 ## Success Metrics
 
-### Code Quality Metrics
+**Updated for Single-User Context** - Focusing on maintainability and developer experience over performance and scale.
 
-- **Component Size:** Average component < 200 lines ✅
-- **Service Coverage:** All database access through repositories ✅
-- **Type Safety:** < 5 `any` types in application code ✅
-- **Hook Pattern:** All data hooks follow standard pattern (80% complete)
+### ✅ Code Quality Metrics (PRIMARY FOCUS)
 
-### Organizational Metrics
+- **Component Size:** Average component < 200 lines ✅ **ACHIEVED**
+- **Service Coverage:** All database access through repositories ✅ **ACHIEVED**
+- **Type Safety:** < 5 `any` types in application code ✅ **ACHIEVED**
+- **Hook Pattern:** All data hooks follow standard pattern ⏳ **80% complete**
+- **Code Duplication:** Minimal duplicate logic 🎯 **Target: <5% duplicate code**
+- **API Consistency:** Standardized patterns across all API routes 🎯 **Target: 100%**
 
-- **Directory Structure:** All components organized by feature/type ✅ (100% complete)
-- **Naming Consistency:** All files follow naming conventions ✅ (100% complete)
-- **Documentation:** All major patterns documented ✅ (100% complete)
-- **Index Files:** All directories have index exports (80% complete - most directories done)
+### ✅ Organization & Maintainability (PRIMARY FOCUS)
 
-### Next.js Best Practices (NEW)
+- **Directory Structure:** All components organized by feature/type ✅ **100% ACHIEVED**
+- **Naming Consistency:** All files follow naming conventions ✅ **100% ACHIEVED**
+- **Documentation:** All major patterns documented ✅ **100% ACHIEVED**
+- **Index Files:** All directories have index exports ⏳ **80% complete, target: 100%**
+- **JSDoc Coverage:** Public APIs documented 🎯 **Target: 80% of public methods**
 
-- **Loading States:** Route-level loading.tsx files ✅ (100% - all major routes covered)
-- **Error Boundaries:** Route-level error.tsx files ✅ (100% - all major routes covered)
-- **Server Components:** Pages using Server Components ❌ (0% - all client)
-- **Metadata:** Proper SEO metadata ⚠️ (10% - only root layout)
+### ✅ Error Handling & Debugging (PRIMARY FOCUS)
 
-### Testing Metrics (Future)
+- **Loading States:** Route-level loading.tsx files ✅ **100% - all major routes covered**
+- **Error Boundaries:** Route-level error.tsx files ✅ **100% - all major routes covered**
+- **Error Logging:** Structured error logging 🎯 **Target: All errors logged with context**
+- **Debug Tools:** Comprehensive debug page 🎯 **Target: Database + API + Cache tools**
 
-- **Unit Test Coverage:** >80% for repositories and services
-- **E2E Test Coverage:** All critical flows covered
-- **Test Reliability:** <5% flaky test rate
+### ✅ Data Safety (NEW - HIGH PRIORITY)
 
-### Performance Metrics (Future)
+- **Data Export:** Full data export capability 🎯 **Target: Export all collections**
+- **Data Import:** Restore from backup 🎯 **Target: Safe import with validation**
+- **Data Seeding:** Development seed data 🎯 **Target: Realistic test data**
 
-- **Bundle Size:** Reduce client JS by 20%
-- **Load Time:** <2s initial page load
-- **Rendering:** No unnecessary re-renders in key components
+### Testing Metrics (MEDIUM PRIORITY)
+
+- **Unit Test Coverage:** >80% for repositories and services 🎯 **Target: 80%**
+- **Hook Test Coverage:** >80% for custom hooks 🎯 **Target: 80%**
+- **Test Reliability:** Stable, passing tests 🎯 **Target: <5% flaky rate**
+
+### Performance Metrics (DEPRIORITIZED)
+
+- ~~Bundle Size~~ - Not critical for single-user
+- ~~Load Time~~ - Local deployment, already fast
+- ~~Rendering Optimizations~~ - Apply only if specific issues identified
+- **Note:** Monitor performance, but don't proactively optimize
+
+### SEO & Accessibility (DEPRIORITIZED)
+
+- ~~SEO Metadata~~ - Not needed for personal app
+- ~~Accessibility Compliance~~ - Nice-to-have, not required for personal use
+- **Note:** Basic keyboard navigation is good practice but not a blocker
 
 ---
 
 ## How to Use This Document
 
-1. **Pick a Story:** Choose a story based on priority and dependencies
-2. **Read Context:** Understand why the work is needed
-3. **Check Dependencies:** Ensure dependent stories are complete
-4. **Follow Tasks:** Work through tasks in order
-5. **Verify Acceptance Criteria:** Ensure all criteria are met
-6. **Mark Complete:** Check off story when done
-7. **Update Document:** Keep this document current
+### For Developers
 
-### Recommended Workflow
+1. **Find the next story:** Look for the lowest numbered story that isn't marked complete
+2. **Read the context:** Understand why the work is needed
+3. **Check dependencies:** Ensure any dependent stories are complete
+4. **Follow the tasks:** Work through tasks in order
+5. **Verify acceptance criteria:** Ensure all criteria are met before marking complete
+6. **Mark complete:** Add ✅ to the story title when done
+7. **Move to next story:** Continue with the next sequential story number
 
-**Week 1-2: Quick Wins & Critical Cleanup** ✅ IN PROGRESS
-- ✅ Complete all **Priority 0** stories (deprecated code cleanup)
-- ✅ Complete **Story 5.1** (loading.tsx files) - immediate UX improvement
-- ⏳ Complete **Story 5.2** (error.tsx files) - better error handling
+### Current Progress
 
-**Week 3-4: Next.js Optimization**
-- Begin **Story 5.3** (Server Components) - start with simple pages
-- Add **Story 5.4** (Metadata) as Server Components are converted
+**Completed:** Stories 0.1-0.3, Story 5.1, Story 5.2, Story 1.1 (from old numbering)  
+**Next Story:** Story 1 (Create Index Files for Component Directories)
 
-**Week 5-6: Organization & Patterns**
-- Complete **Priority 1** stories (organization verification)
-- Complete **Priority 2.5** stories (context improvements)
-- Begin **Priority 2** stories (table abstractions)
+### Ongoing Practices
 
-**Ongoing: Feature Development**
-- Continue with **Priority 3** (enhanced hooks) as needed
-- **Priority 4** (testing) can be done in parallel
-- **Priority 6** (accessibility) can be tackled incrementally
+- Add JSDoc as you write/modify code
+- Write unit tests for new services/repositories
+- Keep debug page updated with useful tools
+- Export your data periodically as backup
+- Update this document as stories are completed
 
 ---
 
 ## Notes
 
 - This is a living document - update it as work progresses
-- Add new stories as needs are identified
-- Archive completed stories to keep document focused
-- Adjust priorities based on business needs
-- **October 7 Update:** Added Priority 0, 2.5, and 4.5; Enhanced Priority 5 stories with current state details
+- Mark stories as complete (✅) when all acceptance criteria are met
+- Stories are numbered sequentially in priority order
+- Adjust order based on actual usage and pain points (document changes)
+- Skip optional stories (29-30) unless interested in learning or planning to make app public
+
+**Major Updates:**
+- October 7, 2025 - Initial comprehensive review
+- October 7, 2025 - Single-user context reorganization
+- October 7, 2025 - **Stories renumbered sequentially (1-30) in priority order**
 
 ---
 
 **Last Updated:** October 7, 2025  
 **Next Review:** Weekly during active refactoring  
-**Major Review:** Conducted October 7, 2025
+**Next Story:** Story 1 - Create Index Files for Component Directories
 
