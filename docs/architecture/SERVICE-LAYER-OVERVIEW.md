@@ -16,53 +16,164 @@ The implementation follows a clean layered architecture with the following compo
 src/
 ├── lib/
 │   ├── db.ts                   # Database utilities
-│   ├── errors.ts               # Error handling utilities
-│   ├── types.ts                # Shared type definitions
-│   └── categorization/         # Categorization type definitions
+│   ├── errors.ts               # Custom error classes (ServiceError, DatabaseError, etc.)
+│   ├── error-handling.ts       # Error handling utilities and helpers
+│   ├── types.ts                # Shared type definitions and domain models
+│   └── categorization/         # Categorization type definitions and services
 ├── repositories/               # Repository classes for data access
 │   ├── base.repository.ts      # Base repository with shared functionality
-│   ├── sparks.repository.ts    # Sparks repository
-│   ├── books.repository.ts     # Books repository
-│   ├── highlights.repository.ts # Highlights repository
-│   ├── categories.repository.ts # Categories repository
-│   ├── tags.repository.ts      # Tags repository
+│   ├── sparks.repository.ts    # Sparks data access
+│   ├── books.repository.ts     # Books data access
+│   ├── highlights.repository.ts # Highlights data access
+│   ├── categories.repository.ts # Categories data access
+│   ├── tags.repository.ts      # Tags data access
+│   ├── notes.repository.ts     # Notes data access
+│   ├── auth.repository.ts      # Authentication data access
+│   ├── integrations.repository.ts # Integrations data access
+│   ├── automations.repository.ts # Automations data access
+│   ├── function-logs.repository.ts # Function logs data access
+│   ├── user-settings.repository.ts # User settings data access
+│   ├── categorization.repository.ts # Categorization operations
+│   ├── content.repository.ts   # Content data access (placeholder)
 │   ├── types.ts                # Shared types for repositories
-│   └── index.ts                # Registry for all repositories
+│   └── index.ts                # RepositoriesRegistry and exports
 ├── services/                   # Service layer with business logic
-│   ├── sparks.service.ts       # Sparks service
-│   ├── books.service.ts        # Books service
-│   ├── highlights.service.ts   # Highlights service 
-│   ├── categorization.service.ts # Categorization service (categories, tags, jobs)
-│   └── index.ts                # Export of all services
+│   ├── base.service.ts         # Base service class with common CRUD operations
+│   ├── sparks.service.ts       # Sparks business logic
+│   ├── books.service.ts        # Books business logic
+│   ├── highlights.service.ts   # Highlights business logic
+│   ├── notes.service.ts        # Notes business logic
+│   ├── categorization.service.ts # Categorization (categories, tags, automations)
+│   ├── auth.service.ts         # Authentication business logic
+│   ├── integrations.service.ts # Integrations (Readwise, Airtable)
+│   ├── airtable.service.ts     # Airtable-specific operations
+│   ├── function-logs.service.ts # Function logs business logic
+│   ├── user-settings.service.ts # User settings business logic
+│   ├── sidebar.service.ts      # Sidebar state and navigation
+│   ├── header.service.ts       # Header state and navigation
+│   ├── content.service.ts      # Content operations (demo data)
+│   └── index.ts                # Services bundler and exports
 └── hooks/                      # React hooks for accessing services
-    ├── use-services.ts         # Hooks for each service
-    └── index.ts                # Export of all hooks
+    ├── auth/                   # Authentication hooks
+    │   ├── use-auth-session.ts # Session management hook
+    │   └── index.ts
+    ├── services/               # Service layer access hooks
+    │   ├── use-services.ts     # Main service hooks (useSparksService, etc.)
+    │   ├── use-content-service.ts
+    │   ├── use-function-logs-service.ts
+    │   ├── use-notes-service.ts
+    │   ├── use-sidebar-service.ts
+    │   ├── use-user-settings-service.ts
+    │   └── index.ts
+    ├── data/                   # Data management hooks (with React state)
+    │   ├── use-sparks.ts
+    │   ├── use-categorization.ts
+    │   ├── use-function-logs.ts
+    │   ├── use-user-settings.ts
+    │   └── index.ts
+    ├── patterns/               # Reusable hook patterns
+    │   ├── use-base-resource.ts
+    │   ├── use-realtime-subscription.ts
+    │   └── index.ts
+    ├── ui/                     # UI state management hooks
+    │   ├── use-storage.ts
+    │   ├── useSidebarData.ts
+    │   └── index.ts
+    └── index.ts                # Export all hooks
 ```
 
 ## Key Components
 
 ### Error Handling
 
-- **CustomError Classes**: `ServiceError`, `DatabaseError`, `AuthError`, etc.
-- **Error Handler Functions**: `handleServiceError`, `handleServiceItemError`
+The application uses a comprehensive error handling system:
+
+**Custom Error Classes** (`lib/errors.ts`):
+- `ServiceError` - Base class for service-related errors
+- `DatabaseError` - Database operation errors
+- `AuthError` - Authentication/authorization errors
+- `NotFoundError` - Resource not found errors
+- `ValidationError` - Validation errors
+
+**Error Handler Functions** (`lib/errors.ts`):
+- `handleServiceError<T>()` - Returns empty array for collection results
+- `handleServiceItemError<T>()` - Returns null for single item results
+
+**Advanced Error Handling** (`lib/error-handling.ts`):
+- `handleError()` - Standardized error logging with toast notifications
+- `handleHookError<T>()` - Hook-friendly error handler returning null
+- `handleHookCollectionError<T>()` - Hook-friendly error handler returning empty array
+- `tryCatch<T>()` - Async try/catch wrapper returning null on error
+- `tryCatchCollection<T>()` - Async try/catch wrapper returning empty array on error
+- `getErrorMessage()` - Extract user-friendly error messages
+- `getToastType()` - Determine appropriate toast notification type
 
 ### Database Access
 
-- **DbClient**: Type-safe Supabase client
-- **BaseRepository**: Abstract class with common repository functionality
-- **Entity Repositories**: Specialized repositories for each entity type
-- **Repository Registry**: Singleton access to repositories
+- **DbClient**: Type-safe Supabase client from `lib/db.ts`
+- **BaseRepository**: Abstract class with common CRUD operations (getAll, getById, create, update, delete)
+- **Entity Repositories**: Specialized repositories extending BaseRepository for each entity type
+- **Repository Registry**: `RepositoriesRegistry` class providing singleton access to repositories
+  - `getRepositories()` - Browser-side singleton instance
+  - `getServerRepositories()` - Server-side instance (creates new instance per call)
+  - Lazy initialization of repository instances
+  - Supports both client and server contexts
 
 ### Business Logic Services
 
-- **Entity Services**: Business logic for each entity type
-- **Service Interfaces**: Clear contracts for service implementations
-- **Domain Models**: Clean models for business logic
+The service layer uses multiple implementation patterns:
+
+**Class-based Services with BaseService**:
+- `SparksService`, `BooksService`, `HighlightsService`, `FunctionLogsService`
+- Extend `BaseService<T, R>` abstract class
+- Inherit common CRUD operations (getAll, getById, create, update, delete)
+- Add domain-specific methods as needed
+
+**Class-based Services without BaseService**:
+- `NotesService`, `AuthService`, `IntegrationsService`, etc.
+- Custom implementation without base class inheritance
+- Used when base CRUD pattern doesn't fit the use case
+
+**Object Export Services**:
+- `categorizationService` - Combines categoryService, tagService, automationService
+- `contentService` - Provides dashboard content (currently demo data)
+- Used for grouping related functionality or simple stateless services
+
+**Service Registry**:
+- All services exported from `services/index.ts`
+- Bundled in a `services` object for easy access
+- Services are singleton instances
 
 ### React Integration
 
-- **Service Hooks**: React hooks to access services in components
-- **Resource Helpers**: Utilities for working with resources
+The hook layer is organized into distinct categories:
+
+**Service Hooks** (`hooks/services/`):
+- Direct access to service layer without additional state management
+- `useSparksService()`, `useBooksService()`, `useHighlightsService()`, etc.
+- Simply return the service instance for use in components
+- Minimal wrapper around services
+
+**Data Hooks** (`hooks/data/`):
+- Add React state management on top of services
+- `useSparks()`, `useCategories()`, `useTags()`, etc.
+- Include loading states, error handling, and data caching
+- Follow the standard data hook pattern with `data`, `isLoading`, `error`
+- Subscribe to auth state changes and refetch data accordingly
+
+**Auth Hooks** (`hooks/auth/`):
+- `useAuthSession()` - Manages authentication session state
+- Provides current user information and auth status
+
+**Pattern Hooks** (`hooks/patterns/`):
+- Reusable patterns for common operations
+- `useBaseResource()` - Generic resource management pattern
+- `useRealTimeSubscription()` - Real-time data subscription pattern
+
+**UI Hooks** (`hooks/ui/`):
+- UI state management
+- `useStorage()` - Local/session storage management
+- `useSidebarData()` - Sidebar state management
 
 ## Implementation Patterns
 
@@ -136,20 +247,40 @@ async createSpark(input: Omit<CreateSparkInput, 'md5Uid'>): Promise<SparkDomain 
 
 ### Hook Pattern
 
-React hooks provide clean access to services in components:
-- Type-safe access to services
-- Consistent usage pattern
-- Separation of UI and business logic
+React hooks provide clean access to services in components. There are two main patterns:
 
-Example:
+**Service Hook Pattern** (Direct service access):
 ```typescript
 function SparkComponent({ sparkId }: { sparkId: string }) {
-  const { getSparks, getSparkDetails } = useSparksService();
-  const { tags } = useCategorization();
+  const sparksService = useSparksService();
+  const { getSparks, getSparkDetails } = sparksService;
   
-  // Use services to interact with data
+  // Use service methods directly
+  // No built-in state management - handle loading/error states yourself
 }
 ```
+
+**Data Hook Pattern** (Service + React state):
+```typescript
+function SparksListComponent() {
+  const { data: sparks, isLoading, error, fetchData } = useSparks();
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      {sparks.map(spark => (
+        <div key={spark.id}>{spark.details.body}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+**When to Use Each**:
+- Use **service hooks** when you need imperative control (e.g., form submissions, button clicks)
+- Use **data hooks** when you need declarative data loading with automatic state management
 
 ## Benefits of this Architecture
 
@@ -168,9 +299,46 @@ Existing components can gradually migrate to using the service layer:
 2. Replace direct Supabase calls with service calls
 3. Leverage the error handling in the service layer
 
+## Current State and Known Patterns
+
+### Service Implementation Inconsistencies
+
+The codebase currently uses **three different service patterns**:
+
+1. **Class extending BaseService** (sparks, books, highlights, function-logs)
+   - Best for entities with standard CRUD operations
+   - Inherits common methods from BaseService
+   
+2. **Standalone class** (notes, auth, integrations)
+   - Used when BaseService pattern doesn't fit
+   - Full custom implementation
+   
+3. **Object export** (categorization, content)
+   - Used for grouping related services
+   - Simple stateless operations
+
+### Content Service Status
+
+- `content.service.ts` and `content.repository.ts` exist as **infrastructure placeholders**
+- Currently return demo/static data for dashboard
+- Ready for future implementation when content features are needed
+
+### Hook Organization
+
+Hooks are split into multiple directories based on purpose:
+- `hooks/services/` - Thin wrappers around services
+- `hooks/data/` - Services + React state management
+- `hooks/auth/` - Authentication-specific hooks
+- `hooks/patterns/` - Reusable patterns
+- `hooks/ui/` - UI state management
+
+This organization provides flexibility but may benefit from standardization (see ARCHITECTURE-IMPROVEMENTS.md).
+
 ## Future Improvements
 
-1. Complete implementation of the job service with database persistence
-2. Add additional repositories for other entities
-3. Integrate with server actions for Next.js
-4. Add caching strategies at the service layer 
+1. Standardize service implementation patterns (see ARCHITECTURE-IMPROVEMENTS.md)
+2. Implement content repository with real data persistence
+3. Add caching strategies at the service layer
+4. Consider adding server actions for Next.js App Router patterns
+5. Add comprehensive error boundaries for React components
+6. Implement optimistic updates pattern across all data hooks 
