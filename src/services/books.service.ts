@@ -27,6 +27,7 @@ class BooksService extends BaseService<BookModel, BooksRepository> {
         rwId: book.rwId,
         name: book.title,
         date: formatDate(book.lastHighlightAt),
+        sortDate: book.lastHighlightAt, // Store raw date for sorting
         highlightsCount: book.numHighlights
       }));
     } catch (error) {

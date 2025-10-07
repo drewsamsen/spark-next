@@ -135,9 +135,9 @@ export const sidebarService = {
         const countB = b.highlightsCount || 0;
         return sort.direction === 'asc' ? countA - countB : countB - countA;
       } else if (sort.field === 'date') {
-        // Parse dates for sorting
-        const dateA = this.parseDate(a.date);
-        const dateB = this.parseDate(b.date);
+        // Use sortDate if available (raw date for accurate sorting), otherwise parse the formatted date
+        const dateA = a.sortDate ? new Date(a.sortDate) : this.parseDate(a.date);
+        const dateB = b.sortDate ? new Date(b.sortDate) : this.parseDate(b.date);
         
         if (!dateA && !dateB) return 0;
         if (!dateA) return sort.direction === 'asc' ? -1 : 1;

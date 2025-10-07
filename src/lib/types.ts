@@ -250,6 +250,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
  * @property name - Display name of the item
  * @property color - Optional color for visual distinction
  * @property date - Optional formatted date for display
+ * @property sortDate - Optional raw date value for sorting (ISO string or Date)
  * @property highlightsCount - Optional count of highlights
  */
 export interface SidebarItem {
@@ -258,6 +259,7 @@ export interface SidebarItem {
   name: string;
   color?: string;      // Optional - used for Sparks
   date?: string;       // Optional - Format: "MMM 'YY" (e.g., "Mar '23")
+  sortDate?: string;   // Optional - Raw date value for sorting (ISO string)
   highlightsCount?: number; // Optional - Number of highlights
 }
 

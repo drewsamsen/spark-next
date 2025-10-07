@@ -108,7 +108,8 @@ export function useSidebarData(sidebarType: SidebarType): UseSidebarDataReturn {
                 date: new Date(note.updatedAt).toLocaleDateString('en-US', {
                   month: 'short',
                   year: '2-digit'
-                })
+                }),
+                sortDate: note.updatedAt // Store raw date for sorting
               }));
               setNotes(noteItems);
             }

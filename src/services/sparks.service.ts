@@ -27,11 +27,13 @@ class SparksService extends BaseService<SparkModel, SparksRepository> {
       // Transform the results into the expected format
       const enhancedSparks = sparksWithRelations.map(spark => {
         const sparkDomain = this.repository.mapToDomain(spark);
+        const rawDate = sparkDomain.todoCreatedAt || sparkDomain.createdAt;
         
         return {
           id: sparkDomain.id,
           name: sparkDomain.body,
-          date: formatDate(sparkDomain.todoCreatedAt || sparkDomain.createdAt),
+          date: formatDate(rawDate),
+          sortDate: rawDate, // Store raw date for sorting
           details: sparkDomain
         };
       });
