@@ -1,26 +1,11 @@
 import { ReactNode } from 'react';
-import { Tag } from '@/lib/books-service';
-import { HighlightDomain } from '@/lib/types';
+import { HighlightDomain, HighlightTag } from '@/lib/types';
 
 /**
- * Function to render tag content depending on its type
+ * Function to render tag content
  */
-export const renderTag = (tag: Tag): string => {
-  if (typeof tag === 'string') {
-    return tag;
-  } else if (tag && typeof tag === 'object') {
-    // If tag is an object with a name property, use that
-    if ('name' in tag && typeof tag.name === 'string') {
-      return tag.name;
-    }
-    // Otherwise try to stringify it
-    try {
-      return JSON.stringify(tag);
-    } catch {
-      return 'Unknown tag';
-    }
-  }
-  return String(tag);
+export const renderTag = (tag: HighlightTag): string => {
+  return tag.name;
 };
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { HighlightDomain } from '@/lib/types';
+import { HighlightDomain, HighlightTag } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Tag as TagIcon, BookOpen, CalendarDays, Save } from 'lucide-react';
 import { 
@@ -10,11 +10,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { ReactNode, useRef, useEffect, useState } from 'react';
-import { Tag } from '@/lib/books-service';
 
 interface HighlightCardProps {
   highlight: HighlightDomain;
-  renderTag: (tag: Tag) => string;
+  renderTag: (tag: HighlightTag) => string;
   formatDate: (dateString: string | null) => string;
   highlightMatches: (text: string) => ReactNode;
   filterTag: string | null;
