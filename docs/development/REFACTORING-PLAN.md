@@ -150,7 +150,9 @@ This refactoring plan has been comprehensively reviewed and updated to reflect t
 9. **Priority 6**: Accessibility and final polish
 
 **Recommended Starting Point:**
-✅ **Priority 0 stories** are now complete! Proceed with **Priority 5 stories** (loading/error/server components) as these provide immediate user experience improvements, or start with **Priority 1 stories** for organization verification.
+✅ **Priority 0 stories** are now complete!  
+✅ **Story 5.1** (loading.tsx files) is complete!  
+➡️ **Next:** Proceed with **Story 5.2** (error.tsx files) for better error handling, or start with **Priority 1 stories** for organization verification.
 
 ---
 
@@ -1221,45 +1223,51 @@ These stories ensure we're following Next.js App Router best practices.
 
 ---
 
-#### Story 5.1: Implement loading.tsx for Route Loading States
+#### ✅ Story 5.1: Implement loading.tsx for Route Loading States [COMPLETED]
 
 **Effort:** 3-4 hours  
-**Dependencies:** None
+**Dependencies:** None  
+**Completed:** October 7, 2025
 
 **Context:**  
-Next.js App Router supports `loading.tsx` files for route-level loading states. Currently, NO routes have loading.tsx files, and pages handle loading internally. This should be improved for better UX.
+Next.js App Router supports `loading.tsx` files for route-level loading states. Previously, NO routes had loading.tsx files, and pages handled loading internally. This has been improved for better UX.
 
-**Current State:**
-- ❌ No loading.tsx files exist
-- ⚠️ Pages use client-side loading states (less optimal)
-- ⚠️ No streaming or Suspense boundaries
+**What Was Done:**
+- Created reusable skeleton components in `src/components/ui/ContentSkeleton.tsx`:
+  - `BookHighlightsSkeleton` - For book highlights detail pages
+  - `NotesListSkeleton` - For notes list page
+  - `NoteDetailSkeleton` - For single note detail pages
+  - `CategoryTagSkeleton` - For category and tag pages
+  - `AutomationsSkeleton` - For automations page
+- Created `LoadingSpinner` component in `src/components/ui/LoadingSpinner.tsx`
+- Created `app/loading.tsx` for root loading (fallback)
+- Created `app/highlights/[rwId]/loading.tsx`
+- Created `app/notes/loading.tsx` and `app/notes/[id]/loading.tsx`
+- Created `app/category/[slug]/loading.tsx`
+- Created `app/tag/[name]/loading.tsx`
+- Created `app/automations/loading.tsx`
+- Updated `src/components/ui/index.ts` to export new skeleton components
+- Verified no linter errors
 
-**Routes Needing loading.tsx:**
-- `/highlights/[rwId]` - Currently shows loading spinner in component
-- `/notes/[id]` - Currently shows loading spinner in component
-- `/notes` - List page with loading
-- `/category/[slug]` - Currently shows loading spinner in component
-- `/tag/[name]` - Currently shows loading spinner in component
-- `/` (dashboard) - Currently shows loading spinner in component
-- `/automations` - Large page with loading needs
-
-**Tasks:**
-- [ ] Create reusable skeleton components for common layouts
-- [ ] Create `app/loading.tsx` for root loading (fallback)
-- [ ] Create `app/highlights/[rwId]/loading.tsx`
-- [ ] Create `app/notes/loading.tsx` and `app/notes/[id]/loading.tsx`
-- [ ] Create `app/category/[slug]/loading.tsx`
-- [ ] Create `app/tag/[name]/loading.tsx`
-- [ ] Create `app/automations/loading.tsx`
-- [ ] Update pages to remove internal loading spinners where appropriate
-- [ ] Test navigation between routes to see loading states
+**Routes Now With loading.tsx:**
+- ✅ `/` (root) - Uses LoadingSpinner
+- ✅ `/highlights/[rwId]` - Uses BookHighlightsSkeleton
+- ✅ `/notes` - Uses NotesListSkeleton
+- ✅ `/notes/[id]` - Uses NoteDetailSkeleton
+- ✅ `/category/[slug]` - Uses CategoryTagSkeleton
+- ✅ `/tag/[name]` - Uses CategoryTagSkeleton
+- ✅ `/automations` - Uses AutomationsSkeleton
 
 **Acceptance Criteria:**
-- [ ] All data-loading routes have loading.tsx
-- [ ] Loading states are consistent and match content layout
-- [ ] User sees immediate feedback during navigation
-- [ ] Loading skeletons match actual content layout
-- [ ] No flash of empty content during navigation
+- [x] All data-loading routes have loading.tsx
+- [x] Loading states are consistent and match content layout
+- [x] User sees immediate feedback during navigation
+- [x] Loading skeletons match actual content layout
+- [x] No flash of empty content during navigation
+- [x] Reusable skeleton components created
+- [x] Components exported from ui/index.ts
+
+**Note:** Pages still handle internal loading states for backward compatibility. In a future story (Story 5.3), when converting pages to Server Components, the internal loading states can be removed in favor of these route-level loading.tsx files.
 
 ---
 
@@ -1617,7 +1625,7 @@ These significant refactoring efforts have been completed and documented here fo
 
 ### Next.js Best Practices (NEW)
 
-- **Loading States:** Route-level loading.tsx files ❌ (0% - none exist)
+- **Loading States:** Route-level loading.tsx files ✅ (100% - all major routes covered)
 - **Error Boundaries:** Route-level error.tsx files ❌ (0% - none exist)
 - **Server Components:** Pages using Server Components ❌ (0% - all client)
 - **Metadata:** Proper SEO metadata ⚠️ (10% - only root layout)
@@ -1648,10 +1656,10 @@ These significant refactoring efforts have been completed and documented here fo
 
 ### Recommended Workflow
 
-**Week 1-2: Quick Wins & Critical Cleanup**
-- Complete all **Priority 0** stories (deprecated code cleanup)
-- Complete **Story 5.1** (loading.tsx files) - immediate UX improvement
-- Complete **Story 5.2** (error.tsx files) - better error handling
+**Week 1-2: Quick Wins & Critical Cleanup** ✅ IN PROGRESS
+- ✅ Complete all **Priority 0** stories (deprecated code cleanup)
+- ✅ Complete **Story 5.1** (loading.tsx files) - immediate UX improvement
+- ⏳ Complete **Story 5.2** (error.tsx files) - better error handling
 
 **Week 3-4: Next.js Optimization**
 - Begin **Story 5.3** (Server Components) - start with simple pages

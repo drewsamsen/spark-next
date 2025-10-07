@@ -86,7 +86,7 @@ export function useSidebarData(sidebarType: SidebarType): UseSidebarDataReturn {
         
         switch (sidebarType) {
           case 'highlights':
-            const booksData = await servicesRef.current.books.getAll();
+            const booksData = await servicesRef.current.books.getBooks();
             if (isMounted) {
               setBooks(booksData);
             }

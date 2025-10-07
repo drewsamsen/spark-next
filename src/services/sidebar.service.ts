@@ -115,7 +115,7 @@ export const sidebarService = {
     
     const lowerSearchTerm = searchTerm.toLowerCase();
     return items.filter(item => 
-      item.name.toLowerCase().includes(lowerSearchTerm)
+      item.name?.toLowerCase().includes(lowerSearchTerm) || false
     );
   },
   
@@ -125,9 +125,11 @@ export const sidebarService = {
   sortItems(items: SidebarItem[], sort: SortState): SidebarItem[] {
     return [...items].sort((a, b) => {
       if (sort.field === 'name') {
+        const nameA = a.name || '';
+        const nameB = b.name || '';
         return sort.direction === 'asc' 
-          ? a.name.localeCompare(b.name)
-          : b.name.localeCompare(a.name);
+          ? nameA.localeCompare(nameB)
+          : nameB.localeCompare(nameA);
       } else if (sort.field === 'highlightsCount') {
         const countA = a.highlightsCount || 0;
         const countB = b.highlightsCount || 0;
