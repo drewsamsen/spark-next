@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSidebarService, SIDEBAR_SETTINGS } from "@/hooks/use-sidebar-service";
+import { useSidebarService, SIDEBAR_SETTINGS } from "@/hooks";
 
 interface RightSidebarProps {
   isOpen: boolean;

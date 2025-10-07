@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from "react-toastify";
 import { getSupabaseBrowserClient } from '@/lib/supabase';
-import { useRealtimeSubscription } from './use-realtime-subscription';
+import { useRealtimeSubscription } from '../patterns/use-realtime-subscription';
 import { FunctionLogModel, FunctionLogsFilter } from '@/lib/types';
 import { handleError } from '@/lib/error-handling';
-import { useAuthService } from './use-services';
+import { useAuthService } from '../services/use-services';
 
 // Define the type alias for the legacy name for backwards compatibility
 export type FunctionLog = FunctionLogModel;

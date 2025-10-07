@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/hooks';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UserSettings } from '@/lib/types';
 

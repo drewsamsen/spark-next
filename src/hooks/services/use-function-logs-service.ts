@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { functionLogsService } from '@/services/function-logs.service';
 import { FunctionLogModel, FunctionLogsFilter } from '@/lib/types';
-import { useRealtimeSubscription } from './use-realtime-subscription';
+import { useRealtimeSubscription } from '../patterns/use-realtime-subscription';
 
 /**
  * Hook to access the function logs service with realtime updates

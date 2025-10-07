@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
-import { useAuthService } from './use-services';
+import { useAuthService } from '../services/use-services';
 
 /**
  * Type for the return value of a resource hook

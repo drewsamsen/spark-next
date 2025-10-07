@@ -3,7 +3,7 @@
 import { Calendar, Users, FileText, Settings, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useContentService } from "@/hooks/use-content-service";
+import { useContentService } from "@/hooks";
 import { QuickAccessItem, ActivityItem, DocumentItem } from "@/services/content.service";
 
 export default function MainContent() {

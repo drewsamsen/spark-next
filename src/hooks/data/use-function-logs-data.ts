@@ -2,10 +2,10 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'react-toastify';
-import { useFunctionLogsService } from './use-services';
-import { createResourceHook, OptimisticUpdateConfig } from './use-base-resource';
+import { useFunctionLogsService } from '../services/use-services';
+import { createResourceHook, OptimisticUpdateConfig } from '../patterns/use-base-resource';
 import { FunctionLogModel, FunctionLogsFilter } from '@/lib/types';
-import { useRealtimeSubscription } from './use-realtime-subscription';
+import { useRealtimeSubscription } from '../patterns/use-realtime-subscription';
 
 /**
  * Hook for fetching function logs with filtering and pagination

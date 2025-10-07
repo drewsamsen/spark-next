@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { contentService, QuickAccessItem, ActivityItem, DocumentItem } from '@/services/content.service';
-import { useAuthSession } from '@/hooks/use-auth-session';
+import { useAuthSession } from '../auth/use-auth-session';
 
 /**
  * Hook for accessing content service functionality

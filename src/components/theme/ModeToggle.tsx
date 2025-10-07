@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useUserSettings } from "@/hooks/use-user-settings";
+import { useUserSettings } from "@/hooks";
 import { Button } from "@/components/ui/button";
 
 export function ModeToggle() {

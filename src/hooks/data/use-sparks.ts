@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSparksService } from './use-services';
-import { useAuthService } from './use-services';
+import { useSparksService, useAuthService } from '../services/use-services';
 import { toast } from 'react-toastify';
 import { SparkDomain, EnhancedSparkItem, CreateSparkInput } from '@/lib/types';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/hooks';
 import { UserSettings } from '@/lib/types';
 
 // Define the shape of our UI settings

@@ -248,7 +248,7 @@ After reviewing the codebase, almost all component files already use PascalCase!
 
 ---
 
-#### Story 3: Reorganize Hooks by Feature
+#### ✅ Story 3: Reorganize Hooks by Feature [COMPLETED]
 
 **Effort:** 1-2 hours  
 **Dependencies:** None
@@ -256,7 +256,7 @@ After reviewing the codebase, almost all component files already use PascalCase!
 **Context:**  
 Currently, all hooks are in a flat `src/hooks/` directory. While this works, grouping related hooks would improve organization and discoverability.
 
-**Proposed Structure:**
+**Implemented Structure:**
 ```
 src/hooks/
   - index.ts                    # Re-exports all hooks
@@ -276,6 +276,7 @@ src/hooks/
     - use-sparks.ts
     - use-categorization.ts
     - use-function-logs.ts
+    - use-function-logs-data.ts
     - use-user-settings.ts
     - index.ts
   - ui/
@@ -289,17 +290,25 @@ src/hooks/
 ```
 
 **Tasks:**
-- [ ] Create subdirectories in `src/hooks/`
-- [ ] Move hooks to appropriate subdirectories
-- [ ] Create index.ts in each subdirectory
-- [ ] Update main `src/hooks/index.ts` to re-export all
-- [ ] Update imports throughout codebase
+- [x] Create subdirectories in `src/hooks/`
+- [x] Move hooks to appropriate subdirectories
+- [x] Create index.ts in each subdirectory
+- [x] Update main `src/hooks/index.ts` to re-export all
+- [x] Update imports throughout codebase
 
 **Acceptance Criteria:**
-- [ ] Hooks organized by logical grouping
-- [ ] Each subdirectory has index.ts
-- [ ] Main hooks/index.ts exports all hooks
-- [ ] All imports updated and working
+- [x] Hooks organized by logical grouping
+- [x] Each subdirectory has index.ts
+- [x] Main hooks/index.ts exports all hooks
+- [x] All imports updated and working
+
+**Completion Summary:**
+- ✅ Created 5 subdirectories: auth, services, data, ui, patterns
+- ✅ Moved 18 hook files to appropriate directories
+- ✅ Created index.ts files in each subdirectory with proper exports
+- ✅ Updated main hooks/index.ts to re-export from subdirectories
+- ✅ Fixed all internal relative imports within hooks
+- ✅ No linter errors
 
 ---
 
@@ -1444,8 +1453,8 @@ All stories in this priority have been completed. Deprecated code has been remov
 
 ### Current Progress
 
-**Completed:** Stories 0.1-0.3, Story 5.1, Story 5.2, Story 1.1 (from old numbering), Story 1, Story 2 ✅  
-**Next Story:** Story 3 (Reorganize Hooks by Feature)
+**Completed:** Stories 0.1-0.3, Story 5.1, Story 5.2, Story 1.1 (from old numbering), Story 1, Story 2, Story 3 ✅  
+**Next Story:** Story 4 (Standardize Utility Organization)
 
 ### Ongoing Practices
 
@@ -1471,10 +1480,11 @@ All stories in this priority have been completed. Deprecated code has been remov
 - October 7, 2025 - **Stories renumbered sequentially (1-30) in priority order**
 - October 7, 2025 - **Story 1 completed** - Created index files for all component directories
 - October 7, 2025 - **Story 2 completed** - Verified and documented component naming conventions
+- October 7, 2025 - **Story 3 completed** - Reorganized hooks into feature-based subdirectories
 
 ---
 
 **Last Updated:** October 7, 2025  
 **Next Review:** Weekly during active refactoring  
-**Next Story:** Story 3 - Reorganize Hooks by Feature
+**Next Story:** Story 4 - Standardize Utility Organization
 

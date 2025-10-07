@@ -1,41 +1,25 @@
 /**
  * Export all hooks for easy imports
+ * 
+ * Hooks are organized by feature:
+ * - auth: Authentication hooks
+ * - services: Service layer hooks
+ * - data: Data management hooks
+ * - ui: UI state management hooks
+ * - patterns: Reusable hook patterns
  */
 
-// Service hooks
-export { useContentService } from './use-content-service';
-export { 
-  useServices,
-  useSparksService,
-  useBooksService,
-  useHighlightsService,
-  useCategorization,
-  useResourceHelper,
-  useAuthService,
-  useIntegrationsService,
-  useSidebarService,
-  useHeaderService,
-  useUserSettingsService
-} from './use-services';
+// Authentication hooks
+export * from './auth';
 
-export { useFunctionLogsService } from './use-function-logs-service';
-export { useFunctionLogs } from './use-function-logs';
+// Service layer hooks
+export * from './services';
 
-export { useUserSettings } from './use-user-settings-service';
-export { useAuthSession } from './use-auth-session';
+// Data management hooks
+export * from './data';
 
-// Export categorization hooks
-export { 
-  useCategories, 
-  useTags, 
-  useCategorizationAutomations 
-} from './use-categorization';
+// UI state management hooks
+export * from './ui';
 
-// Export enhanced resource hooks
-export { useSparks } from './use-sparks';
-export { useNotesService } from './use-notes-service';
-
-// Export new sidebar hooks
-export { useSidebarData } from './useSidebarData';
-
-// Add additional hooks as needed 
+// Reusable hook patterns
+export * from './patterns';

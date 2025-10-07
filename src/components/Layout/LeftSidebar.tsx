@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import Link from "next/link";
-import { useSidebarService, SIDEBAR_SETTINGS } from "@/hooks/use-sidebar-service";
+import { useSidebarService, SIDEBAR_SETTINGS } from "@/hooks";
 
 interface NavItem {
   name: string;

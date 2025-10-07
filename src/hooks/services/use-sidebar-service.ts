@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { sidebarService } from '@/services/sidebar.service';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '../data/use-user-settings';
 
 // Constants for sidebar dimensions
 export const SIDEBAR_SETTINGS = {

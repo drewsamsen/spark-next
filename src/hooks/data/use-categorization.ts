@@ -12,8 +12,8 @@ import {
   CategorizationAutomation
 } from '@/lib/categorization/types';
 import { toast } from 'react-toastify';
-import { useAuthService } from './use-services';
-import { useSupabaseAuth as useAuth } from './use-supabase-auth';
+import { useAuthService } from '../services/use-services';
+import { useSupabaseAuth as useAuth } from '../auth/use-supabase-auth';
 
 // Interface for useCategoriesHook return value
 interface UseCategoriesReturn {
