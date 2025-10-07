@@ -19,12 +19,27 @@ The project follows a well-defined directory structure:
 
 ## File Naming Conventions
 
-- **Next.js Routes**: Use kebab-case for route folders (e.g., `user-profile`)
-- **Components**: Use PascalCase (e.g., `UserProfile.tsx`)
-- **Hooks**: Use camelCase with `use` prefix (e.g., `useUser.ts`)
-- **Services**: Use camelCase with `Service` suffix (e.g., `userService.ts`)
-- **Repositories**: Use camelCase with `Repository` suffix (e.g., `userRepository.ts`)
-- **Types**: Centralize in `src/lib/types.ts`
+### Use PascalCase for:
+- **React Components**: Files that primarily export React components (e.g., `UserProfile.tsx`, `LoginForm.tsx`)
+- **Component Files in `/src/components`**: All component files should use PascalCase
+- **Layout Components in `/src/app`**: When the file is a reusable component (e.g., `AppShell.tsx`)
+- **Layouts in `/src/layouts`**: Layout component files (e.g., `AppLayout.tsx`)
+
+### Use kebab-case for:
+- **Next.js Route Files**: Special files like `page.tsx`, `layout.tsx`, `error.tsx`, `loading.tsx`
+- **Next.js Route Folders**: Directory names in app router (e.g., `user-profile/`, `settings/`)
+- **Context Files**: React context providers (e.g., `sidebar-context.tsx`, `ui-settings-context.tsx`)
+- **Type-only Files**: Files that only export types/interfaces (e.g., `types.ts` when it's not the main types file)
+- **Utility Files**: Non-component utilities (e.g., `api-utils.ts`, `error-handling.ts`)
+- **Third-party UI Components**: shadcn/ui components use kebab-case (e.g., `button.tsx`, `card.tsx`, `dropdown-menu.tsx`)
+
+### Use camelCase with prefixes for:
+- **Hooks**: Use `use` prefix (e.g., `useUser.ts`, `useAuthSession.ts`)
+- **Services**: Use `.service` suffix (e.g., `auth.service.ts`, `user-settings.service.ts`)
+- **Repositories**: Use `.repository` suffix (e.g., `auth.repository.ts`, `user-settings.repository.ts`)
+
+### Key Principle:
+**If a file primarily exports a React component, use PascalCase. Otherwise, use kebab-case or camelCase as appropriate.**
 
 ## Component Directory Structure
 
