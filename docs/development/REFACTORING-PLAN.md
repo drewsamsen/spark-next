@@ -152,7 +152,8 @@ This refactoring plan has been comprehensively reviewed and updated to reflect t
 **Recommended Starting Point:**
 ✅ **Priority 0 stories** are now complete!  
 ✅ **Story 5.1** (loading.tsx files) is complete!  
-➡️ **Next:** Proceed with **Story 5.2** (error.tsx files) for better error handling, or start with **Priority 1 stories** for organization verification.
+✅ **Story 5.2** (error.tsx files) is complete!  
+➡️ **Next:** Continue with **Priority 1 stories** for organization verification and cleanup, or start **Story 5.3** (Server Components optimization) for major Next.js performance improvements.
 
 ---
 
@@ -1271,46 +1272,46 @@ Next.js App Router supports `loading.tsx` files for route-level loading states. 
 
 ---
 
-#### Story 5.2: Implement error.tsx for Error Boundaries
+#### ✅ Story 5.2: Implement error.tsx for Error Boundaries [COMPLETED]
 
 **Effort:** 3-4 hours  
-**Dependencies:** None
+**Dependencies:** None  
+**Completed:** October 7, 2025
 
 **Context:**  
-Next.js App Router supports `error.tsx` files for route-level error boundaries. Currently, NO error.tsx files exist. Pages handle errors internally or show uncaught errors. This should be improved.
+Next.js App Router supports `error.tsx` files for route-level error boundaries. Previously, NO error.tsx files existed. Pages handled errors internally or showed uncaught errors. This has been improved with comprehensive error boundaries.
 
-**Current State:**
-- ❌ No error.tsx files exist anywhere
-- ⚠️ Uncaught errors break the entire app
-- ⚠️ No graceful error handling for route-level failures
-- ✅ ErrorState component exists in `ui/` but not used as error boundary
+**What Was Done:**
+- Reviewed existing `ErrorBoundary` component in `src/components/ui/ErrorState.tsx` (excellent implementation with error logging, reset functionality, and user-friendly UI)
+- Created 10 error.tsx files for all major routes using the `ErrorBoundary` component:
+  - ✅ `app/error.tsx` - Root level error boundary
+  - ✅ `app/highlights/[rwId]/error.tsx`
+  - ✅ `app/notes/error.tsx` - Notes list
+  - ✅ `app/notes/[id]/error.tsx` - Note detail
+  - ✅ `app/category/[slug]/error.tsx`
+  - ✅ `app/tag/[name]/error.tsx`
+  - ✅ `app/automations/error.tsx`
+  - ✅ `app/debug/error.tsx`
+  - ✅ `app/(routes)/settings/error.tsx`
+  - ✅ `app/login/error.tsx`
+- Error logging already implemented in ErrorBoundary component (console.error with error details)
+- "Try Again" functionality already implemented via reset button in ErrorBoundary
+- Added test button to `/debug` page to manually trigger errors and verify error boundary works correctly
+- Error handling pattern documented in this refactoring plan
 
-**Routes Needing error.tsx:**
-- `/` - Root level error boundary
-- `/highlights/[rwId]`
-- `/notes/[id]` and `/notes`
-- `/category/[slug]`
-- `/tag/[name]`
-- `/automations`
-- `/debug` and `/settings`
-
-**Tasks:**
-- [ ] Review existing `ErrorState` component in `ui/ErrorState.tsx`
-- [ ] Create error.tsx files using ErrorState or create new error component
-- [ ] Implement `app/error.tsx` for root-level errors
-- [ ] Create error.tsx for each major route
-- [ ] Add error logging/reporting (console or external service)
-- [ ] Add "Try Again" functionality with error reset
-- [ ] Test with intentional errors (throw new Error)
-- [ ] Document error handling pattern
+**Routes Now With error.tsx:**
+All 10 major routes now have error boundaries that catch and gracefully handle errors without crashing the entire application.
 
 **Acceptance Criteria:**
-- [ ] All major routes have error.tsx
-- [ ] Errors are caught and displayed gracefully
-- [ ] Error details logged for debugging
-- [ ] Users can recover from errors with reset
-- [ ] Consistent error UI across routes
-- [ ] App doesn't crash completely on route errors
+- [x] All major routes have error.tsx
+- [x] Errors are caught and displayed gracefully
+- [x] Error details logged for debugging (via ErrorBoundary component)
+- [x] Users can recover from errors with reset button
+- [x] Consistent error UI across routes (all use same ErrorBoundary component)
+- [x] App doesn't crash completely on route errors
+- [x] Manual test capability added to /debug page
+
+**Note:** The existing `ErrorBoundary` component in `ErrorState.tsx` is excellent and provides consistent, user-friendly error handling with proper logging and recovery options. All error.tsx files use this component for consistency.
 
 ---
 
@@ -1626,7 +1627,7 @@ These significant refactoring efforts have been completed and documented here fo
 ### Next.js Best Practices (NEW)
 
 - **Loading States:** Route-level loading.tsx files ✅ (100% - all major routes covered)
-- **Error Boundaries:** Route-level error.tsx files ❌ (0% - none exist)
+- **Error Boundaries:** Route-level error.tsx files ✅ (100% - all major routes covered)
 - **Server Components:** Pages using Server Components ❌ (0% - all client)
 - **Metadata:** Proper SEO metadata ⚠️ (10% - only root layout)
 

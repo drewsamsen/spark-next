@@ -9,6 +9,12 @@ import { UserSettings } from '@/lib/types';
 export default function DebugPage() {
   const { settings, isLoading } = useUserSettings();
   const [localStorageData, setLocalStorageData] = useState<Record<string, any>>({});
+  const [shouldThrowError, setShouldThrowError] = useState(false);
+
+  // Test error boundary
+  if (shouldThrowError) {
+    throw new Error('This is a test error to verify the error boundary works correctly!');
+  }
 
   useEffect(() => {
     // Collect all localStorage data
@@ -41,6 +47,26 @@ export default function DebugPage() {
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Debug Information</h1>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Error Boundary Test</CardTitle>
+          <CardDescription>
+            Test the error boundary implementation
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <button
+            onClick={() => setShouldThrowError(true)}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+          >
+            Throw Test Error
+          </button>
+          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+            Click this button to trigger an error and see the error boundary in action.
+          </p>
+        </CardContent>
+      </Card>
       
       <Card>
         <CardHeader>
