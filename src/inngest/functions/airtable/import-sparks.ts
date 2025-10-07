@@ -34,6 +34,7 @@ function cleanSparkContent(content: string): string {
     [/\bxtians\b/gi, 'Christians'],
     [/\bxtian\b/gi, 'Christian'],
     [/\bq for\b/gi, 'question for'],
+    [/\bq:\s/gi, 'question: '],
   ];
   
   for (const [pattern, replacement] of replacements) {
