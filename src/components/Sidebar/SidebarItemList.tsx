@@ -31,7 +31,7 @@ export function SidebarItemList({
 
   if (isLoading) {
     return (
-      <div className="grid gap-1 px-2 max-w-full">
+      <div className="grid gap-1 px-2 pb-8 max-w-full">
         {Array(8).fill(0).map((_, index) => (
           <div key={index} className="flex items-center gap-3 px-3 py-2">
             <div className="flex flex-1 justify-between items-center">
@@ -48,7 +48,7 @@ export function SidebarItemList({
   }
 
   return (
-    <div className="grid gap-1 px-2 max-w-full">
+    <div className="grid gap-1 px-2 pb-8 max-w-full">
       {items.map((item) => (
         <button
           key={item.id}

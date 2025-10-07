@@ -166,7 +166,7 @@ export default function NestedSidebar({
           isLoading={isLoading} 
         />
         
-        <nav className="flex-1 overflow-auto scrollbar-thin">
+        <nav className="flex-1 overflow-auto scrollbar-thin pb-8">
           {/* Column Headers */}
           {(title === "Highlights" || title === "Sparks" || title === "Categories" || title === "Tags") && (
             <SidebarColumnHeader 
