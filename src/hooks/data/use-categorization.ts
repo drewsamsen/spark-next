@@ -13,7 +13,7 @@ import {
 } from '@/lib/categorization/types';
 import { toast } from 'react-toastify';
 import { useAuthService } from '../services/use-services';
-import { useSupabaseAuth as useAuth } from '../auth/use-supabase-auth';
+import { useAuthSession } from '../auth/use-auth-session';
 
 // Interface for useCategoriesHook return value
 interface UseCategoriesReturn {
@@ -357,7 +357,7 @@ export function useCategorizationAutomations(): UseAutomationsReturn {
   const [error, setError] = useState<Error | null>(null);
   
   const { automations: automationService } = useCategorizationService();
-  const { session, loading: authLoading } = useAuth();
+  const { session, loading: authLoading } = useAuthSession();
   
   // Load automations on mount
   useEffect(() => {

@@ -622,35 +622,40 @@ Focus mode is currently managed as local state in `AppLayout.tsx` and doesn't in
 
 ---
 
-#### Story 11: Consolidate Authentication Hooks
+#### ✅ Story 11: Consolidate Authentication Hooks [COMPLETED]
 
 **Effort:** 2-3 hours  
 **Dependencies:** None
 
 **Context:**  
-There are two similar authentication hooks: `useAuthSession` and `useSupabaseAuth`. They serve similar purposes but have subtle differences. This creates confusion about which to use.
+There were two similar authentication hooks: `useAuthSession` and `useSupabaseAuth`. They served similar purposes but had subtle differences. This created confusion about which to use.
 
-**Current Hooks:**
-```typescript
-// use-auth-session.ts - uses authService
-export function useAuthSession()
-
-// use-supabase-auth.ts - uses Supabase directly
-export function useSupabaseAuth()
-```
+**Resolution:**
+Consolidated on `useAuthSession` and removed `useSupabaseAuth` because:
+- `useAuthSession` follows the proper architecture pattern (repository → service → hook)
+- `useSupabaseAuth` bypassed the service layer (architectural violation)
+- Both provided the same core functionality (session, loading, error states)
+- Only one usage of `useSupabaseAuth` needed to be migrated
 
 **Tasks:**
-- [ ] Audit all usages of both hooks
-- [ ] Determine if both are needed or if one can be removed
-- [ ] If both needed, document clear use cases for each
-- [ ] Consider renaming for clarity (e.g., `useAuthService` vs `useSupabaseSession`)
-- [ ] Update documentation with guidance on which to use when
+- [x] Audit all usages of both hooks
+- [x] Determine if both are needed or if one can be removed
+- [x] Remove `useSupabaseAuth` and update single usage to `useAuthSession`
+- [x] Update hooks/auth/index.ts with documentation
+- [x] Verify no linter errors
 
 **Acceptance Criteria:**
-- [ ] Clear distinction between hooks (or one removed)
-- [ ] Documentation explains when to use each
-- [ ] No duplicate functionality
-- [ ] Consistent usage across codebase
+- [x] Clear distinction between hooks (useSupabaseAuth removed)
+- [x] Documentation explains architectural decision
+- [x] No duplicate functionality
+- [x] Consistent usage across codebase
+
+**Completion Summary:**
+- ✅ Deleted `src/hooks/auth/use-supabase-auth.ts`
+- ✅ Updated `src/hooks/data/use-categorization.ts` to use `useAuthSession`
+- ✅ Updated `src/hooks/auth/index.ts` with architectural documentation
+- ✅ No linter errors
+- ✅ All authentication now follows service layer pattern
 
 ---
 
@@ -1453,7 +1458,7 @@ All stories in this priority have been completed. Deprecated code has been remov
 
 ### Current Progress
 
-**Completed:** Stories 0.1-0.3, Story 5.1, Story 5.2, Story 1.1 (from old numbering), Story 1, Story 2, Story 3 ✅  
+**Completed:** Stories 0.1-0.3, Story 5.1, Story 5.2, Story 1.1 (from old numbering), Story 1, Story 2, Story 3, Story 11 ✅  
 **Next Story:** Story 4 (Standardize Utility Organization)
 
 ### Ongoing Practices
@@ -1481,6 +1486,7 @@ All stories in this priority have been completed. Deprecated code has been remov
 - October 7, 2025 - **Story 1 completed** - Created index files for all component directories
 - October 7, 2025 - **Story 2 completed** - Verified and documented component naming conventions
 - October 7, 2025 - **Story 3 completed** - Reorganized hooks into feature-based subdirectories
+- October 7, 2025 - **Story 11 completed** - Consolidated authentication hooks (removed useSupabaseAuth)
 
 ---
 
