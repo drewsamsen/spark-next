@@ -115,18 +115,41 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
 
         if (error) {
           logger.warn("Error fetching user settings, will perform full sync:", error);
-          return { lastSynced: null, success: true };
+          return { lastSynced: null, lastFullSync: null, success: true };
         }
 
         const lastSynced = userSettings?.settings?.integrations?.readwise?.lastSyncTime || null;
-        logger.info(`Last sync timestamp: ${lastSynced || 'none (first sync)'}`);
+        const lastFullSync = userSettings?.settings?.integrations?.readwise?.lastFullSyncTime || null;
+        
+        logger.info(`Last incremental sync: ${lastSynced || 'none'}`);
+        logger.info(`Last full sync: ${lastFullSync || 'none'}`);
 
-        return { lastSynced, success: true };
+        return { lastSynced, lastFullSync, success: true };
       });
 
       const lastSynced = lastSyncResult.lastSynced;
-      const syncType = lastSynced ? 'incremental' : 'full';
-      logger.info(`Performing ${syncType} sync`);
+      const lastFullSync = lastSyncResult.lastFullSync;
+      
+      // Determine if we need a full sync:
+      // 1. Never synced before (lastSynced is null)
+      // 2. Never did a full sync (lastFullSync is null)
+      // 3. Last full sync was more than 10 days ago
+      const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const needsFullSync = !lastSynced || 
+                            !lastFullSync || 
+                            (now - new Date(lastFullSync).getTime() > TEN_DAYS_MS);
+      
+      const syncType = needsFullSync ? 'full' : 'incremental';
+      
+      if (needsFullSync && lastFullSync) {
+        const daysSinceFullSync = Math.floor((now - new Date(lastFullSync).getTime()) / (24 * 60 * 60 * 1000));
+        logger.info(`Forcing full sync - last full sync was ${daysSinceFullSync} days ago (threshold: 10 days)`);
+      } else if (needsFullSync) {
+        logger.info(`Performing full sync - ${!lastSynced ? 'first sync' : 'no previous full sync recorded'}`);
+      } else {
+        logger.info(`Performing incremental sync - last full sync was within 10 days`);
+      }
 
       // Step 3: Conditionally fetch existing highlights (only for full syncs)
       let existingHighlightsCount = 0;
@@ -177,8 +200,10 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         logger.info(`Importing Readwise highlights for user ${userId} (${syncType} sync)`);
 
         // Construct URL with incremental sync parameter if available
+        // For incremental syncs, use the lastSynced timestamp
+        // For full syncs, fetch everything (no timestamp filter)
         const baseUrl = "https://readwise.io/api/v2/highlights/";
-        const readwiseUrl = lastSynced 
+        const readwiseUrl = (syncType === 'incremental' && lastSynced)
           ? `${baseUrl}?updated__gt=${lastSynced}`
           : baseUrl;
 
@@ -390,7 +415,11 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           return { success: false };
         }
 
-        // Merge existing settings with new lastSyncTime timestamp
+        const syncTimestamp = new Date().toISOString();
+
+        // Merge existing settings with new timestamps
+        // Always update lastSyncTime
+        // Also update lastFullSyncTime if this was a full sync
         const updatedSettings = {
           settings: {
             ...(currentSettings?.settings || {}),
@@ -398,11 +427,15 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
               ...(currentSettings?.settings?.integrations || {}),
               readwise: {
                 ...(currentSettings?.settings?.integrations?.readwise || {}),
-                lastSyncTime: new Date().toISOString()
+                lastSyncTime: syncTimestamp,
+                // Update lastFullSyncTime only if this was a full sync
+                ...(syncType === 'full' && { lastFullSyncTime: syncTimestamp })
               }
             }
           }
         };
+
+        logger.info(`Updating sync timestamps - type: ${syncType}, lastSyncTime: ${syncTimestamp}${syncType === 'full' ? `, lastFullSyncTime: ${syncTimestamp}` : ''}`);
 
         // Update settings
         const { error } = await supabase
