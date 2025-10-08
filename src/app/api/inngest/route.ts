@@ -29,7 +29,8 @@ export const { GET, POST, PUT } = serve({
     airtableImportSparksFn,
     
     // Scheduled cron functions
-    scheduledTasksCronFn,
+    // Skip cron when running local dev with prod DB to avoid duplicate runs
+    ...(process.env.NEXT_PUBLIC_USING_PROD_DB !== 'true' ? [scheduledTasksCronFn] : []),
     
     // Automation functions
     tagRandomHighlights,
