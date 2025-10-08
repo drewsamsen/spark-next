@@ -210,6 +210,13 @@ export interface UserSettings {
       lastImported?: string;
     }
   };
+  scheduledTasks?: {
+    [taskId: string]: {
+      enabled: boolean;
+      frequency: 'off' | 'hourly' | 'daily' | 'weekly' | 'monthly';
+      lastRun?: string;
+    };
+  };
   // Additional settings can be added here in the future
 }
 
@@ -239,7 +246,8 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
       isConnected: false,
       lastImported: ''
     }
-  }
+  },
+  scheduledTasks: {}
 };
 
 /**

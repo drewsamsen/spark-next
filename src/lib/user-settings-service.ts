@@ -128,4 +128,73 @@ export async function updateLeftSidebarWidth(
   return updateUserSettings(userId, {
     leftSidebar: { width }
   });
+}
+
+// Get scheduled task settings for a specific task
+export async function getTaskSchedule(
+  userId: string,
+  taskId: string
+): Promise<{ enabled: boolean; frequency: 'off' | 'hourly' | 'daily' | 'weekly' | 'monthly'; lastRun?: string } | null> {
+  try {
+    const settings = await getUserSettings(userId);
+    return settings.scheduledTasks?.[taskId] || null;
+  } catch (error) {
+    console.error('Error in getTaskSchedule:', error);
+    return null;
+  }
+}
+
+// Update scheduled task settings for a specific task
+export async function updateTaskSchedule(
+  userId: string,
+  taskId: string,
+  schedule: {
+    enabled: boolean;
+    frequency: 'off' | 'hourly' | 'daily' | 'weekly' | 'monthly';
+    lastRun?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createServerClient();
+    
+    // Get current settings
+    const { data: currentData } = await supabase
+      .from('user_settings')
+      .select('settings')
+      .eq('id', userId)
+      .single();
+    
+    const currentSettings = currentData?.settings || DEFAULT_USER_SETTINGS;
+    
+    // Update the specific task schedule
+    const updatedSettings = {
+      ...currentSettings,
+      scheduledTasks: {
+        ...(currentSettings.scheduledTasks || {}),
+        [taskId]: schedule
+      }
+    };
+    
+    // Save to database
+    const { error } = await supabase
+      .from('user_settings')
+      .upsert({
+        id: userId,
+        settings: updatedSettings,
+        updated_at: new Date().toISOString()
+      });
+    
+    if (error) {
+      console.error('Error updating task schedule:', error);
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error in updateTaskSchedule:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
 } 

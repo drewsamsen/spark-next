@@ -13,5 +13,8 @@ export * from './functions/tags';
 // Export airtable functions
 export * from './functions/airtable';
 
+// Export scheduled functions
+export * from './functions/scheduled';
+
 // Export automations functions
 export * from './functions/automations'; 

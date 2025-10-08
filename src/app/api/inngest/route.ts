@@ -7,6 +7,7 @@ import {
   readwiseSyncHighlightsFn,
   migrateHighlightTagsFn,
   airtableImportSparksFn,
+  scheduledTasksCronFn,
   tagRandomHighlights,
   categorizeRandomHighlights
 } from "@/inngest";
@@ -26,6 +27,9 @@ export const { GET, POST, PUT } = serve({
     
     // Airtable functions
     airtableImportSparksFn,
+    
+    // Scheduled cron functions
+    scheduledTasksCronFn,
     
     // Automation functions
     tagRandomHighlights,

@@ -5,11 +5,19 @@ export interface ScheduledTask {
   id: string;
   name: string;
   description: string;
-  // Schedule options in the future will go here
   isSchedulable: boolean;
   triggerEndpoint: string;
   requiresApiKey?: boolean;
   apiKeySource?: string;
+}
+
+/**
+ * Task schedule configuration
+ */
+export interface TaskScheduleConfig {
+  enabled: boolean;
+  frequency: 'off' | 'hourly' | 'daily' | 'weekly' | 'monthly';
+  lastRun?: string;
 }
 
 /**

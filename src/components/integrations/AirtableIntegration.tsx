@@ -54,7 +54,7 @@ export default function AirtableIntegration() {
       console.log('Saving Airtable settings:', {
         apiKey: !!apiKey,
         baseId,
-        tableId,
+        tableId
       });
       
       const success = await integrationsService.updateAirtableSettings({
@@ -242,6 +242,14 @@ export default function AirtableIntegration() {
           </div>
         )}
       </div>
+      
+      {isConnected && (
+        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            💡 <strong>Tip:</strong> You can schedule automatic Airtable imports from the <strong>Automations</strong> tab above.
+          </p>
+        </div>
+      )}
     </div>
   );
 } 
