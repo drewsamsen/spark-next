@@ -39,13 +39,15 @@ The system uses a **generic, scalable approach** with Inngest's cron scheduling:
   1. Queries all users with any scheduled tasks configured
   2. For each user's enabled tasks:
      - Validates required settings (API keys, etc.)
-     - Checks if task is due based on frequency:
-       - **Hourly**: Runs if ≥1 hour has passed
-       - **Daily**: Runs if ≥23 hours have passed
-       - **Weekly**: Runs if ≥7 days have passed
-       - **Monthly**: Runs if ≥30 days have passed
+     - Checks if task is due based on frequency (with 20-minute tolerance windows to prevent missed runs):
+       - **Hourly**: Runs if ≥40 minutes have passed
+       - **Daily**: Runs if ≥23h 40min have passed
+       - **Weekly**: Runs if ≥6d 23h 40min have passed
+       - **Monthly**: Runs if ≥29d 23h 40min have passed
   3. Triggers the appropriate Inngest event for each eligible task
   4. Updates `lastRun` timestamp after triggering
+  
+> **Note**: All frequencies have a 20-minute tolerance window to prevent missed runs when cron timing drifts. For example, an hourly task will trigger even if only 40 minutes have passed since the last run.
 
 #### 2. Task Configuration Registry
 

@@ -151,22 +151,26 @@ async function processScheduledTasks({ step, logger }: { step: any; logger: any 
             } else {
               const hoursSinceLastRun = (now.getTime() - lastRun.getTime()) / (1000 * 60 * 60);
               
+              // Add tolerance windows to prevent missed runs due to timing drift
+              // All frequencies have a 20-minute tolerance window
+              const TOLERANCE_HOURS = 20 / 60; // 20 minutes = 0.333 hours
+              
               switch (schedule.frequency) {
                 case 'hourly':
-                  // Run if at least 1 hour has passed
-                  shouldRun = hoursSinceLastRun >= 1;
+                  // Run if at least 40 minutes have passed (1 hour - 20 min tolerance)
+                  shouldRun = hoursSinceLastRun >= (1 - TOLERANCE_HOURS);
                   break;
                 case 'daily':
-                  // Run if at least 23 hours have passed (allows for some timing flexibility)
-                  shouldRun = hoursSinceLastRun >= 23;
+                  // Run if at least 23.667 hours have passed (24 hours - 20 min tolerance)
+                  shouldRun = hoursSinceLastRun >= (24 - TOLERANCE_HOURS);
                   break;
                 case 'weekly':
-                  // Run if at least 7 days have passed
-                  shouldRun = hoursSinceLastRun >= (7 * 24);
+                  // Run if at least 167.667 hours have passed (7 days - 20 min tolerance)
+                  shouldRun = hoursSinceLastRun >= ((7 * 24) - TOLERANCE_HOURS);
                   break;
                 case 'monthly':
-                  // Run if at least 30 days have passed
-                  shouldRun = hoursSinceLastRun >= (30 * 24);
+                  // Run if at least 719.667 hours have passed (30 days - 20 min tolerance)
+                  shouldRun = hoursSinceLastRun >= ((30 * 24) - TOLERANCE_HOURS);
                   break;
                 default:
                   logger.warn(`Unknown frequency: ${schedule.frequency} for task ${taskId}`);
