@@ -91,7 +91,7 @@ export const scheduledTasksCronFn = inngest.createFunction(
         
         const { data: users, error } = await supabase
           .from('user_settings')
-          .select('user_id, settings')
+          .select('id, settings')
           .not('settings->scheduledTasks', 'is', null);
         
         if (error) {
@@ -149,7 +149,7 @@ export const scheduledTasksCronFn = inngest.createFunction(
               
               // Validate that user has required settings for this task
               if (!taskConfig.validateSettings(settings)) {
-                logger.debug(`Skipping task ${taskId} for user ${user.user_id}: missing required settings`);
+                logger.debug(`Skipping task ${taskId} for user ${user.id}: missing required settings`);
                 skippedCount++;
                 continue;
               }
@@ -189,7 +189,7 @@ export const scheduledTasksCronFn = inngest.createFunction(
               if (shouldRun) {
                 try {
                   // Trigger the appropriate Inngest event
-                  const eventData = taskConfig.getEventData(user.user_id, settings);
+                  const eventData = taskConfig.getEventData(user.id, settings);
                   await inngest.send({
                     name: taskConfig.eventName as any,
                     data: eventData
@@ -212,21 +212,21 @@ export const scheduledTasksCronFn = inngest.createFunction(
                   await supabase
                     .from('user_settings')
                     .update({ settings: updatedSettings })
-                    .eq('user_id', user.user_id);
+                    .eq('id', user.id);
                   
-                  triggeredTasks.push({ userId: user.user_id, taskId });
+                  triggeredTasks.push({ userId: user.id, taskId });
                   triggeredCount++;
-                  logger.info(`Triggered task ${taskId} for user ${user.user_id}`);
+                  logger.info(`Triggered task ${taskId} for user ${user.id}`);
                 } catch (error) {
-                  logger.error(`Error triggering task ${taskId} for user ${user.user_id}:`, error);
+                  logger.error(`Error triggering task ${taskId} for user ${user.id}:`, error);
                 }
               } else {
                 skippedCount++;
-                logger.debug(`Skipped task ${taskId} for user ${user.user_id}: not due yet (last run: ${lastRun?.toISOString()})`);
+                logger.debug(`Skipped task ${taskId} for user ${user.id}: not due yet (last run: ${lastRun?.toISOString()})`);
               }
             }
           } catch (error) {
-            logger.error(`Error processing tasks for user ${user.user_id}:`, error);
+            logger.error(`Error processing tasks for user ${user.id}:`, error);
           }
         }
         
