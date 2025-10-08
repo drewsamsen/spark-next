@@ -43,6 +43,7 @@ const TASK_CONFIG: Record<string, {
  * Scheduled cron job to run scheduled tasks for all users.
  * 
  * SCHEDULE: Runs hourly at minute 0
+ * MANUAL TRIGGER: Can be triggered via POST /api/inngest/trigger-schedule
  * 
  * PROCESS:
  * 1. Query all users with scheduled tasks configured
@@ -65,9 +66,13 @@ export const scheduledTasksCronFn = inngest.createFunction(
     // Format: minute hour day month weekday
     // "0 * * * *" means: At minute 0 of every hour
   },
-  { cron: "0 * * * *" },
-  async ({ step, logger }) => {
-    logger.info("Starting scheduled tasks check");
+  [
+    { cron: "0 * * * *" },
+    { event: "scheduled-tasks/manual-trigger" }
+  ],
+  async ({ step, logger, event }) => {
+    const isManualTrigger = event?.name === "scheduled-tasks/manual-trigger";
+    logger.info(`Starting scheduled tasks check${isManualTrigger ? ' (manually triggered)' : ' (cron triggered)'}`);
     
     // Initialize Supabase client with service role key
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

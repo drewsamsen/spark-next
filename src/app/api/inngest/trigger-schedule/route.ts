@@ -10,22 +10,23 @@ export async function POST(request: NextRequest) {
       return authResult.error;
     }
 
-    // Send the Inngest event manually
+    // Send the manual trigger event for scheduled tasks
     await inngest.send({
-      name: "readwise/daily-sync",
+      name: "scheduled-tasks/manual-trigger",
       data: {
+        triggeredBy: authResult.userId,
         timestamp: new Date().toISOString()
       }
     });
 
     return createSuccessResponse(
       { triggered: true }, 
-      'Readwise daily sync automation triggered manually'
+      'Scheduled tasks cron triggered manually'
     );
   } catch (error) {
     console.error('API Error:', error);
     return createErrorResponse(
-      error instanceof Error ? error.message : 'Failed to trigger Readwise sync automation'
+      error instanceof Error ? error.message : 'Failed to trigger scheduled tasks'
     );
   }
 }

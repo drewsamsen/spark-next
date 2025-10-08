@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useUserSettings } from '@/hooks';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UserSettings } from '@/lib/types';
@@ -10,6 +11,8 @@ export default function DebugPage() {
   const { settings, isLoading } = useUserSettings();
   const [localStorageData, setLocalStorageData] = useState<Record<string, any>>({});
   const [shouldThrowError, setShouldThrowError] = useState(false);
+  const [cronTriggerLoading, setCronTriggerLoading] = useState(false);
+  const [cronTriggerMessage, setCronTriggerMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Test error boundary
   if (shouldThrowError) {
@@ -40,6 +43,41 @@ export default function DebugPage() {
     setLocalStorageData(data);
   }, []);
 
+  const triggerScheduledTasksCron = async () => {
+    setCronTriggerLoading(true);
+    setCronTriggerMessage(null);
+
+    try {
+      const response = await fetch('/api/inngest/trigger-schedule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setCronTriggerMessage({ 
+          type: 'success', 
+          text: data.message || 'Scheduled tasks cron triggered successfully!' 
+        });
+      } else {
+        setCronTriggerMessage({ 
+          type: 'error', 
+          text: data.error || 'Failed to trigger scheduled tasks cron' 
+        });
+      }
+    } catch (error) {
+      setCronTriggerMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Failed to trigger scheduled tasks cron' 
+      });
+    } finally {
+      setCronTriggerLoading(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="p-8">Loading...</div>;
   }
@@ -56,15 +94,47 @@ export default function DebugPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <button
+          <Button
             onClick={() => setShouldThrowError(true)}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            variant="destructive"
           >
             Throw Test Error
-          </button>
+          </Button>
           <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
             Click this button to trigger an error and see the error boundary in action.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Inngest Triggers</CardTitle>
+          <CardDescription>
+            Manually trigger Inngest cron jobs and functions
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Button
+              onClick={triggerScheduledTasksCron}
+              disabled={cronTriggerLoading}
+              variant="primary"
+            >
+              {cronTriggerLoading ? 'Triggering...' : 'Trigger Scheduled Tasks Cron'}
+            </Button>
+            <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+              Manually trigger the scheduled-tasks-cron function to process all user scheduled tasks.
+            </p>
+            {cronTriggerMessage && (
+              <div className={`mt-3 p-3 rounded ${
+                cronTriggerMessage.type === 'success' 
+                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                  : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+              }`}>
+                {cronTriggerMessage.text}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
       

@@ -29,8 +29,10 @@ export const { GET, POST, PUT } = serve({
     airtableImportSparksFn,
     
     // Scheduled cron functions
-    // Skip cron when running local dev with prod DB to avoid duplicate runs
-    ...(process.env.NEXT_PUBLIC_USING_PROD_DB !== 'true' ? [scheduledTasksCronFn] : []),
+    // Only register cron in production environment to avoid duplicate runs from:
+    // - Preview deployments (Vercel creates separate deployments for PRs/branches)
+    // - Local development when connected to prod DB
+    ...(process.env.VERCEL_ENV === 'production' ? [scheduledTasksCronFn] : []),
     
     // Automation functions
     tagRandomHighlights,
