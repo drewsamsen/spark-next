@@ -213,7 +213,7 @@ Remove timestamp comparison - let the database and API handle this:
 
 ---
 
-### Story 5: Add Sync Statistics and Monitoring
+### Story 5: Add Sync Statistics and Monitoring ✅ COMPLETED
 **Priority**: MEDIUM | **Impact**: LOW | **Effort**: Low
 
 #### Problem
@@ -246,6 +246,16 @@ Enhance logging to provide insights without sacrificing performance.
 - Better observability
 - Easier debugging
 - Performance insights for future optimization
+
+#### Completion Notes
+- ✅ Added timing metrics for API fetch operations with `apiStartTime` and duration calculation
+- ✅ Added timing metrics for database operations with `dbStartTime` and duration calculation
+- ✅ Enhanced API fetch summary logging with pages fetched, highlights received, and duration
+- ✅ Enhanced DB operation summary logging with batch count, upserts, and duration
+- ✅ Implemented optional total highlights count query after sync for monitoring
+- ✅ Updated final success log to include all new metrics: syncType, totalInDatabase, apiDuration, dbDuration, pagesProcessed
+- ✅ Updated return object to include all monitoring metrics for observability
+- File modified: `src/inngest/functions/readwise/sync-highlights.ts`
 
 ---
 

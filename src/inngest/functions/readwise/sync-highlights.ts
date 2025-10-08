@@ -164,6 +164,9 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
 
         logger.info(`Readwise API URL: ${readwiseUrl}`);
 
+        // Track API timing
+        const apiStartTime = Date.now();
+
         let nextUrl = readwiseUrl;
         let highlightsToUpsert = [];
         let totalReadwiseHighlights = 0;
@@ -240,12 +243,20 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           }
         }
 
+        // Log API fetch metrics
+        const apiDuration = Date.now() - apiStartTime;
+        const apiDurationSeconds = (apiDuration / 1000).toFixed(2);
+        logger.info(`API Fetch Summary: ${page - 1} pages fetched, ${totalReadwiseHighlights} highlights received in ${apiDurationSeconds}s`);
+        
         logger.info(`Finished processing all highlights. Ready to upsert: ${highlightsToUpsert.length}, Without books: ${highlightsWithoutBooks}`);
 
         // Execute batch upsert operations
         let upsertedCount = 0;
 
         logger.info("Starting database operations for highlight upsert");
+        
+        // Track database operation timing
+        const dbStartTime = Date.now();
 
         // Upsert highlights in batches of 100
         if (highlightsToUpsert.length > 0) {
@@ -274,12 +285,38 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           logger.info("No highlights to upsert");
         }
 
+        // Log database operation metrics
+        const dbDuration = Date.now() - dbStartTime;
+        const dbDurationSeconds = (dbDuration / 1000).toFixed(2);
+        const batchCount = Math.ceil(highlightsToUpsert.length / 100);
+        logger.info(`DB Operation Summary: ${batchCount} batches processed, ${upsertedCount} highlights upserted in ${dbDurationSeconds}s`);
+
+        // Get total highlight count for this user after sync (optional monitoring metric)
+        let totalHighlightsInDb = 0;
+        try {
+          const { count, error: countError } = await supabase
+            .from('highlights')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
+
+          if (!countError && count !== null) {
+            totalHighlightsInDb = count;
+            logger.info(`Total highlights in database for user: ${totalHighlightsInDb}`);
+          }
+        } catch (error) {
+          logger.warn("Could not fetch total highlight count:", error);
+        }
+
         logger.info(`Completed database operations. Upserted: ${upsertedCount}`);
 
         return {
           upserted: upsertedCount,
           totalHighlights: totalReadwiseHighlights,
           withoutBooks: highlightsWithoutBooks,
+          totalInDatabase: totalHighlightsInDb,
+          apiDuration: apiDurationSeconds,
+          dbDuration: dbDurationSeconds,
+          pagesProcessed: page - 1,
           success: true
         };
       });
@@ -326,18 +363,28 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
 
       // Final log and return
       logger.info("Highlights sync completed successfully", {
+        syncType,
         totalHighlights: importResult.totalHighlights,
         existingHighlights: existingHighlightsCount,
         upserted: importResult.upserted,
-        withoutBooks: importResult.withoutBooks
+        withoutBooks: importResult.withoutBooks,
+        totalInDatabase: importResult.totalInDatabase,
+        apiDuration: `${importResult.apiDuration}s`,
+        dbDuration: `${importResult.dbDuration}s`,
+        pagesProcessed: importResult.pagesProcessed
       });
 
       return markAsLastStep({
         success: true,
+        syncType,
         totalHighlights: importResult.totalHighlights,
         existingHighlights: existingHighlightsCount,
         upserted: importResult.upserted,
-        withoutBooks: importResult.withoutBooks
+        withoutBooks: importResult.withoutBooks,
+        totalInDatabase: importResult.totalInDatabase,
+        apiDuration: importResult.apiDuration,
+        dbDuration: importResult.dbDuration,
+        pagesProcessed: importResult.pagesProcessed
       });
     } catch (error) {
       logger.error("Error in Readwise sync highlights function:", error);
