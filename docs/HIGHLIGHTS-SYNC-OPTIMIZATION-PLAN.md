@@ -134,7 +134,7 @@ Use Readwise API's `updated_after` parameter to only fetch highlights modified s
 
 ---
 
-### Story 3: Optimize Existing Highlights Lookup
+### Story 3: Optimize Existing Highlights Lookup ✅ COMPLETED
 **Priority**: MEDIUM | **Impact**: MODERATE | **Effort**: Low
 
 #### Problem
@@ -170,6 +170,16 @@ Two-phase approach based on sync type:
 - Eliminates large SELECT query on incremental syncs
 - Reduces memory footprint significantly
 - Faster sync start time
+
+#### Completion Notes
+- ✅ Reordered steps to determine sync type BEFORE fetching existing highlights
+- ✅ Implemented conditional fetch: only fetches existing highlights for full syncs
+- ✅ For incremental syncs, skips the database SELECT entirely and relies on upsert conflict resolution
+- ✅ Added comprehensive logging to indicate when fetch is skipped
+- ✅ Removed unused lookup map creation (no longer needed with upsert-only approach)
+- ✅ Updated step numbering throughout the function (Step 1-5 instead of 1-6)
+- ✅ Set `existingHighlightsCount` to 0 for incremental syncs (can be calculated post-sync if needed)
+- File modified: `src/inngest/functions/readwise/sync-highlights.ts`
 
 ---
 

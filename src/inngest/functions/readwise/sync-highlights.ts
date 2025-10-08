@@ -41,60 +41,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     try {
-      // Step 1: Get all existing highlights for this user once
-      type HighlightInfo = { id: string, rwUpdated: Date };
-      type HighlightMap = Map<string, HighlightInfo>;
-
-      const fetchResult = await step.run("fetch-existing-highlights", async () => {
-        logger.info(`Fetching existing highlights for user ${userId} from database`);
-
-        const { data, error } = await supabase
-          .from('highlights')
-          .select('id, rw_id, rw_updated')
-          .eq('user_id', userId);
-
-        if (error) {
-          logger.error("Error fetching existing highlights:", error);
-          throw error;
-        }
-
-        // Maps don't serialize well in Inngest steps, so return raw data
-        logger.info(`Found ${data?.length || 0} existing highlights in database`);
-
-        return {
-          highlightsData: data || [],
-          success: true
-        };
-      });
-
-      if (!fetchResult.success) {
-        logger.error("Failed to fetch existing highlights");
-        return markAsError({
-          success: false,
-          error: "Failed to fetch existing highlights",
-          totalHighlights: 0,
-          upserted: 0,
-          existingHighlights: 0
-        });
-      }
-
-      // Track the number of existing highlights
-      const existingHighlightsCount = fetchResult.highlightsData.length;
-      logger.info(`Total highlights in Supabase: ${existingHighlightsCount}`);
-
-      // Build lookup map
-      logger.info("Step 2: Creating lookup map from existing highlights");
-      const highlightsMap = new Map<string, HighlightInfo>();
-      for (const highlight of fetchResult.highlightsData) {
-        highlightsMap.set(highlight.rw_id.toString(), {
-          id: highlight.id,
-          rwUpdated: new Date(highlight.rw_updated)
-        });
-      }
-
-      logger.info(`Created lookup map with ${highlightsMap.size} highlights`);
-
-      // Step 3: Get the books first to create a map of book ids
+      // Step 1: Get the books first to create a map of book ids
       const booksResult = await step.run("fetch-book-ids", async () => {
         logger.info("Fetching books to create book ID mapping");
 
@@ -129,14 +76,14 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           error: "Failed to create book mapping",
           totalHighlights: 0,
           upserted: 0,
-          existingHighlights: existingHighlightsCount
+          existingHighlights: 0
         });
       }
 
       // Reconstruct the bookMap from the object
       const bookMap = new Map(Object.entries(booksResult.bookMap).map(([k, v]) => [Number(k), v]));
 
-      // Step 4: Get last sync timestamp to determine sync type
+      // Step 2: Get last sync timestamp to determine sync type
       const lastSyncResult = await step.run("fetch-last-sync-timestamp", async () => {
         logger.info("Fetching last sync timestamp from user settings");
 
@@ -161,7 +108,50 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       const syncType = lastSynced ? 'incremental' : 'full';
       logger.info(`Performing ${syncType} sync`);
 
-      // Step 5: Import highlights from Readwise API with batch processing
+      // Step 3: Conditionally fetch existing highlights (only for full syncs)
+      let existingHighlightsCount = 0;
+
+      if (syncType === 'full') {
+        const fetchResult = await step.run("fetch-existing-highlights", async () => {
+          logger.info(`Full sync detected - fetching existing highlights for user ${userId} from database`);
+
+          const { data, error } = await supabase
+            .from('highlights')
+            .select('id, rw_id')
+            .eq('user_id', userId);
+
+          if (error) {
+            logger.error("Error fetching existing highlights:", error);
+            throw error;
+          }
+
+          logger.info(`Found ${data?.length || 0} existing highlights in database`);
+
+          return {
+            highlightsData: data || [],
+            success: true
+          };
+        });
+
+        if (!fetchResult.success) {
+          logger.error("Failed to fetch existing highlights");
+          return markAsError({
+            success: false,
+            error: "Failed to fetch existing highlights",
+            totalHighlights: 0,
+            upserted: 0,
+            existingHighlights: 0
+          });
+        }
+
+        existingHighlightsCount = fetchResult.highlightsData.length;
+        logger.info(`Total highlights in Supabase: ${existingHighlightsCount}`);
+      } else {
+        logger.info("Incremental sync detected - skipping existing highlights fetch (relying on upsert conflict resolution)");
+        existingHighlightsCount = 0; // Will be determined from database post-sync if needed
+      }
+
+      // Step 4: Import highlights from Readwise API with batch processing
       logger.info("Starting to import highlights from Readwise");
       const importResult = await step.run("import-highlights-from-readwise", async () => {
         logger.info(`Importing Readwise highlights for user ${userId} (${syncType} sync)`);
@@ -295,7 +285,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       });
 
       // Update user settings with the sync time
-      logger.info("Step 6: Updating user settings with sync timestamp");
+      logger.info("Step 5: Updating user settings with sync timestamp");
       await step.run("update-last-synced", async () => {
         // First get current settings
         const { data: currentSettings, error: getError } = await supabase
