@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useUserSettings } from '@/hooks';
+import { useUserSettings, useAuthService } from '@/hooks';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UserSettings } from '@/lib/types';
+import { toast } from 'react-toastify';
 
 export default function DebugPage() {
   const { settings, isLoading } = useUserSettings();
+  const authService = useAuthService();
   const [localStorageData, setLocalStorageData] = useState<Record<string, any>>({});
   const [shouldThrowError, setShouldThrowError] = useState(false);
   const [cronTriggerLoading, setCronTriggerLoading] = useState(false);
@@ -48,10 +50,23 @@ export default function DebugPage() {
     setCronTriggerMessage(null);
 
     try {
+      // Get current session for auth token
+      const session = await authService.getSession();
+      
+      if (!session || !session.token) {
+        toast.error("You must be logged in to trigger scheduled tasks");
+        setCronTriggerMessage({ 
+          type: 'error', 
+          text: 'Authentication required. Please log in.' 
+        });
+        return;
+      }
+
       const response = await fetch('/api/inngest/trigger-schedule', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.token}`
         },
       });
 
@@ -62,17 +77,21 @@ export default function DebugPage() {
           type: 'success', 
           text: data.message || 'Scheduled tasks cron triggered successfully!' 
         });
+        toast.success('Scheduled tasks cron triggered successfully!');
       } else {
         setCronTriggerMessage({ 
           type: 'error', 
           text: data.error || 'Failed to trigger scheduled tasks cron' 
         });
+        toast.error(data.error || 'Failed to trigger scheduled tasks cron');
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to trigger scheduled tasks cron';
       setCronTriggerMessage({ 
         type: 'error', 
-        text: error instanceof Error ? error.message : 'Failed to trigger scheduled tasks cron' 
+        text: errorMessage
       });
+      toast.error(errorMessage);
     } finally {
       setCronTriggerLoading(false);
     }
