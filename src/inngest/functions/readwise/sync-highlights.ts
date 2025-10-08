@@ -41,6 +41,26 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     try {
+      // Step 0: Sync books first to ensure all books are up-to-date
+      await step.run("sync-books-first", async () => {
+        logger.info("Triggering books sync to ensure all books are current before syncing highlights");
+        
+        // Send event to trigger books sync
+        await inngest.send({
+          name: "readwise/sync-books",
+          data: {
+            userId,
+            apiKey
+          }
+        });
+        
+        logger.info("Books sync event sent");
+        return { success: true };
+      });
+
+      // Wait a moment for books to sync (you may want to use step.waitForEvent for more robust sync)
+      await step.sleep("wait-for-books-sync", "30s");
+
       // Step 1: Get the books first to create a map of book ids
       const booksResult = await step.run("fetch-book-ids", async () => {
         logger.info("Fetching books to create book ID mapping");
