@@ -65,6 +65,11 @@ export const scheduledTasksCronFn = inngest.createFunction(
     // Run hourly at minute 0
     // Format: minute hour day month weekday
     // "0 * * * *" means: At minute 0 of every hour
+    // Concurrency limit prevents multiple executions if multiple syncs exist
+    concurrency: {
+      limit: 1,
+      key: "global" // Only 1 instance can run at a time across all syncs
+    }
   },
   [
     { cron: "0 * * * *" },

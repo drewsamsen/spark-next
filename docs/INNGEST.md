@@ -4,6 +4,33 @@
 
 This project uses [Inngest](https://www.inngest.com/) for background jobs and scheduled tasks. Inngest allows us to run reliable, scalable background processing with retries, delays, and scheduled functions.
 
+## Architecture
+
+### Environment-Specific App IDs
+
+The application uses **environment-specific Inngest app IDs** to ensure isolation between environments and prevent sync pollution:
+
+```typescript
+// Production environment
+App ID: "spark-production"
+
+// Preview deployments (per branch)
+App ID: "spark-preview-{branch-name}"
+
+// Local development
+App ID: "spark-dev"
+```
+
+**Why This Matters:**
+- Each app ID creates a separate Inngest app in the dashboard
+- Prevents syncs from accumulating across environments
+- Ensures cron jobs only run in production
+- Preview deployments don't interfere with production functions
+- Makes debugging easier by isolating environments
+
+**Implementation:**
+See `src/inngest/client.ts` for the app ID logic based on `VERCEL_ENV`.
+
 ## Setup
 
 ### Prerequisites

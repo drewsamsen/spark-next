@@ -143,6 +143,24 @@ INNGEST_SIGNING_KEY=your_inngest_signing_key
 2. **Sync functions** - After deployment, Inngest will automatically detect the new cron function
 3. **Monitor** - View cron job executions in the Inngest dashboard at https://app.inngest.com
 
+#### Environment-Specific App IDs
+
+The application uses **environment-specific Inngest app IDs** to prevent sync pollution:
+
+- **Production**: `spark-production` - Clean production environment
+- **Preview**: `spark-preview-{branch}` - Isolated per branch
+- **Development**: `spark-dev` - Local development only
+
+This architecture ensures:
+- Each environment has its own Inngest app
+- Syncs don't accumulate across environments
+- Preview deployments don't interfere with production
+- Cron jobs only run in the intended environment
+
+#### Concurrency Protection
+
+The scheduled cron function has a **concurrency limit of 1**, ensuring only one instance runs at a time even if multiple syncs exist. This prevents duplicate task executions.
+
 ## User Guide
 
 ### Setting Up Scheduled Tasks
