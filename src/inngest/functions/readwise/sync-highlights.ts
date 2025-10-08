@@ -87,10 +87,10 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       const lastSyncResult = await step.run("fetch-last-sync-timestamp", async () => {
         logger.info("Fetching last sync timestamp from user settings");
 
-        const { data: settings, error } = await supabase
+        const { data: userSettings, error } = await supabase
           .from('user_settings')
-          .select('integrations')
-          .eq('user_id', userId)
+          .select('settings')
+          .eq('id', userId)
           .single();
 
         if (error) {
@@ -98,7 +98,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           return { lastSynced: null, success: true };
         }
 
-        const lastSynced = settings?.integrations?.readwise?.lastSynced || null;
+        const lastSynced = userSettings?.settings?.integrations?.readwise?.lastSyncTime || null;
         logger.info(`Last sync timestamp: ${lastSynced || 'none (first sync)'}`);
 
         return { lastSynced, success: true };
@@ -233,8 +233,8 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
             page++;
 
             // Safety check to prevent infinite loops
-            if (page > 100) {
-              logger.warn("Reached 100 pages - stopping to prevent potential infinite loop");
+            if (page > 250) {
+              logger.warn("Reached 250 pages - stopping to prevent potential infinite loop");
               break;
             }
           } catch (error) {
@@ -361,8 +361,8 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         // First get current settings
         const { data: currentSettings, error: getError } = await supabase
           .from('user_settings')
-          .select('integrations')
-          .eq('user_id', userId)
+          .select('settings')
+          .eq('id', userId)
           .single();
 
         if (getError) {
@@ -370,13 +370,16 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           return { success: false };
         }
 
-        // Merge existing settings with new lastSynced timestamp
+        // Merge existing settings with new lastSyncTime timestamp
         const updatedSettings = {
-          integrations: {
-            ...(currentSettings?.integrations || {}),
-            readwise: {
-              ...(currentSettings?.integrations?.readwise || {}),
-              lastSynced: new Date().toISOString()
+          settings: {
+            ...(currentSettings?.settings || {}),
+            integrations: {
+              ...(currentSettings?.settings?.integrations || {}),
+              readwise: {
+                ...(currentSettings?.settings?.integrations?.readwise || {}),
+                lastSyncTime: new Date().toISOString()
+              }
             }
           }
         };
@@ -385,7 +388,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         const { error } = await supabase
           .from('user_settings')
           .update(updatedSettings)
-          .eq('user_id', userId);
+          .eq('id', userId);
 
         if (error) {
           logger.error("Failed to update last synced timestamp", error);
