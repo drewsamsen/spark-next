@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     await inngest.send({
       name: "scheduled-tasks/manual-trigger",
       data: {
-        triggeredBy: authResult.userId,
+        triggeredBy: authResult.user?.id || 'unknown',
         timestamp: new Date().toISOString()
       }
     });
