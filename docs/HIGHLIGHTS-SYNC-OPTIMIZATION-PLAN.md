@@ -183,7 +183,7 @@ Two-phase approach based on sync type:
 
 ---
 
-### Story 4: Remove Unnecessary Timestamp Comparison Logic
+### Story 4: Remove Unnecessary Timestamp Comparison Logic ✅ COMPLETED
 **Priority**: LOW | **Impact**: MODERATE | **Effort**: Low
 
 #### Problem
@@ -210,6 +210,13 @@ Remove timestamp comparison - let the database and API handle this:
 - Cleaner, more maintainable code
 - Slight performance improvement (fewer date comparisons)
 - Reduced cognitive complexity
+
+#### Completion Notes
+- ✅ Timestamp comparison logic was removed as part of Story 1 implementation
+- ✅ Simplified logic: all highlights from API are added to upsert batch
+- ✅ rwUpdated field removed from existing highlights fetch (only fetches id, rw_id now)
+- ✅ Database and API now handle all timestamp/update logic
+- File modified: `src/inngest/functions/readwise/sync-highlights.ts`
 
 ---
 
@@ -259,7 +266,7 @@ Enhance logging to provide insights without sacrificing performance.
 
 ---
 
-### Story 6: Implement Error Recovery for Partial Failures
+### Story 6: Implement Error Recovery for Partial Failures ✅ COMPLETED
 **Priority**: LOW | **Impact**: MODERATE | **Effort**: Medium
 
 #### Problem
@@ -294,6 +301,17 @@ Add error handling and retry logic for individual batches.
 - More resilient syncs
 - Partial success instead of complete failure
 - Better error diagnostics
+
+#### Completion Notes
+- ✅ Wrapped each batch upsert in try-catch block for error recovery
+- ✅ Created `failedBatches` array to track failed operations with batch index, batch number, and error details
+- ✅ Implemented error logging with detailed context (batch number, index, size, error message)
+- ✅ Ensured sync continues processing remaining batches after a failure (no early termination)
+- ✅ Added failed batch count to DB operation summary logging
+- ✅ Updated final completion log to show "partial failures" warning when batches fail
+- ✅ Included `failedBatches` and `failedBatchCount` in return object for observability
+- ✅ Enhanced final log to use warn level when failures occur, info level for success
+- File modified: `src/inngest/functions/readwise/sync-highlights.ts`
 
 ---
 

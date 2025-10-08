@@ -252,6 +252,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
 
         // Execute batch upsert operations
         let upsertedCount = 0;
+        const failedBatches: Array<{ batchIndex: number; batchNumber: number; error: any }> = [];
 
         logger.info("Starting database operations for highlight upsert");
         
@@ -263,22 +264,42 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           logger.info(`Beginning upsert of ${highlightsToUpsert.length} highlights`);
           // Process in smaller batches to avoid hitting size limits
           const batchSize = 100;
+          const totalBatches = Math.ceil(highlightsToUpsert.length / batchSize);
+          
           for (let i = 0; i < highlightsToUpsert.length; i += batchSize) {
             const batch = highlightsToUpsert.slice(i, i + batchSize);
-            logger.info(`Upserting batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(highlightsToUpsert.length/batchSize)}: ${batch.length} highlights`);
+            const batchNumber = Math.floor(i / batchSize) + 1;
+            
+            logger.info(`Upserting batch ${batchNumber} of ${totalBatches}: ${batch.length} highlights`);
 
-            const { error: upsertError } = await supabase
-              .from('highlights')
-              .upsert(batch, { 
-                onConflict: 'user_id,rw_id',
-                ignoreDuplicates: false 
-              });
+            try {
+              const { error: upsertError } = await supabase
+                .from('highlights')
+                .upsert(batch, { 
+                  onConflict: 'user_id,rw_id',
+                  ignoreDuplicates: false 
+                });
 
-            if (upsertError) {
-              logger.error("Error upserting highlights batch:", upsertError);
-            } else {
+              if (upsertError) {
+                throw upsertError;
+              }
+              
               upsertedCount += batch.length;
-              logger.info(`Successfully upserted batch: ${batch.length} highlights`);
+              logger.info(`Successfully upserted batch ${batchNumber}: ${batch.length} highlights`);
+            } catch (error) {
+              // Log the error but continue processing remaining batches
+              logger.error(`Batch ${batchNumber} (index ${i}) failed:`, {
+                error: error instanceof Error ? error.message : String(error),
+                batchSize: batch.length,
+                startIndex: i
+              });
+              
+              // Track failed batch for final report
+              failedBatches.push({
+                batchIndex: i,
+                batchNumber,
+                error: error instanceof Error ? error.message : String(error)
+              });
             }
           }
         } else {
@@ -289,7 +310,18 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         const dbDuration = Date.now() - dbStartTime;
         const dbDurationSeconds = (dbDuration / 1000).toFixed(2);
         const batchCount = Math.ceil(highlightsToUpsert.length / 100);
-        logger.info(`DB Operation Summary: ${batchCount} batches processed, ${upsertedCount} highlights upserted in ${dbDurationSeconds}s`);
+        const failedCount = failedBatches.length;
+        
+        if (failedCount > 0) {
+          logger.warn(`DB Operation Summary: ${batchCount} batches processed, ${upsertedCount} highlights upserted, ${failedCount} batches failed in ${dbDurationSeconds}s`, {
+            failedBatches: failedBatches.map(fb => ({
+              batchNumber: fb.batchNumber,
+              error: fb.error
+            }))
+          });
+        } else {
+          logger.info(`DB Operation Summary: ${batchCount} batches processed, ${upsertedCount} highlights upserted in ${dbDurationSeconds}s`);
+        }
 
         // Get total highlight count for this user after sync (optional monitoring metric)
         let totalHighlightsInDb = 0;
@@ -307,7 +339,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           logger.warn("Could not fetch total highlight count:", error);
         }
 
-        logger.info(`Completed database operations. Upserted: ${upsertedCount}`);
+        logger.info(`Completed database operations. Upserted: ${upsertedCount}${failedBatches.length > 0 ? `, Failed batches: ${failedBatches.length}` : ''}`);
 
         return {
           upserted: upsertedCount,
@@ -317,6 +349,8 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           apiDuration: apiDurationSeconds,
           dbDuration: dbDurationSeconds,
           pagesProcessed: page - 1,
+          failedBatches: failedBatches.length > 0 ? failedBatches : undefined,
+          failedBatchCount: failedBatches.length,
           success: true
         };
       });
@@ -362,7 +396,13 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       });
 
       // Final log and return
-      logger.info("Highlights sync completed successfully", {
+      const hasFailures = importResult.failedBatchCount > 0;
+      const logMessage = hasFailures 
+        ? "Highlights sync completed with partial failures"
+        : "Highlights sync completed successfully";
+      
+      const logLevel = hasFailures ? 'warn' : 'info';
+      logger[logLevel](logMessage, {
         syncType,
         totalHighlights: importResult.totalHighlights,
         existingHighlights: existingHighlightsCount,
@@ -371,7 +411,11 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         totalInDatabase: importResult.totalInDatabase,
         apiDuration: `${importResult.apiDuration}s`,
         dbDuration: `${importResult.dbDuration}s`,
-        pagesProcessed: importResult.pagesProcessed
+        pagesProcessed: importResult.pagesProcessed,
+        ...(hasFailures && { 
+          failedBatchCount: importResult.failedBatchCount,
+          failedBatches: importResult.failedBatches 
+        })
       });
 
       return markAsLastStep({
@@ -384,7 +428,11 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         totalInDatabase: importResult.totalInDatabase,
         apiDuration: importResult.apiDuration,
         dbDuration: importResult.dbDuration,
-        pagesProcessed: importResult.pagesProcessed
+        pagesProcessed: importResult.pagesProcessed,
+        ...(hasFailures && {
+          failedBatchCount: importResult.failedBatchCount,
+          failedBatches: importResult.failedBatches
+        })
       });
     } catch (error) {
       logger.error("Error in Readwise sync highlights function:", error);
