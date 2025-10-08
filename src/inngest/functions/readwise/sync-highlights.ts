@@ -18,8 +18,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         success: false,
         error: "Missing user ID or API key",
         totalHighlights: 0,
-        imported: 0,
-        updated: 0,
+        upserted: 0,
         existingHighlights: 0
       });
     }
@@ -34,8 +33,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         success: false,
         error: "Server configuration error",
         totalHighlights: 0,
-        imported: 0,
-        updated: 0,
+        upserted: 0,
         existingHighlights: 0
       });
     }
@@ -75,8 +73,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           success: false,
           error: "Failed to fetch existing highlights",
           totalHighlights: 0,
-          imported: 0,
-          updated: 0,
+          upserted: 0,
           existingHighlights: 0
         });
       }
@@ -131,8 +128,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           success: false,
           error: "Failed to create book mapping",
           totalHighlights: 0,
-          imported: 0,
-          updated: 0,
+          upserted: 0,
           existingHighlights: existingHighlightsCount
         });
       }
@@ -148,8 +144,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         const readwiseUrl = "https://readwise.io/api/v2/highlights/";
 
         let nextUrl = readwiseUrl;
-        let highlightsToInsert = [];
-        let highlightsToUpdate = [];
+        let highlightsToUpsert = [];
         let totalReadwiseHighlights = 0;
         let page = 1;
         let highlightsWithoutBooks = 0;
@@ -204,27 +199,11 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
                 rw_tags: highlight.tags || []
               };
 
-              // Check if this highlight already exists in our database
-              const existingHighlight = highlightsMap.get(highlight.id.toString());
-
-              if (!existingHighlight) {
-                // New highlight, add to insert batch
-                highlightsToInsert.push(highlightData);
-              } else {
-                // Existing highlight, check if update needed
-                const newUpdated = new Date(highlight.updated);
-                
-                if (newUpdated > existingHighlight.rwUpdated) {
-                  // Highlight needs update
-                  highlightsToUpdate.push({
-                    ...highlightData,
-                    id: existingHighlight.id // Include id for the update operation
-                  });
-                }
-              }
+              // Add to upsert batch (handles both inserts and updates)
+              highlightsToUpsert.push(highlightData);
             }
 
-            logger.info(`Page ${page}: Processed ${highlights.length} highlights. Cumulative totals - To insert: ${highlightsToInsert.length}, To update: ${highlightsToUpdate.length}, Without books: ${highlightsWithoutBooks}`);
+            logger.info(`Page ${page}: Processed ${highlights.length} highlights. Cumulative totals - To upsert: ${highlightsToUpsert.length}, Without books: ${highlightsWithoutBooks}`);
 
             // Check if there's another page
             nextUrl = data.next || null;
@@ -241,71 +220,44 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           }
         }
 
-        logger.info(`Finished processing all highlights. Ready to insert: ${highlightsToInsert.length}, Ready to update: ${highlightsToUpdate.length}, Without books: ${highlightsWithoutBooks}`);
+        logger.info(`Finished processing all highlights. Ready to upsert: ${highlightsToUpsert.length}, Without books: ${highlightsWithoutBooks}`);
 
-        // Execute batch operations
-        let insertedCount = 0;
-        let updatedCount = 0;
+        // Execute batch upsert operations
+        let upsertedCount = 0;
 
-        logger.info("Starting database operations for highlight insertion/updates");
+        logger.info("Starting database operations for highlight upsert");
 
-        // Insert new highlights in batches of 100
-        if (highlightsToInsert.length > 0) {
-          logger.info(`Beginning insertion of ${highlightsToInsert.length} highlights`);
+        // Upsert highlights in batches of 100
+        if (highlightsToUpsert.length > 0) {
+          logger.info(`Beginning upsert of ${highlightsToUpsert.length} highlights`);
           // Process in smaller batches to avoid hitting size limits
           const batchSize = 100;
-          for (let i = 0; i < highlightsToInsert.length; i += batchSize) {
-            const batch = highlightsToInsert.slice(i, i + batchSize);
-            logger.info(`Inserting batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(highlightsToInsert.length/batchSize)}: ${batch.length} highlights`);
+          for (let i = 0; i < highlightsToUpsert.length; i += batchSize) {
+            const batch = highlightsToUpsert.slice(i, i + batchSize);
+            logger.info(`Upserting batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(highlightsToUpsert.length/batchSize)}: ${batch.length} highlights`);
 
-            const { error: insertError } = await supabase
+            const { error: upsertError } = await supabase
               .from('highlights')
-              .insert(batch);
+              .upsert(batch, { 
+                onConflict: 'user_id,rw_id',
+                ignoreDuplicates: false 
+              });
 
-            if (insertError) {
-              logger.error("Error inserting highlights batch:", insertError);
+            if (upsertError) {
+              logger.error("Error upserting highlights batch:", upsertError);
             } else {
-              insertedCount += batch.length;
-              logger.info(`Successfully inserted batch: ${batch.length} highlights`);
+              upsertedCount += batch.length;
+              logger.info(`Successfully upserted batch: ${batch.length} highlights`);
             }
           }
         } else {
-          logger.info("No new highlights to insert");
+          logger.info("No highlights to upsert");
         }
 
-        // Update existing highlights in batches of 100
-        if (highlightsToUpdate.length > 0) {
-          logger.info(`Beginning update of ${highlightsToUpdate.length} highlights`);
-          // Process in smaller batches
-          const batchSize = 100;
-          for (let i = 0; i < highlightsToUpdate.length; i += batchSize) {
-            const batch = highlightsToUpdate.slice(i, i + batchSize);
-            logger.info(`Updating batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(highlightsToUpdate.length/batchSize)}: ${batch.length} highlights`);
-
-            // Update each highlight in the batch
-            for (const highlight of batch) {
-              const { id, ...updateData } = highlight;
-              const { error: updateError } = await supabase
-                .from('highlights')
-                .update(updateData)
-                .eq('id', id);
-
-              if (updateError) {
-                logger.error(`Error updating highlight ${highlight.rw_id}:`, updateError);
-              } else {
-                updatedCount++;
-              }
-            }
-          }
-        } else {
-          logger.info("No highlights to update");
-        }
-
-        logger.info(`Completed database operations. Inserted: ${insertedCount}, Updated: ${updatedCount}`);
+        logger.info(`Completed database operations. Upserted: ${upsertedCount}`);
 
         return {
-          imported: insertedCount,
-          updated: updatedCount,
+          upserted: upsertedCount,
           totalHighlights: totalReadwiseHighlights,
           withoutBooks: highlightsWithoutBooks,
           success: true
@@ -356,8 +308,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       logger.info("Highlights sync completed successfully", {
         totalHighlights: importResult.totalHighlights,
         existingHighlights: existingHighlightsCount,
-        imported: importResult.imported,
-        updated: importResult.updated,
+        upserted: importResult.upserted,
         withoutBooks: importResult.withoutBooks
       });
 
@@ -365,8 +316,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         success: true,
         totalHighlights: importResult.totalHighlights,
         existingHighlights: existingHighlightsCount,
-        imported: importResult.imported,
-        updated: importResult.updated,
+        upserted: importResult.upserted,
         withoutBooks: importResult.withoutBooks
       });
     } catch (error) {
@@ -375,8 +325,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
         totalHighlights: 0,
-        imported: 0,
-        updated: 0,
+        upserted: 0,
         existingHighlights: 0
       });
     }

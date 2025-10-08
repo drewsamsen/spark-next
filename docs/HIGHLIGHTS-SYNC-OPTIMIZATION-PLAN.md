@@ -20,7 +20,7 @@ Focus on high-impact, low-risk improvements that leverage existing Readwise API 
 
 ## Developer Stories (Execute in Order)
 
-### Story 1: Replace Individual Updates with Batch Upsert
+### Story 1: Replace Individual Updates with Batch Upsert ✅ COMPLETED
 **Priority**: HIGH | **Impact**: CRITICAL | **Effort**: Medium
 
 #### Problem
@@ -63,6 +63,16 @@ Use Supabase's `upsert` operation to handle both inserts and updates in a single
 - Reduces database queries from ~1,000+ to ~10 (for 1,000 highlights in batches of 100)
 - Simplifies code by removing conditional logic
 - Atomic operations reduce race condition risks
+
+#### Completion Notes
+- ✅ Removed separate `highlightsToInsert` and `highlightsToUpdate` arrays
+- ✅ Created single `highlightsToUpsert` array
+- ✅ Implemented `.upsert()` with `onConflict: 'user_id,rw_id'`
+- ✅ Verified unique constraint exists on `(user_id, rw_id)` in highlights table
+- ✅ Updated all logging to use `upserted` count instead of separate insert/update counts
+- ✅ Removed timestamp comparison logic (no longer needed with upsert)
+- ✅ Maintained batch size of 100 for upsert operations
+- File modified: `src/inngest/functions/readwise/sync-highlights.ts`
 
 ---
 
