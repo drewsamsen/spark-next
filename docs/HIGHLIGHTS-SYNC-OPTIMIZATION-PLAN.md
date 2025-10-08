@@ -76,7 +76,7 @@ Use Supabase's `upsert` operation to handle both inserts and updates in a single
 
 ---
 
-### Story 2: Implement Incremental Sync with `updated_after` Parameter
+### Story 2: Implement Incremental Sync with `updated_after` Parameter ✅ COMPLETED
 **Priority**: HIGH | **Impact**: CRITICAL | **Effort**: Medium
 
 #### Problem
@@ -121,6 +121,16 @@ Use Readwise API's `updated_after` parameter to only fetch highlights modified s
 - **Subsequent syncs**: Fetches only changed highlights (could be 99% reduction in API calls)
 - Dramatically faster sync times after initial import
 - Reduced API rate limiting issues
+
+#### Completion Notes
+- ✅ Added new step to fetch last sync timestamp from user_settings before API call
+- ✅ Implemented sync type detection (incremental vs full) based on lastSynced value
+- ✅ Constructed Readwise API URL with `updated__gt` parameter for incremental syncs
+- ✅ Added comprehensive logging to indicate sync type and API URL being used
+- ✅ Handled first-time sync case (no lastSynced) by performing full sync
+- ✅ Used ISO 8601 timestamp format (already stored in this format in user_settings)
+- ✅ Updated step numbering throughout the function for clarity
+- File modified: `src/inngest/functions/readwise/sync-highlights.ts`
 
 ---
 

@@ -136,12 +136,43 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       // Reconstruct the bookMap from the object
       const bookMap = new Map(Object.entries(booksResult.bookMap).map(([k, v]) => [Number(k), v]));
 
-      // Step 4: Import highlights from Readwise API with batch processing
-      logger.info("Step 3: Starting to import highlights from Readwise");
-      const importResult = await step.run("import-highlights-from-readwise", async () => {
-        logger.info(`Importing Readwise highlights for user ${userId}`);
+      // Step 4: Get last sync timestamp to determine sync type
+      const lastSyncResult = await step.run("fetch-last-sync-timestamp", async () => {
+        logger.info("Fetching last sync timestamp from user settings");
 
-        const readwiseUrl = "https://readwise.io/api/v2/highlights/";
+        const { data: settings, error } = await supabase
+          .from('user_settings')
+          .select('integrations')
+          .eq('user_id', userId)
+          .single();
+
+        if (error) {
+          logger.warn("Error fetching user settings, will perform full sync:", error);
+          return { lastSynced: null, success: true };
+        }
+
+        const lastSynced = settings?.integrations?.readwise?.lastSynced || null;
+        logger.info(`Last sync timestamp: ${lastSynced || 'none (first sync)'}`);
+
+        return { lastSynced, success: true };
+      });
+
+      const lastSynced = lastSyncResult.lastSynced;
+      const syncType = lastSynced ? 'incremental' : 'full';
+      logger.info(`Performing ${syncType} sync`);
+
+      // Step 5: Import highlights from Readwise API with batch processing
+      logger.info("Starting to import highlights from Readwise");
+      const importResult = await step.run("import-highlights-from-readwise", async () => {
+        logger.info(`Importing Readwise highlights for user ${userId} (${syncType} sync)`);
+
+        // Construct URL with incremental sync parameter if available
+        const baseUrl = "https://readwise.io/api/v2/highlights/";
+        const readwiseUrl = lastSynced 
+          ? `${baseUrl}?updated__gt=${lastSynced}`
+          : baseUrl;
+
+        logger.info(`Readwise API URL: ${readwiseUrl}`);
 
         let nextUrl = readwiseUrl;
         let highlightsToUpsert = [];
@@ -149,7 +180,6 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         let page = 1;
         let highlightsWithoutBooks = 0;
 
-        logger.info(`Making first request to Readwise API: ${readwiseUrl}`);
         // Process all pages of results
         while (nextUrl) {
           logger.info(`Fetching highlights page ${page} from ${nextUrl}`);
@@ -265,7 +295,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       });
 
       // Update user settings with the sync time
-      logger.info("Step 4: Updating user settings with sync timestamp");
+      logger.info("Step 6: Updating user settings with sync timestamp");
       await step.run("update-last-synced", async () => {
         // First get current settings
         const { data: currentSettings, error: getError } = await supabase
