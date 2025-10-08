@@ -1,2 +1,2 @@
-export { scheduledTasksCronFn } from './tasks-cron';
+export { scheduledTasksCronFn, scheduledTasksManualFn } from './tasks-cron';
 

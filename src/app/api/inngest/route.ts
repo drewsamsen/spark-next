@@ -8,6 +8,7 @@ import {
   migrateHighlightTagsFn,
   airtableImportSparksFn,
   scheduledTasksCronFn,
+  scheduledTasksManualFn,
   tagRandomHighlights,
   categorizeRandomHighlights
 } from "@/inngest";
@@ -33,6 +34,9 @@ export const { GET, POST, PUT } = serve({
     // - Preview deployments (Vercel creates separate deployments for PRs/branches)
     // - Local development when connected to prod DB
     ...(process.env.VERCEL_ENV === 'production' ? [scheduledTasksCronFn] : []),
+    
+    // Manual trigger for scheduled tasks (available in all environments for debugging)
+    scheduledTasksManualFn,
     
     // Automation functions
     tagRandomHighlights,
