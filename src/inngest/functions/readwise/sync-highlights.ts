@@ -103,9 +103,9 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       // Reconstruct the bookMap from the object
       const bookMap = new Map(Object.entries(booksResult.bookMap).map(([k, v]) => [Number(k), v]));
 
-      // Step 2: Get last sync timestamp to determine sync type
-      const lastSyncResult = await step.run("fetch-last-sync-timestamp", async () => {
-        logger.info("Fetching last sync timestamp from user settings");
+      // Step 2: Get last sync state to determine sync strategy
+      const lastSyncResult = await step.run("fetch-last-sync-state", async () => {
+        logger.info("Fetching last sync state from user settings");
 
         const { data: userSettings, error } = await supabase
           .from('user_settings')
@@ -114,117 +114,118 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           .single();
 
         if (error) {
-          logger.warn("Error fetching user settings, will perform full sync:", error);
-          return { lastSynced: null, lastFullSync: null, success: true };
+          logger.warn("Error fetching user settings, will start fresh pagination:", error);
+          return { 
+            lastSynced: null, 
+            lastFullSync: null, 
+            paginationCursor: null,
+            isFullySynced: false,
+            success: true 
+          };
         }
 
-        const lastSynced = userSettings?.settings?.integrations?.readwise?.lastSyncTime || null;
-        const lastFullSync = userSettings?.settings?.integrations?.readwise?.lastFullSyncTime || null;
+        const readwiseSettings = userSettings?.settings?.integrations?.readwise || {};
+        const lastSynced = readwiseSettings.lastSyncTime || null;
+        const lastFullSync = readwiseSettings.lastFullSyncTime || null;
+        const paginationCursor = readwiseSettings.paginationCursor || null;
+        const isFullySynced = readwiseSettings.isFullySynced || false;
         
         logger.info(`Last incremental sync: ${lastSynced || 'none'}`);
         logger.info(`Last full sync: ${lastFullSync || 'none'}`);
+        logger.info(`Pagination cursor: ${paginationCursor || 'none (start from beginning)'}`);
+        logger.info(`Fully synced: ${isFullySynced}`);
 
-        return { lastSynced, lastFullSync, success: true };
+        return { lastSynced, lastFullSync, paginationCursor, isFullySynced, success: true };
       });
 
       const lastSynced = lastSyncResult.lastSynced;
       const lastFullSync = lastSyncResult.lastFullSync;
+      const paginationCursor = lastSyncResult.paginationCursor;
+      const isFullySynced = lastSyncResult.isFullySynced;
       
-      // Determine if we need a full sync:
-      // 1. Never synced before (lastSynced is null)
-      // 2. Never did a full sync (lastFullSync is null)
-      // 3. Last full sync was more than 10 days ago
+      // Determine sync strategy:
+      // 1. If we have a pagination cursor, continue chunked sync from where we left off
+      // 2. If fully synced AND last full sync < 10 days, do incremental (updated only)
+      // 3. If fully synced AND last full sync > 10 days, restart full pagination
+      // 4. If never synced, start fresh pagination
       const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
       const now = Date.now();
-      const needsFullSync = !lastSynced || 
-                            !lastFullSync || 
-                            (now - new Date(lastFullSync).getTime() > TEN_DAYS_MS);
       
-      const syncType = needsFullSync ? 'full' : 'incremental';
+      let syncType: 'chunked-full' | 'chunked-continue' | 'incremental';
+      let shouldResetPagination = false;
       
-      if (needsFullSync && lastFullSync) {
-        const daysSinceFullSync = Math.floor((now - new Date(lastFullSync).getTime()) / (24 * 60 * 60 * 1000));
-        logger.info(`Forcing full sync - last full sync was ${daysSinceFullSync} days ago (threshold: 10 days)`);
-      } else if (needsFullSync) {
-        logger.info(`Performing full sync - ${!lastSynced ? 'first sync' : 'no previous full sync recorded'}`);
+      if (paginationCursor) {
+        // Continue from where we left off
+        syncType = 'chunked-continue';
+        logger.info(`Continuing chunked sync from cursor: ${paginationCursor}`);
+      } else if (isFullySynced && lastFullSync && (now - new Date(lastFullSync).getTime() <= TEN_DAYS_MS)) {
+        // Fully synced recently, just get updates
+        syncType = 'incremental';
+        logger.info(`Performing incremental sync - fully synced and last full sync within 10 days`);
       } else {
-        logger.info(`Performing incremental sync - last full sync was within 10 days`);
-      }
-
-      // Step 3: Conditionally fetch existing highlights (only for full syncs)
-      let existingHighlightsCount = 0;
-
-      if (syncType === 'full') {
-        const fetchResult = await step.run("fetch-existing-highlights", async () => {
-          logger.info(`Full sync detected - fetching existing highlights for user ${userId} from database`);
-
-          const { data, error } = await supabase
-            .from('highlights')
-            .select('id, rw_id')
-            .eq('user_id', userId);
-
-          if (error) {
-            logger.error("Error fetching existing highlights:", error);
-            throw error;
-          }
-
-          logger.info(`Found ${data?.length || 0} existing highlights in database`);
-
-          return {
-            highlightsData: data || [],
-            success: true
-          };
-        });
-
-        if (!fetchResult.success) {
-          logger.error("Failed to fetch existing highlights");
-          return markAsError({
-            success: false,
-            error: "Failed to fetch existing highlights",
-            totalHighlights: 0,
-            upserted: 0,
-            existingHighlights: 0
-          });
+        // Need to start/restart full pagination
+        syncType = 'chunked-full';
+        shouldResetPagination = true;
+        
+        if (lastFullSync) {
+          const daysSinceFullSync = Math.floor((now - new Date(lastFullSync).getTime()) / (24 * 60 * 60 * 1000));
+          logger.info(`Starting new chunked full sync - last full sync was ${daysSinceFullSync} days ago (threshold: 10 days)`);
+        } else {
+          logger.info(`Starting new chunked full sync - ${!lastSynced ? 'first sync ever' : 'no previous full sync recorded'}`);
         }
-
-        existingHighlightsCount = fetchResult.highlightsData.length;
-        logger.info(`Total highlights in Supabase: ${existingHighlightsCount}`);
-      } else {
-        logger.info("Incremental sync detected - skipping existing highlights fetch (relying on upsert conflict resolution)");
-        existingHighlightsCount = 0; // Will be determined from database post-sync if needed
       }
 
-      // Step 4: Import highlights from Readwise API with batch processing
+      // Step 3: No need to fetch existing highlights for chunked syncs
+      // We rely on upsert conflict resolution for all sync types now
+      let existingHighlightsCount = 0;
+      logger.info("Using upsert conflict resolution - skipping existing highlights fetch");
+
+      // Step 4: Import highlights from Readwise API with chunked processing
       logger.info("Starting to import highlights from Readwise");
       const importResult = await step.run("import-highlights-from-readwise", async () => {
         logger.info(`Importing Readwise highlights for user ${userId} (${syncType} sync)`);
 
-        // Construct URL with incremental sync parameter if available
-        // For incremental syncs, use the lastSynced timestamp
-        // For full syncs, fetch everything (no timestamp filter)
+        // Determine starting URL based on sync type
         const baseUrl = "https://readwise.io/api/v2/highlights/";
-        const readwiseUrl = (syncType === 'incremental' && lastSynced)
-          ? `${baseUrl}?updated__gt=${lastSynced}`
-          : baseUrl;
+        let startUrl: string;
+        
+        if (syncType === 'incremental' && lastSynced) {
+          // Incremental: only get updated highlights
+          startUrl = `${baseUrl}?updated__gt=${lastSynced}`;
+          logger.info(`Incremental sync - fetching highlights updated after ${lastSynced}`);
+        } else if (syncType === 'chunked-continue' && paginationCursor) {
+          // Continue from saved cursor
+          startUrl = paginationCursor;
+          logger.info(`Continuing chunked sync from saved cursor`);
+        } else {
+          // Start fresh full sync
+          startUrl = baseUrl;
+          logger.info(`Starting new full sync from beginning`);
+        }
 
-        logger.info(`Readwise API URL: ${readwiseUrl}`);
+        logger.info(`Readwise API URL: ${startUrl}`);
 
         // Track API timing
         const apiStartTime = Date.now();
 
-        let nextUrl = readwiseUrl;
         let highlightsToUpsert = [];
         let totalReadwiseHighlights = 0;
-        let page = 1;
         let highlightsWithoutBooks = 0;
+        let nextCursor: string | null = null;
+        let reachedEnd = false;
 
-        // Process all pages of results
-        while (nextUrl) {
-          logger.info(`Fetching highlights page ${page} from ${nextUrl}`);
+        // CHUNKED SYNC: Only fetch up to 500 highlights per run
+        const MAX_HIGHLIGHTS_PER_RUN = 500;
+        let currentUrl = startUrl;
+        let pagesProcessed = 0;
+
+        while (currentUrl && totalReadwiseHighlights < MAX_HIGHLIGHTS_PER_RUN) {
+          pagesProcessed++;
+          logger.info(`Fetching highlights page ${pagesProcessed} from ${currentUrl}`);
 
           try {
             // Use throttled request function
-            const data = await throttledReadwiseRequest(nextUrl, apiKey, logger);
+            const data = await throttledReadwiseRequest(currentUrl, apiKey, logger);
             const highlights = data.results || [];
 
             // Add the highlights from this page to the total count
@@ -271,19 +272,28 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
               highlightsToUpsert.push(highlightData);
             }
 
-            logger.info(`Page ${page}: Processed ${highlights.length} highlights. Cumulative totals - To upsert: ${highlightsToUpsert.length}, Without books: ${highlightsWithoutBooks}`);
+            logger.info(`Page ${pagesProcessed}: Processed ${highlights.length} highlights. Cumulative totals - To upsert: ${highlightsToUpsert.length}, Without books: ${highlightsWithoutBooks}`);
 
-            // Check if there's another page
-            nextUrl = data.next || null;
-            page++;
-
-            // Safety check to prevent infinite loops
-            if (page > 250) {
-              logger.warn("Reached 250 pages - stopping to prevent potential infinite loop");
+            // Save the next cursor for continuation
+            nextCursor = data.next || null;
+            
+            if (!nextCursor) {
+              // No more pages available - we've reached the end
+              reachedEnd = true;
+              logger.info("Reached end of highlights - no more pages available");
               break;
             }
+
+            // Check if we've hit our limit for this run
+            if (totalReadwiseHighlights >= MAX_HIGHLIGHTS_PER_RUN) {
+              logger.info(`Reached chunk limit of ${MAX_HIGHLIGHTS_PER_RUN} highlights for this run`);
+              break;
+            }
+
+            // Continue to next page
+            currentUrl = nextCursor;
           } catch (error) {
-            logger.error(`Error processing Readwise API highlights page ${page}:`, error);
+            logger.error(`Error processing Readwise API highlights page ${pagesProcessed}:`, error);
             throw error;
           }
         }
@@ -291,9 +301,15 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         // Log API fetch metrics
         const apiDuration = Date.now() - apiStartTime;
         const apiDurationSeconds = (apiDuration / 1000).toFixed(2);
-        logger.info(`API Fetch Summary: ${page - 1} pages fetched, ${totalReadwiseHighlights} highlights received in ${apiDurationSeconds}s`);
+        logger.info(`API Fetch Summary: ${pagesProcessed} pages fetched, ${totalReadwiseHighlights} highlights received in ${apiDurationSeconds}s`);
         
-        logger.info(`Finished processing all highlights. Ready to upsert: ${highlightsToUpsert.length}, Without books: ${highlightsWithoutBooks}`);
+        if (reachedEnd) {
+          logger.info(`Finished processing - reached end of all highlights. Ready to upsert: ${highlightsToUpsert.length}, Without books: ${highlightsWithoutBooks}`);
+        } else if (nextCursor) {
+          logger.info(`Finished processing chunk. Ready to upsert: ${highlightsToUpsert.length}, Without books: ${highlightsWithoutBooks}. Will continue from cursor in next run.`);
+        } else {
+          logger.info(`Finished processing highlights. Ready to upsert: ${highlightsToUpsert.length}, Without books: ${highlightsWithoutBooks}`);
+        }
 
         // Execute batch upsert operations
         let upsertedCount = 0;
@@ -393,16 +409,18 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           totalInDatabase: totalHighlightsInDb,
           apiDuration: apiDurationSeconds,
           dbDuration: dbDurationSeconds,
-          pagesProcessed: page - 1,
+          pagesProcessed: pagesProcessed,
+          nextCursor: nextCursor,
+          reachedEnd: reachedEnd,
           failedBatches: failedBatches.length > 0 ? failedBatches : undefined,
           failedBatchCount: failedBatches.length,
           success: true
         };
       });
 
-      // Update user settings with the sync time
-      logger.info("Step 5: Updating user settings with sync timestamp");
-      await step.run("update-last-synced", async () => {
+      // Update user settings with the sync state
+      logger.info("Step 5: Updating user settings with sync state");
+      await step.run("update-sync-state", async () => {
         // First get current settings
         const { data: currentSettings, error: getError } = await supabase
           .from('user_settings')
@@ -417,9 +435,11 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
 
         const syncTimestamp = new Date().toISOString();
 
-        // Merge existing settings with new timestamps
-        // Always update lastSyncTime
-        // Also update lastFullSyncTime if this was a full sync
+        // Determine pagination state for next run
+        const shouldSaveCursor = !importResult.reachedEnd && importResult.nextCursor;
+        const isNowFullySynced = importResult.reachedEnd || syncType === 'incremental';
+
+        // Merge existing settings with new state
         const updatedSettings = {
           settings: {
             ...(currentSettings?.settings || {}),
@@ -428,14 +448,23 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
               readwise: {
                 ...(currentSettings?.settings?.integrations?.readwise || {}),
                 lastSyncTime: syncTimestamp,
-                // Update lastFullSyncTime only if this was a full sync
-                ...(syncType === 'full' && { lastFullSyncTime: syncTimestamp })
+                // Save pagination cursor if we haven't reached the end
+                paginationCursor: shouldSaveCursor ? importResult.nextCursor : null,
+                // Mark as fully synced if we reached the end or completed incremental
+                isFullySynced: isNowFullySynced,
+                // Update lastFullSyncTime when we complete a full sync (reached end)
+                ...(importResult.reachedEnd && { lastFullSyncTime: syncTimestamp })
               }
             }
           }
         };
 
-        logger.info(`Updating sync timestamps - type: ${syncType}, lastSyncTime: ${syncTimestamp}${syncType === 'full' ? `, lastFullSyncTime: ${syncTimestamp}` : ''}`);
+        logger.info(`Updating sync state - type: ${syncType}, lastSyncTime: ${syncTimestamp}`);
+        logger.info(`Pagination: ${shouldSaveCursor ? 'saved cursor for next run' : 'no cursor (completed or incremental)'}`);
+        logger.info(`Status: ${isNowFullySynced ? 'fully synced' : 'chunked sync in progress'}`);
+        if (importResult.reachedEnd) {
+          logger.info(`Completed full sync - setting lastFullSyncTime: ${syncTimestamp}`);
+        }
 
         // Update settings
         const { error } = await supabase
@@ -444,7 +473,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           .eq('id', userId);
 
         if (error) {
-          logger.error("Failed to update last synced timestamp", error);
+          logger.error("Failed to update sync state", error);
           return { success: false };
         }
 
@@ -453,9 +482,18 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
 
       // Final log and return
       const hasFailures = importResult.failedBatchCount > 0;
-      const logMessage = hasFailures 
-        ? "Highlights sync completed with partial failures"
-        : "Highlights sync completed successfully";
+      const isInProgress = !importResult.reachedEnd && importResult.nextCursor;
+      
+      let logMessage: string;
+      if (hasFailures) {
+        logMessage = "Highlights sync completed with partial failures";
+      } else if (isInProgress) {
+        logMessage = "Highlights chunk sync completed - will continue in next run";
+      } else if (importResult.reachedEnd) {
+        logMessage = "Highlights full sync completed successfully - all highlights synced";
+      } else {
+        logMessage = "Highlights sync completed successfully";
+      }
       
       const logLevel = hasFailures ? 'warn' : 'info';
       logger[logLevel](logMessage, {
@@ -468,6 +506,8 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         apiDuration: `${importResult.apiDuration}s`,
         dbDuration: `${importResult.dbDuration}s`,
         pagesProcessed: importResult.pagesProcessed,
+        reachedEnd: importResult.reachedEnd,
+        hasMoreToSync: isInProgress,
         ...(hasFailures && { 
           failedBatchCount: importResult.failedBatchCount,
           failedBatches: importResult.failedBatches 
@@ -485,6 +525,8 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         apiDuration: importResult.apiDuration,
         dbDuration: importResult.dbDuration,
         pagesProcessed: importResult.pagesProcessed,
+        reachedEnd: importResult.reachedEnd,
+        hasMoreToSync: isInProgress,
         ...(hasFailures && {
           failedBatchCount: importResult.failedBatchCount,
           failedBatches: importResult.failedBatches
