@@ -112,86 +112,72 @@ export const generateHighlightEmbeddingsFn = inngest.createFunction(
         });
       }
 
-      // Step 2: Generate embeddings for all highlights in the batch
-      const embeddingsResult = await step.run("generate-embeddings", async () => {
-        logger.info(`Generating embeddings for ${highlightsResult.highlights.length} highlights`);
+      // Step 2: Process embeddings in chunks (generate + update DB immediately)
+      // This avoids returning large embedding arrays which exceed Inngest's step output limit
+      const totalChunks = Math.ceil(highlightsResult.highlights.length / OPENAI_BATCH_SIZE);
+      let totalProcessed = 0;
+      let totalFailed = 0;
 
-        const texts = highlightsResult.highlights.map(h => h.rw_text || '');
-        
-        try {
-          // Split texts into chunks of OPENAI_BATCH_SIZE to respect API limits
-          const allEmbeddings: number[][] = [];
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const chunkResult = await step.run(`process-chunk-${chunkIndex + 1}`, async () => {
+          const startIdx = chunkIndex * OPENAI_BATCH_SIZE;
+          const endIdx = Math.min(startIdx + OPENAI_BATCH_SIZE, highlightsResult.highlights.length);
+          const highlightChunk = highlightsResult.highlights.slice(startIdx, endIdx);
           
-          for (let i = 0; i < texts.length; i += OPENAI_BATCH_SIZE) {
-            const chunk = texts.slice(i, i + OPENAI_BATCH_SIZE);
-            const chunkNumber = Math.floor(i / OPENAI_BATCH_SIZE) + 1;
-            const totalChunks = Math.ceil(texts.length / OPENAI_BATCH_SIZE);
-            
-            logger.info(`Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} highlights)`);
-            
-            const chunkEmbeddings = await generateEmbeddingBatch(chunk);
-            allEmbeddings.push(...chunkEmbeddings);
-            
-            logger.info(`Completed chunk ${chunkNumber}/${totalChunks}`);
-          }
+          logger.info(`Processing chunk ${chunkIndex + 1}/${totalChunks} (${highlightChunk.length} highlights)`);
+
+          // Generate embeddings for this chunk
+          const texts = highlightChunk.map(h => h.rw_text || '');
+          const embeddings = await generateEmbeddingBatch(texts);
           
-          logger.info(`Successfully generated ${allEmbeddings.length} embeddings`);
-          
-          return { 
-            embeddings: allEmbeddings,
-            success: true 
-          };
-        } catch (error) {
-          logger.error("Error generating embeddings", { error });
-          throw error;
-        }
-      });
+          logger.info(`Generated ${embeddings.length} embeddings for chunk ${chunkIndex + 1}`);
 
-      // Step 3: Update database with embeddings
-      const updateResult = await step.run("update-database-with-embeddings", async () => {
-        logger.info("Updating database with generated embeddings");
+          // Update database immediately with generated embeddings
+          let processed = 0;
+          let failed = 0;
+          const now = new Date().toISOString();
 
-        let processed = 0;
-        let failed = 0;
-        const now = new Date().toISOString();
+          for (let i = 0; i < highlightChunk.length; i++) {
+            const highlight = highlightChunk[i];
+            const embedding = embeddings[i];
 
-        for (let i = 0; i < highlightsResult.highlights.length; i++) {
-          const highlight = highlightsResult.highlights[i];
-          const embedding = embeddingsResult.embeddings[i];
+            try {
+              // Convert embedding array to pgvector format
+              const embeddingString = `[${embedding.join(',')}]`;
 
-          try {
-            // Convert embedding array to pgvector format
-            const embeddingString = `[${embedding.join(',')}]`;
+              const { error } = await supabase
+                .from('highlights')
+                .update({
+                  embedding: embeddingString,
+                  embedding_updated_at: now
+                })
+                .eq('id', highlight.id)
+                .eq('user_id', userId);
 
-            const { error } = await supabase
-              .from('highlights')
-              .update({
-                embedding: embeddingString,
-                embedding_updated_at: now
-              })
-              .eq('id', highlight.id)
-              .eq('user_id', userId);
-
-            if (error) {
-              logger.error(`Error updating embedding for highlight ${highlight.id}`, { error });
+              if (error) {
+                logger.error(`Error updating embedding for highlight ${highlight.id}`, { error });
+                failed++;
+              } else {
+                processed++;
+                logger.debug(`Successfully updated embedding for highlight ${highlight.id}`);
+              }
+            } catch (error) {
+              logger.error(`Error processing highlight ${highlight.id}`, { error });
               failed++;
-            } else {
-              processed++;
-              logger.debug(`Successfully updated embedding for highlight ${highlight.id}`);
             }
-          } catch (error) {
-            logger.error(`Error processing highlight ${highlight.id}`, { error });
-            failed++;
           }
-        }
 
-        logger.info(`Finished updating embeddings: ${processed} processed, ${failed} failed`);
+          logger.info(`Chunk ${chunkIndex + 1} complete: ${processed} processed, ${failed} failed`);
 
-        return {
-          processed,
-          failed
-        };
-      });
+          // Return only counts, not the actual embeddings (to avoid step output size limit)
+          return { processed, failed };
+        });
+
+        totalProcessed += chunkResult.processed;
+        totalFailed += chunkResult.failed;
+      }
+
+      const updateResult = { processed: totalProcessed, failed: totalFailed };
 
       // Return final result
       return markAsLastStep({
