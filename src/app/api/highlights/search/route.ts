@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fetch full highlight details with relations
+    // Fetch full highlight details with relations and book information
     const fullHighlights = await Promise.all(
       searchResults.map(async (result: any) => {
         const { data, error } = await supabase
@@ -208,6 +208,12 @@ export async function POST(request: NextRequest) {
             highlight_notes(
               note_id,
               notes:note_id(content)
+            ),
+            book:books!highlights_book_id_fkey(
+              id,
+              rw_title,
+              rw_author,
+              rw_cover_image_url
             )
           `)
           .eq('id', result.id)
@@ -245,6 +251,14 @@ export async function POST(request: NextRequest) {
           userNote = highlight.highlight_notes[0].notes?.content || null;
         }
 
+        // Extract book information
+        const book = highlight.book ? {
+          id: highlight.book.id,
+          title: highlight.book.rw_title || 'Untitled',
+          author: highlight.book.rw_author,
+          coverImageUrl: highlight.book.rw_cover_image_url
+        } : undefined;
+
         return {
           id: highlight.id,
           bookId: highlight.book_id,
@@ -261,7 +275,8 @@ export async function POST(request: NextRequest) {
           userNote,
           createdAt: highlight.created_at,
           updatedAt: highlight.updated_at,
-          score: highlight.score
+          score: highlight.score,
+          book
         };
       });
 

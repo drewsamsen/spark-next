@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { HighlightSearchMode, HighlightSearchResult } from '@/lib/types';
 import { useHighlightSearch } from '@/hooks/services/useHighlightSearch';
-import { HighlightCard } from '@/components/Highlights';
+import { SearchResultCard } from '@/components/Highlights';
 import { Loader2, Search, Sparkles, Layers, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -229,7 +229,7 @@ export default function SearchPage() {
       {!isLoading && results.length > 0 && (
         <div className="grid gap-6">
           {results.map((highlight) => (
-            <HighlightCard
+            <SearchResultCard
               key={highlight.id}
               highlight={highlight}
               renderTag={(tag) => (
@@ -246,6 +246,7 @@ export default function SearchPage() {
               onTagSelect={() => {}}
               onUserNoteChange={() => {}}
               isSavingNote={false}
+              searchMode={mode}
             />
           ))}
         </div>

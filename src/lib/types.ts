@@ -604,10 +604,16 @@ export interface CreateHighlightInput {
 export type HighlightSearchMode = 'keyword' | 'semantic' | 'hybrid';
 
 /**
- * Highlight search result with similarity/rank score
+ * Highlight search result with similarity/rank score and book information
  */
 export interface HighlightSearchResult extends HighlightDomain {
   score?: number; // Similarity score (0-1) for semantic/hybrid, rank for keyword
+  book?: {
+    id: string;
+    title: string;
+    author: string | null;
+    coverImageUrl: string | null;
+  };
 }
 
 /**
