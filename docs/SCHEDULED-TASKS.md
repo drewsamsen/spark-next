@@ -149,7 +149,7 @@ INNGEST_SIGNING_KEY=your_inngest_signing_key
 
 The application uses **environment-specific Inngest app IDs** to prevent sync pollution:
 
-- **Production**: `spark-production` - Clean production environment
+- **Production**: `spark-prod` - Clean production environment
 - **Preview**: `spark-preview-{branch}` - Isolated per branch
 - **Development**: `spark-dev` - Local development only
 

@@ -12,7 +12,7 @@ The application uses **environment-specific Inngest app IDs** to ensure isolatio
 
 ```typescript
 // Production environment
-App ID: "spark-production"
+App ID: "spark-prod"
 
 // Preview deployments (per branch)
 App ID: "spark-preview-{branch-name}"

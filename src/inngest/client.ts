@@ -5,7 +5,7 @@ import { databaseLoggerMiddleware } from "../lib/inngest-db-logger-middleware";
 // Each environment gets its own Inngest app to avoid accumulating stale syncs
 const getAppId = () => {
   if (process.env.VERCEL_ENV === "production") {
-    return "spark-production";
+    return "spark-prod";
   }
   if (process.env.VERCEL_ENV === "preview") {
     // Use branch name for preview deployments to keep them isolated
