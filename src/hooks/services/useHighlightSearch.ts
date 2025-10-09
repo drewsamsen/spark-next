@@ -3,19 +3,19 @@ import { HighlightSearchMode, HighlightSearchResult } from '@/lib/types';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 
 /**
- * Hook for searching highlights with debouncing
+ * Hook for searching highlights
  * 
  * @param initialQuery - Initial search query (default: '')
  * @param initialMode - Initial search mode (default: 'keyword')
  * @param limit - Maximum number of results to return (default: 10)
- * @param debounceMs - Debounce delay in milliseconds (default: 300)
+ * @param autoSearch - Whether to automatically search when query/mode changes (default: true)
  * @returns Search results, loading state, error, and search function
  */
 export function useHighlightSearch(
   initialQuery: string = '',
   initialMode: HighlightSearchMode = 'keyword',
   limit: number = 10,
-  debounceMs: number = 300
+  autoSearch: boolean = true
 ) {
   const [query, setQuery] = useState(initialQuery);
   const [mode, setMode] = useState<HighlightSearchMode>(initialMode);
@@ -25,7 +25,6 @@ export function useHighlightSearch(
   
   // Use ref to track the latest request to avoid race conditions
   const latestRequestId = useRef(0);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   /**
    * Perform the search API call
@@ -98,12 +97,11 @@ export function useHighlightSearch(
   }, [limit]);
 
   /**
-   * Debounced search effect
+   * Auto search effect (only if enabled)
    */
   useEffect(() => {
-    // Clear previous timer
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
+    if (!autoSearch) {
+      return;
     }
 
     // Don't search if query is empty
@@ -113,31 +111,16 @@ export function useHighlightSearch(
       return;
     }
 
-    // Set up new debounced search
-    debounceTimer.current = setTimeout(() => {
-      performSearch(query, mode);
-    }, debounceMs);
-
-    // Cleanup
-    return () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
-    };
-  }, [query, mode, performSearch, debounceMs]);
+    performSearch(query, mode);
+  }, [query, mode, performSearch, autoSearch]);
 
   /**
-   * Manual search function (bypasses debounce)
+   * Manual search function
    */
   const search = useCallback((searchQuery: string, searchMode?: HighlightSearchMode) => {
     setQuery(searchQuery);
     if (searchMode) {
       setMode(searchMode);
-    }
-    
-    // Clear debounce timer and search immediately
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
     }
     
     performSearch(searchQuery, searchMode || mode);
@@ -151,10 +134,6 @@ export function useHighlightSearch(
     setResults([]);
     setError(null);
     setIsLoading(false);
-    
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
   }, []);
 
   return {

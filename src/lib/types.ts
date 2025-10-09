@@ -217,6 +217,10 @@ export interface UserSettings {
       lastRun?: string;
     };
   };
+  search?: {
+    maxResults?: number;
+    defaultMode?: HighlightSearchMode;
+  };
   // Additional settings can be added here in the future
 }
 
@@ -247,7 +251,11 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
       lastImported: ''
     }
   },
-  scheduledTasks: {}
+  scheduledTasks: {},
+  search: {
+    maxResults: 10,
+    defaultMode: 'semantic'
+  }
 };
 
 /**

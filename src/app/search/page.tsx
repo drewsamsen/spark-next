@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { HighlightSearchMode, HighlightSearchResult } from '@/lib/types';
+import { HighlightSearchMode, HighlightSearchResult, DEFAULT_USER_SETTINGS } from '@/lib/types';
 import { useHighlightSearch } from '@/hooks/services/useHighlightSearch';
 import { SearchResultCard } from '@/components/Highlights';
-import { Loader2, Search, Sparkles, Layers, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2, Search, Sparkles, Layers } from 'lucide-react';
 
 export default function SearchPage() {
   const router = useRouter();
-  const [initialQuery, setInitialQuery] = useState('');
-  const [initialMode, setInitialMode] = useState<HighlightSearchMode>('keyword');
   const [hasLoadedFromSession, setHasLoadedFromSession] = useState(false);
+
+  // Get default settings
+  const defaultMode = DEFAULT_USER_SETTINGS.search?.defaultMode || 'semantic';
+  const maxResults = DEFAULT_USER_SETTINGS.search?.maxResults || 10;
 
   const {
     query,
@@ -23,7 +24,7 @@ export default function SearchPage() {
     isLoading,
     error,
     search
-  } = useHighlightSearch('', 'keyword', 50, 0); // No debounce for search page
+  } = useHighlightSearch('', defaultMode, maxResults, false); // Manual search only
 
   // Load search params from sessionStorage on mount
   useEffect(() => {
@@ -32,16 +33,14 @@ export default function SearchPage() {
       const savedMode = sessionStorage.getItem('searchMode') as HighlightSearchMode;
       
       if (savedQuery) {
-        setInitialQuery(savedQuery);
         setQuery(savedQuery);
         
         if (savedMode && ['keyword', 'semantic', 'hybrid'].includes(savedMode)) {
-          setInitialMode(savedMode);
           setMode(savedMode);
         }
         
         // Perform the search
-        search(savedQuery, savedMode || 'keyword');
+        search(savedQuery, savedMode || defaultMode);
         
         // Clear sessionStorage after loading
         sessionStorage.removeItem('searchQuery');
@@ -50,13 +49,10 @@ export default function SearchPage() {
       
       setHasLoadedFromSession(true);
     }
-  }, [hasLoadedFromSession, search, setQuery, setMode]);
+  }, [hasLoadedFromSession, search, setQuery, setMode, defaultMode]);
 
   const handleModeChange = (newMode: HighlightSearchMode) => {
     setMode(newMode);
-    if (query) {
-      search(query, newMode);
-    }
   };
 
   const handleNewSearch = (e: React.FormEvent) => {
@@ -92,19 +88,8 @@ export default function SearchPage() {
     <div className="container mx-auto p-6 max-w-5xl">
       {/* Header */}
       <div className="mb-6">
-        <Button 
-          variant="ghost" 
-          onClick={() => router.back()}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        
-        <h1 className="text-3xl font-bold mb-2">Search Highlights</h1>
-        
         {/* Search form */}
-        <form onSubmit={handleNewSearch} className="mt-4">
+        <form onSubmit={handleNewSearch}>
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <input

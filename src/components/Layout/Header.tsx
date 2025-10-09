@@ -17,7 +17,7 @@ import { LogoutButton } from "@/components/auth";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { LogoIcon } from "@/components/icons/LogoIcon";
-import { HighlightSearchMode } from "@/lib/types";
+import { HighlightSearchMode, DEFAULT_USER_SETTINGS } from "@/lib/types";
 
 interface HeaderProps {
   toggleRightSidebar: () => void;
@@ -37,7 +37,9 @@ export default function Header({
   const pathname = usePathname();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchMode, setSearchMode] = useState<HighlightSearchMode>('keyword');
+  const [searchMode, setSearchMode] = useState<HighlightSearchMode>(
+    DEFAULT_USER_SETTINGS.search?.defaultMode || 'semantic'
+  );
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   
