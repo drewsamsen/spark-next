@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { HighlightSearchMode, HighlightSearchResult, DEFAULT_USER_SETTINGS } from '@/lib/types';
 import { useHighlightSearch } from '@/hooks/services/useHighlightSearch';
 import { SearchResultCard } from '@/components/Highlights';
@@ -9,6 +9,7 @@ import { Loader2, Search, Sparkles, Layers } from 'lucide-react';
 
 export default function SearchPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [hasLoadedFromSession, setHasLoadedFromSession] = useState(false);
 
   // Get default settings
@@ -26,30 +27,47 @@ export default function SearchPage() {
     search
   } = useHighlightSearch('', defaultMode, maxResults, false); // Manual search only
 
-  // Load search params from sessionStorage on mount
+  // Load search params from URL parameters first, then fall back to sessionStorage
   useEffect(() => {
-    if (typeof window !== 'undefined' && !hasLoadedFromSession) {
-      const savedQuery = sessionStorage.getItem('searchQuery');
-      const savedMode = sessionStorage.getItem('searchMode') as HighlightSearchMode;
+    if (typeof window !== 'undefined') {
+      // Check URL params first
+      const urlQuery = searchParams.get('q');
+      const urlMode = searchParams.get('mode') as HighlightSearchMode;
       
-      if (savedQuery) {
-        setQuery(savedQuery);
+      if (urlQuery) {
+        setQuery(urlQuery);
         
-        if (savedMode && ['keyword', 'semantic', 'hybrid'].includes(savedMode)) {
-          setMode(savedMode);
-        }
+        const searchMode = (urlMode && ['keyword', 'semantic', 'hybrid'].includes(urlMode)) 
+          ? urlMode 
+          : defaultMode;
+        setMode(searchMode);
         
         // Perform the search
-        search(savedQuery, savedMode || defaultMode);
+        search(urlQuery, searchMode);
+      } else if (!hasLoadedFromSession) {
+        // Fall back to sessionStorage if no URL params
+        const savedQuery = sessionStorage.getItem('searchQuery');
+        const savedMode = sessionStorage.getItem('searchMode') as HighlightSearchMode;
         
-        // Clear sessionStorage after loading
-        sessionStorage.removeItem('searchQuery');
-        sessionStorage.removeItem('searchMode');
+        if (savedQuery) {
+          setQuery(savedQuery);
+          
+          if (savedMode && ['keyword', 'semantic', 'hybrid'].includes(savedMode)) {
+            setMode(savedMode);
+          }
+          
+          // Perform the search
+          search(savedQuery, savedMode || defaultMode);
+          
+          // Clear sessionStorage after loading
+          sessionStorage.removeItem('searchQuery');
+          sessionStorage.removeItem('searchMode');
+        }
+        
+        setHasLoadedFromSession(true);
       }
-      
-      setHasLoadedFromSession(true);
     }
-  }, [hasLoadedFromSession, search, setQuery, setMode, defaultMode]);
+  }, [searchParams, hasLoadedFromSession, search, setQuery, setMode, defaultMode]);
 
   const handleModeChange = (newMode: HighlightSearchMode) => {
     setMode(newMode);

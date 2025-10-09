@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X } from "lucide-react";
+import { X, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
 import { SparkDomain } from "@/lib/types";
@@ -39,6 +40,7 @@ export default function SparkPreviewPanel({
   // Get services using hooks
   const { getSparkDetails } = useSparksService();
   const { createSparkResource } = useResourceHelper();
+  const router = useRouter();
 
   // Load spark details when ID changes
   useEffect(() => {
@@ -155,6 +157,18 @@ export default function SparkPreviewPanel({
     }
   };
 
+  // Handle semantic search with spark body text
+  const handleSemanticSearch = () => {
+    if (!sparkDetails?.body) return;
+    
+    // Navigate to search page with query parameters
+    const params = new URLSearchParams({
+      q: sparkDetails.body,
+      mode: 'semantic'
+    });
+    router.push(`/search?${params.toString()}`);
+  };
+
   if (!sparkId || !sparkDetails) return null;
 
   return (
@@ -205,6 +219,19 @@ export default function SparkPreviewPanel({
               onAddTag={handleAddTag}
               onRemoveTag={handleRemoveTag}
             />
+            
+            {/* Semantic Search Button */}
+            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={handleSemanticSearch}
+              >
+                <Sparkles className="h-4 w-4" />
+                Find similar highlights
+              </Button>
+            </div>
           </>
         )}
       </div>
