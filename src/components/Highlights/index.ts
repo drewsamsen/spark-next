@@ -1,4 +1,3 @@
-export { SearchBar } from './SearchBar';
 export { TagFilter } from './TagFilter';
 export { HighlightCard } from './HighlightCard';
 export { EmptyState } from './EmptyState';

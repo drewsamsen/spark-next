@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,14 +8,16 @@ import {
   Search,
   Settings,
   Maximize,
-  Minimize
+  Minimize,
+  Sparkles,
+  Layers
 } from "lucide-react";
 import { ModeToggle } from "@/components/theme";
 import { LogoutButton } from "@/components/auth";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { LogoIcon } from "@/components/icons/LogoIcon";
-import { useHeaderService } from "@/hooks";
+import { HighlightSearchMode } from "@/lib/types";
 
 interface HeaderProps {
   toggleRightSidebar: () => void;
@@ -33,8 +35,44 @@ export default function Header({
   toggleFocusMode
 }: HeaderProps) {
   const pathname = usePathname();
-  const headerService = useHeaderService();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<HighlightSearchMode>('keyword');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Load search mode preference from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('globalSearchMode') as HighlightSearchMode;
+      if (savedMode && ['keyword', 'semantic', 'hybrid'].includes(savedMode)) {
+        setSearchMode(savedMode);
+      }
+    }
+  }, []);
+
+  // Store mode preference in localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('globalSearchMode', searchMode);
+    }
+  }, [searchMode]);
+
+  // Handle clicks outside the search container to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchFocused(false);
+      }
+    }
+
+    if (isSearchFocused) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isSearchFocused]);
   
   const handleLogoClick = (e: React.MouseEvent) => {
     if (navigateTo) {
@@ -45,14 +83,20 @@ export default function Header({
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      try {
-        const results = await headerService.search(searchQuery);
-        // In the future, this would display search results
-        console.log('Search results:', results);
-      } catch (error) {
-        console.error('Error performing search:', error);
-      }
+      // Navigate to search page with query and mode
+      router.push('/search');
+      // Use a small timeout to ensure navigation happens before setting state
+      setTimeout(() => {
+        // Store search params in sessionStorage for the search page to pick up
+        sessionStorage.setItem('searchQuery', searchQuery);
+        sessionStorage.setItem('searchMode', searchMode);
+      }, 0);
+      setIsSearchFocused(false);
     }
+  };
+
+  const handleModeChange = (mode: HighlightSearchMode) => {
+    setSearchMode(mode);
   };
   
   return (
@@ -79,16 +123,69 @@ export default function Header({
         
         {/* Center section */}
         <div className="flex-1 flex justify-center px-4 max-w-3xl mx-auto">
-          <form onSubmit={handleSearch} className="relative w-full max-w-lg">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search..."
-              className="w-full rounded-md border bg-background pl-9 py-2 text-sm outline-none focus:ring-1 focus:ring-spark-primary dark:focus:ring-spark-dark-primary dark:border-spark-dark-neutral/30"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </form>
+          <div ref={searchContainerRef} className="relative w-full max-w-lg">
+            <form onSubmit={handleSearch} className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="search"
+                placeholder="Search highlights..."
+                className="w-full rounded-md border bg-background pl-9 py-2 text-sm outline-none focus:ring-1 focus:ring-spark-primary dark:focus:ring-spark-dark-primary dark:border-spark-dark-neutral/30"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+              />
+            </form>
+            
+            {/* Search mode dropdown */}
+            {isSearchFocused && (
+              <div className="absolute top-full mt-1 left-0 right-0 bg-background border rounded-md shadow-lg p-2 z-50">
+                <div className="text-xs text-muted-foreground mb-2 px-2">Search mode:</div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange('keyword')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                      searchMode === 'keyword'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                    }`}
+                    title="Search by exact keywords"
+                  >
+                    <Search className="h-3.5 w-3.5" />
+                    Keyword
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange('semantic')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                      searchMode === 'semantic'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                    }`}
+                    title="Search by meaning using AI"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Semantic
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange('hybrid')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                      searchMode === 'hybrid'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                    }`}
+                    title="Combine keyword and semantic search"
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                    Hybrid
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         
         {/* Right section */}
