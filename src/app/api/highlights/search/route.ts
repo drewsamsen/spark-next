@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HighlightSearchMode } from '@/lib/types';
-import { createServerClient } from '@/lib/supabase';
+import { authenticateRequest } from '@/lib/api-utils';
 import { createClient } from '@supabase/supabase-js';
 import { generateEmbedding } from '@/lib/openai';
 
@@ -25,18 +25,15 @@ import { generateEmbedding } from '@/lib/openai';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get user from session (cookie-based auth)
-    const supabaseAuth = createServerClient();
-    const { data: { session }, error: sessionError } = await supabaseAuth.auth.getSession();
+    // Authenticate the request using the Authorization header
+    const { user, error: authError } = await authenticateRequest(request);
     
-    if (sessionError || !session) {
-      return NextResponse.json(
+    if (authError || !user) {
+      return authError || NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
-
-    const user = session.user;
 
     // Parse request body
     const body = await request.json();

@@ -110,7 +110,7 @@ RETURNS TABLE (
   updated_at timestamptz,
   embedding vector(1536),
   embedding_updated_at timestamptz,
-  rank float
+  rank real
 )
 LANGUAGE plpgsql
 AS $$
