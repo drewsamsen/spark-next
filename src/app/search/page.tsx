@@ -217,15 +217,8 @@ export default function SearchPage() {
             <SearchResultCard
               key={highlight.id}
               highlight={highlight}
-              renderTag={(tag) => (
-                <span
-                  key={tag.id}
-                  className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                >
-                  {tag.name}
-                </span>
-              )}
-              formatDate={(date: string) => new Date(date).toLocaleDateString()}
+              renderTag={(tag) => tag.name}
+              formatDate={(date: string | null) => date ? new Date(date).toLocaleDateString() : ''}
               highlightMatches={(text: string) => <span>{text}</span>}
               filterTag={null}
               onTagSelect={() => {}}
