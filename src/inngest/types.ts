@@ -37,6 +37,11 @@ export type AppEvents = {
       tableId: string;
     }
   };
+  "embeddings/generate-highlight-embeddings": {
+    data: {
+      userId: string;
+    }
+  };
 };
 
 // Readwise specific types

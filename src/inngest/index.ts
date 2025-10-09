@@ -17,4 +17,7 @@ export * from './functions/airtable';
 export * from './functions/scheduled';
 
 // Export automations functions
-export * from './functions/automations'; 
+export * from './functions/automations';
+
+// Export embeddings functions
+export * from './functions/embeddings'; 

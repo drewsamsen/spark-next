@@ -10,7 +10,8 @@ import {
   scheduledTasksCronFn,
   scheduledTasksManualFn,
   tagRandomHighlights,
-  categorizeRandomHighlights
+  categorizeRandomHighlights,
+  generateHighlightEmbeddingsFn
 } from "@/inngest";
 
 // Export the API routes for Inngest communication
@@ -28,6 +29,9 @@ export const { GET, POST, PUT } = serve({
     
     // Airtable functions
     airtableImportSparksFn,
+    
+    // Embeddings functions
+    generateHighlightEmbeddingsFn,
     
     // Scheduled cron functions
     // Only register cron in production environment to avoid duplicate runs from:

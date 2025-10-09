@@ -418,4 +418,178 @@ export class HighlightsRepository extends BaseRepository<HighlightModel> {
     
     return (data || []) as unknown as HighlightWithRelations[];
   }
+
+  /**
+   * Get highlights that need embeddings generated
+   * Returns highlights where embedding is NULL or where the highlight has been updated after embedding was generated
+   * 
+   * @param limit - Maximum number of highlights to return
+   * @param overrideUserId - Optional user ID to override the session user
+   * @returns Array of highlights that need embeddings
+   */
+  async getHighlightsWithoutEmbeddings(limit: number = 5, overrideUserId?: string): Promise<HighlightModel[]> {
+    const userId = overrideUserId || await this.getUserId();
+    
+    const { data, error } = await this.client
+      .from('highlights')
+      .select('*')
+      .eq('user_id', userId)
+      .or('embedding.is.null,updated_at.gt.embedding_updated_at')
+      .not('rw_text', 'is', null) // Only get highlights with text
+      .order('updated_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) {
+      throw new DatabaseError('Error fetching highlights without embeddings', error);
+    }
+    
+    return data || [];
+  }
+
+  /**
+   * Update a highlight's embedding and timestamp
+   * 
+   * @param highlightId - The ID of the highlight to update
+   * @param embedding - The embedding vector (1536 dimensions)
+   * @param embeddingUpdatedAt - Timestamp when the embedding was generated
+   */
+  async updateHighlightEmbedding(
+    highlightId: string, 
+    embedding: number[], 
+    embeddingUpdatedAt: string
+  ): Promise<void> {
+    const userId = await this.getUserId();
+    
+    // Verify the highlight exists and belongs to this user
+    await this.verifyUserOwnership('highlights', highlightId, userId);
+    
+    // Convert embedding array to pgvector format string
+    const embeddingString = `[${embedding.join(',')}]`;
+    
+    const { error } = await this.client
+      .from('highlights')
+      .update({
+        embedding: embeddingString,
+        embedding_updated_at: embeddingUpdatedAt
+      })
+      .eq('id', highlightId)
+      .eq('user_id', userId);
+    
+    if (error) {
+      throw new DatabaseError(`Error updating embedding for highlight ${highlightId}`, error);
+    }
+  }
+
+  /**
+   * Perform semantic search using vector similarity
+   * 
+   * @param queryEmbedding - The embedding vector of the search query
+   * @param limit - Maximum number of results to return
+   * @returns Array of highlights with similarity scores
+   */
+  async semanticSearch(queryEmbedding: number[], limit: number = 10): Promise<Array<HighlightModel & { similarity: number }>> {
+    const userId = await this.getUserId();
+    
+    // Convert embedding array to pgvector format string
+    const embeddingString = `[${queryEmbedding.join(',')}]`;
+    
+    const { data, error } = await this.client
+      .rpc('search_highlights_semantic', {
+        query_embedding: embeddingString,
+        match_user_id: userId,
+        match_count: limit
+      });
+    
+    if (error) {
+      throw new DatabaseError('Error performing semantic search', error);
+    }
+    
+    return data || [];
+  }
+
+  /**
+   * Perform keyword search using full-text search
+   * 
+   * @param queryText - The search text
+   * @param limit - Maximum number of results to return
+   * @returns Array of highlights with rank scores
+   */
+  async keywordSearch(queryText: string, limit: number = 10): Promise<Array<HighlightModel & { rank: number }>> {
+    const userId = await this.getUserId();
+    
+    const { data, error } = await this.client
+      .rpc('search_highlights_keyword', {
+        search_text: queryText,
+        match_user_id: userId,
+        match_count: limit
+      });
+    
+    if (error) {
+      throw new DatabaseError('Error performing keyword search', error);
+    }
+    
+    return data || [];
+  }
+
+  /**
+   * Perform hybrid search combining keyword and semantic search using Reciprocal Rank Fusion (RRF)
+   * 
+   * @param queryText - The search text
+   * @param queryEmbedding - The embedding vector of the search query
+   * @param limit - Maximum number of results to return
+   * @returns Array of highlights with combined scores
+   */
+  async hybridSearch(
+    queryText: string, 
+    queryEmbedding: number[], 
+    limit: number = 10
+  ): Promise<Array<HighlightModel & { score: number }>> {
+    // Perform both searches in parallel
+    const [semanticResults, keywordResults] = await Promise.all([
+      this.semanticSearch(queryEmbedding, limit * 2), // Get more results for better fusion
+      this.keywordSearch(queryText, limit * 2)
+    ]);
+
+    // Reciprocal Rank Fusion (RRF) algorithm
+    // Each result gets a score of 1 / (k + rank) where k is a constant (typically 60)
+    const k = 60;
+    const scores = new Map<string, { highlight: HighlightModel; score: number }>();
+
+    // Add semantic search scores
+    semanticResults.forEach((result, index) => {
+      const rank = index + 1;
+      const score = 1 / (k + rank);
+      scores.set(result.id, {
+        highlight: result,
+        score: score
+      });
+    });
+
+    // Add keyword search scores
+    keywordResults.forEach((result, index) => {
+      const rank = index + 1;
+      const score = 1 / (k + rank);
+      const existing = scores.get(result.id);
+      if (existing) {
+        // Combine scores if highlight appears in both results
+        existing.score += score;
+      } else {
+        scores.set(result.id, {
+          highlight: result,
+          score: score
+        });
+      }
+    });
+
+    // Sort by combined score and return top results
+    const sortedResults = Array.from(scores.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(item => ({
+        ...item.highlight,
+        score: item.score
+      }));
+
+    return sortedResults;
+  }
 } 

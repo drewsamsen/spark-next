@@ -533,6 +533,8 @@ export interface HighlightModel {
   rw_tags: (string | { id: string; name: string })[] | null;
   created_at: string;
   updated_at: string;
+  embedding?: number[] | null;
+  embedding_updated_at?: string | null;
 }
 
 /**
@@ -594,6 +596,27 @@ export interface CreateHighlightInput {
   rwUrl?: string | null;
   rwColor?: string | null;
   rwTags?: (string | { id: string; name: string })[] | null;
+}
+
+/**
+ * Search mode for highlight search
+ */
+export type HighlightSearchMode = 'keyword' | 'semantic' | 'hybrid';
+
+/**
+ * Highlight search result with similarity/rank score
+ */
+export interface HighlightSearchResult extends HighlightDomain {
+  score?: number; // Similarity score (0-1) for semantic/hybrid, rank for keyword
+}
+
+/**
+ * Input for highlight search
+ */
+export interface HighlightSearchInput {
+  query: string;
+  mode: HighlightSearchMode;
+  limit?: number;
 }
 
 /**

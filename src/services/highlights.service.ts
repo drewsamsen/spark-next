@@ -1,6 +1,7 @@
 import { getRepositories } from '@/repositories';
-import { HighlightDomain, CreateHighlightInput } from '@/lib/types';
+import { HighlightDomain, CreateHighlightInput, HighlightSearchMode, HighlightSearchResult } from '@/lib/types';
 import { handleServiceError, handleServiceItemError } from '@/lib/errors';
+import { generateEmbedding } from '@/lib/openai';
 
 /**
  * Service for handling highlights-related operations
@@ -181,5 +182,90 @@ export const highlightsService = {
       
       return '';
     }).filter(tag => tag.length > 0);
+  },
+
+  /**
+   * Search highlights using keyword, semantic, or hybrid search
+   * 
+   * @param query - The search query text
+   * @param mode - Search mode: 'keyword', 'semantic', or 'hybrid'
+   * @param limit - Maximum number of results to return (default: 10)
+   * @returns Array of highlights with optional similarity/rank scores
+   */
+  async searchHighlights(
+    query: string,
+    mode: HighlightSearchMode,
+    limit: number = 10
+  ): Promise<HighlightSearchResult[]> {
+    try {
+      if (!query || query.trim().length === 0) {
+        return [];
+      }
+
+      const repo = getRepositories().highlights;
+
+      // Perform search based on mode
+      let results: Array<any> = [];
+
+      switch (mode) {
+        case 'keyword': {
+          const keywordResults = await repo.keywordSearch(query, limit);
+          results = keywordResults.map(r => ({
+            ...r,
+            score: r.rank
+          }));
+          break;
+        }
+
+        case 'semantic': {
+          // Generate embedding for the query
+          const queryEmbedding = await generateEmbedding(query);
+          const semanticResults = await repo.semanticSearch(queryEmbedding, limit);
+          results = semanticResults.map(r => ({
+            ...r,
+            score: r.similarity
+          }));
+          break;
+        }
+
+        case 'hybrid': {
+          // Generate embedding for the query
+          const queryEmbedding = await generateEmbedding(query);
+          results = await repo.hybridSearch(query, queryEmbedding, limit);
+          break;
+        }
+
+        default: {
+          throw new Error(`Invalid search mode: ${mode}`);
+        }
+      }
+
+      // Convert results to HighlightSearchResult format
+      // We need to get full highlight details with relations for each result
+      const highlightIds = results.map(r => r.id);
+      
+      // Fetch full details for all results in parallel
+      const fullHighlights = await Promise.all(
+        highlightIds.map(id => repo.getHighlightById(id))
+      );
+
+      // Map to domain and add scores
+      const searchResults: HighlightSearchResult[] = fullHighlights
+        .filter((highlight): highlight is NonNullable<typeof highlight> => highlight !== null)
+        .map((highlight, index) => {
+          const domain = repo.mapToDomain(highlight);
+          const score = results[index]?.score;
+          
+          return {
+            ...domain,
+            score: score !== undefined ? score : undefined
+          } as HighlightSearchResult;
+        });
+
+      return searchResults;
+    } catch (error) {
+      console.error('Error in highlightsService.searchHighlights:', error);
+      return handleServiceError<HighlightSearchResult>(error, 'Error searching highlights');
+    }
   }
 }; 

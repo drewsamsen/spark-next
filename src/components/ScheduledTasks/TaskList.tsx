@@ -64,5 +64,13 @@ export const availableTasks: ScheduledTask[] = [
     triggerEndpoint: "/api/inngest/trigger-categorize-random-highlights",
     requiresApiKey: false
   },
+  {
+    id: "generate-embeddings",
+    name: "Generate Embeddings",
+    description: "Generate AI embeddings for highlights to enable semantic search (processes 5 highlights per run)",
+    isSchedulable: true,
+    triggerEndpoint: "/api/inngest/trigger-generate-embeddings",
+    requiresApiKey: false // Uses global OpenAI API key, not user-specific
+  },
   // More tasks will be added in the future
 ]; 

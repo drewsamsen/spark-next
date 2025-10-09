@@ -36,6 +36,13 @@ const TASK_CONFIG: Record<string, {
       apiKey: settings.integrations?.readwise?.apiKey
     }),
     validateSettings: (settings) => !!settings.integrations?.readwise?.apiKey
+  },
+  "generate-embeddings": {
+    eventName: "embeddings/generate-highlight-embeddings",
+    getEventData: (userId, settings) => ({
+      userId
+    }),
+    validateSettings: (settings) => true // Uses global OpenAI API key, no user-specific settings required
   }
 };
 
