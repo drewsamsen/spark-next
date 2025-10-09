@@ -7,7 +7,13 @@ import { generateEmbeddingBatch } from "@/lib/openai";
  * Batch size for processing highlights at a time
  * This can be adjusted based on performance and cost considerations
  */
-const BATCH_SIZE = 5;
+const BATCH_SIZE = 250;
+
+/**
+ * OpenAI batch size - sending smaller batches for better reliability
+ * We'll chunk our highlights into this size when calling the API
+ */
+const OPENAI_BATCH_SIZE = 50;
 
 /**
  * Inngest function to generate embeddings for highlights
@@ -113,12 +119,26 @@ export const generateHighlightEmbeddingsFn = inngest.createFunction(
         const texts = highlightsResult.highlights.map(h => h.rw_text || '');
         
         try {
-          const embeddings = await generateEmbeddingBatch(texts);
+          // Split texts into chunks of OPENAI_BATCH_SIZE to respect API limits
+          const allEmbeddings: number[][] = [];
           
-          logger.info(`Successfully generated ${embeddings.length} embeddings`);
+          for (let i = 0; i < texts.length; i += OPENAI_BATCH_SIZE) {
+            const chunk = texts.slice(i, i + OPENAI_BATCH_SIZE);
+            const chunkNumber = Math.floor(i / OPENAI_BATCH_SIZE) + 1;
+            const totalChunks = Math.ceil(texts.length / OPENAI_BATCH_SIZE);
+            
+            logger.info(`Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} highlights)`);
+            
+            const chunkEmbeddings = await generateEmbeddingBatch(chunk);
+            allEmbeddings.push(...chunkEmbeddings);
+            
+            logger.info(`Completed chunk ${chunkNumber}/${totalChunks}`);
+          }
+          
+          logger.info(`Successfully generated ${allEmbeddings.length} embeddings`);
           
           return { 
-            embeddings,
+            embeddings: allEmbeddings,
             success: true 
           };
         } catch (error) {
