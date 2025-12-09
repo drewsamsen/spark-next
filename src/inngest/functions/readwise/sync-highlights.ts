@@ -130,7 +130,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         const paginationCursor = readwiseSettings.paginationCursor || null;
         const isFullySynced = readwiseSettings.isFullySynced || false;
         
-        logger.info(`Last incremental sync: ${lastSynced || 'none'}`);
+        logger.info(`Last incremental sync (stored): ${lastSynced || 'none'}`);
         logger.info(`Last full sync: ${lastFullSync || 'none'}`);
         logger.info(`Pagination cursor: ${paginationCursor || 'none (start from beginning)'}`);
         logger.info(`Fully synced: ${isFullySynced}`);
@@ -142,6 +142,37 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       const lastFullSync = lastSyncResult.lastFullSync;
       const paginationCursor = lastSyncResult.paginationCursor;
       const isFullySynced = lastSyncResult.isFullySynced;
+
+      // Step 2b: Get most recent highlight from database to determine true sync baseline
+      const mostRecentHighlightResult = await step.run("fetch-most-recent-highlight", async () => {
+        logger.info("Fetching most recent highlight timestamp from database (source of truth)");
+
+        const { data: recentHighlight, error } = await supabase
+          .from('highlights')
+          .select('rw_updated')
+          .eq('user_id', userId)
+          .not('rw_updated', 'is', null)
+          .order('rw_updated', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error) {
+          // No highlights found or error - this is expected for first sync
+          if (error.code === 'PGRST116') {
+            logger.info("No existing highlights found in database - will perform full sync");
+            return { mostRecentTimestamp: null, success: true };
+          }
+          logger.warn("Error fetching most recent highlight, will use stored timestamp if available:", error);
+          return { mostRecentTimestamp: null, success: true };
+        }
+
+        const mostRecentTimestamp = recentHighlight?.rw_updated || null;
+        logger.info(`Most recent highlight in database: ${mostRecentTimestamp || 'none'}`);
+
+        return { mostRecentTimestamp, success: true };
+      });
+
+      const mostRecentHighlightTimestamp = mostRecentHighlightResult.mostRecentTimestamp;
       
       // Determine sync strategy:
       // 1. If we have a pagination cursor, continue chunked sync from where we left off
@@ -149,10 +180,12 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       // 3. If fully synced AND last full sync > 10 days, restart full pagination
       // 4. If never synced, start fresh pagination
       const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+      const ONE_HOUR_MS = 60 * 60 * 1000; // Safety buffer for incremental sync
       const now = Date.now();
       
       let syncType: 'chunked-full' | 'chunked-continue' | 'incremental';
       let shouldResetPagination = false;
+      let incrementalSyncTimestamp: string | null = null;
       
       if (paginationCursor) {
         // Continue from where we left off
@@ -161,7 +194,20 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
       } else if (isFullySynced && lastFullSync && (now - new Date(lastFullSync).getTime() <= TEN_DAYS_MS)) {
         // Fully synced recently, just get updates
         syncType = 'incremental';
-        logger.info(`Performing incremental sync - fully synced and last full sync within 10 days`);
+        
+        // Use database timestamp as source of truth, with 1-hour safety buffer
+        if (mostRecentHighlightTimestamp) {
+          const mostRecentTime = new Date(mostRecentHighlightTimestamp).getTime();
+          const safeStartTime = mostRecentTime - ONE_HOUR_MS;
+          incrementalSyncTimestamp = new Date(safeStartTime).toISOString();
+          logger.info(`Performing incremental sync - using database timestamp with 1-hour safety buffer`);
+          logger.info(`Most recent highlight in DB: ${mostRecentHighlightTimestamp}`);
+          logger.info(`Will fetch highlights updated after: ${incrementalSyncTimestamp} (1 hour before most recent)`);
+        } else {
+          // Fallback to stored timestamp if database query failed (shouldn't happen in normal case)
+          incrementalSyncTimestamp = lastSynced;
+          logger.warn(`No database timestamp available, falling back to stored lastSyncTime: ${incrementalSyncTimestamp}`);
+        }
       } else {
         // Need to start/restart full pagination
         syncType = 'chunked-full';
@@ -171,7 +217,7 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
           const daysSinceFullSync = Math.floor((now - new Date(lastFullSync).getTime()) / (24 * 60 * 60 * 1000));
           logger.info(`Starting new chunked full sync - last full sync was ${daysSinceFullSync} days ago (threshold: 10 days)`);
         } else {
-          logger.info(`Starting new chunked full sync - ${!lastSynced ? 'first sync ever' : 'no previous full sync recorded'}`);
+          logger.info(`Starting new chunked full sync - ${!mostRecentHighlightTimestamp ? 'first sync ever' : 'no previous full sync recorded'}`);
         }
       }
 
@@ -189,10 +235,11 @@ export const readwiseSyncHighlightsFn = inngest.createFunction(
         const baseUrl = "https://readwise.io/api/v2/highlights/";
         let startUrl: string;
         
-        if (syncType === 'incremental' && lastSynced) {
-          // Incremental: only get updated highlights
-          startUrl = `${baseUrl}?updated__gt=${lastSynced}`;
-          logger.info(`Incremental sync - fetching highlights updated after ${lastSynced}`);
+        if (syncType === 'incremental' && incrementalSyncTimestamp) {
+          // Incremental: only get updated highlights using database-derived timestamp
+          startUrl = `${baseUrl}?updated__gt=${incrementalSyncTimestamp}`;
+          logger.info(`Incremental sync - fetching highlights updated after ${incrementalSyncTimestamp}`);
+          logger.info(`Using database-derived timestamp (source of truth) instead of stored lastSyncTime`);
         } else if (syncType === 'chunked-continue' && paginationCursor) {
           // Continue from saved cursor
           startUrl = paginationCursor;
